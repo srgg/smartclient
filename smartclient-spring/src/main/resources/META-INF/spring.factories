@@ -1,0 +1,1 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=org.srg.smartclient.spring.autoconfiguration.SmartClientAutoConfiguration

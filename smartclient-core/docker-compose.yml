@@ -1,0 +1,28 @@
+# https://www.thepolyglotdeveloper.com/2017/03/nginx-reverse-proxy-containerized-docker-applications/
+# https://www.sep.com/sep-blog/2017/02/28/load-balancing-with-nginx-and-docker/
+
+version: "3.5"
+networks:
+  internal:
+  
+services:
+  mysql:
+    image: mysql:5.6
+    volumes:
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    environment:
+      - MYSQL_ROOT_PASSWORD=1234
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=user
+      - MYSQL_DATABASE=test
+    ports:
+      - 3306:3306
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
+    networks:
+      internal:
+
+    networks:
+      internal:
+        aliases:
+          - icoden-repo-001.localtest.me

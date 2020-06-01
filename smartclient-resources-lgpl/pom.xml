@@ -1,0 +1,69 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<relativePath>..</relativePath>
+		<groupId>org.srg.smartclient-dsi</groupId>
+		<artifactId>smartclient-parent</artifactId>
+		<version>1.0-SNAPSHOT</version>
+	</parent>
+
+	<artifactId>smartclient-resources-lgpl</artifactId>
+
+	<properties>
+		<smartclient-lgpl.version>SmartClient_v121p_2020-05-30_LGPL</smartclient-lgpl.version>
+	</properties>
+	<build>
+		<resources>
+			<resource>
+				<directory>${project.build.directory}/generated-resources/${smartclient-lgpl.version}/smartclientRuntime/isomorphic</directory>
+				<targetPath>${project.build.outputDirectory}/assets/isomorphic</targetPath>
+				<includes>
+					<include>**/*.*</include>
+				</includes>
+			</resource>
+		</resources>
+
+		<plugins>
+			<plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>3.0.0</version>
+				<executions>
+					<execution>
+						<phase>generate-resources</phase>
+						<configuration>
+							<target>
+								<echo message="downloading smartclient lgpl" />
+								<get src="https://www.smartclient.com/builds/SmartClient/12.1p/LGPL/latest/${smartclient-lgpl.version}.zip"
+								dest="${project.build.directory}"
+								skipexisting="true"
+								verbose="false"
+								usetimestamp="true"/>
+
+								<echo message="unzipping file" />
+								<unzip src="${project.build.directory}/${smartclient-lgpl.version}.zip" dest="${project.build.directory}/generated-resources" />
+							</target>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.2.0</version>
+				<configuration>
+					<archive>
+						<manifestEntries>
+							<SmartClient-Version>${smartclient-lgpl.version}</SmartClient-Version>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>

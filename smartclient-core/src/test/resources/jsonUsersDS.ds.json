@@ -1,0 +1,36 @@
+{
+  "id": "jsonUsersDS",
+  "serverType": "sql",
+  "fileName": "data/jsonUsersDS.json",
+  "fields": [
+    {
+      "name": "userId",
+      "type": "text",
+      "title": "User Id",
+      "required": true,
+      "primaryKey": true
+    },
+    {
+      "name": "firstName",
+      "type": "text",
+      "title": "First name",
+      "required": true
+    },
+    {
+      "name": "lastName",
+      "type": "text",
+      "title": "Last name",
+      "required": true
+    },
+    {
+      "name": "age",
+      "type": "integer",
+      "title": "Age"
+    },
+    {
+      "name": "email",
+      "type": "text",
+      "title": "Email"
+    }
+  ]
+}

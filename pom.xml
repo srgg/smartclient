@@ -1,0 +1,220 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>org.srg.smartclient-dsi</groupId>
+	<artifactId>smartclient-parent</artifactId>
+	<version>1.0-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<java.sdk.version>14</java.sdk.version>
+		<java.compiler.compilerVersion>${java.sdk.version}</java.compiler.compilerVersion>
+		<java.compiler.source>${java.sdk.version}</java.compiler.source>
+		<java.compiler.target>${java.sdk.version}</java.compiler.target>
+		<mavenVersion>3.6</mavenVersion>
+
+		<slf4j.version>1.7.30</slf4j.version>
+		<jackson.version>2.11.0</jackson.version>
+		<spring-batch.version>4.2.2.RELEASE</spring-batch.version>
+		<spring.version>5.2.6.RELEASE</spring.version>
+		<spring-boot.version>2.3.0.RELEASE</spring-boot.version>
+	</properties>
+
+	<modules>
+		<module>smartclient-core</module>
+		<module>smartclient-spring</module>
+		<module>smartclient-resources-lgpl</module>
+	</modules>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-api</artifactId>
+				<version>${slf4j.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.h2database</groupId>
+				<artifactId>h2</artifactId>
+				<version>1.3.167</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-beanutils</groupId>
+				<artifactId>commons-beanutils</artifactId>
+				<version>1.9.4</version>
+				<exclusions>
+					<exclusion>
+						<artifactId>commons-logging</artifactId>
+						<groupId>commons-logging</groupId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-classic</artifactId>
+				<version>1.2.3</version>
+			</dependency>
+			<dependency>
+				<groupId>org.junit.jupiter</groupId>
+				<artifactId>junit-jupiter-engine</artifactId>
+				<version>5.7.0-M1</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-databind</artifactId>
+				<version>${jackson.version}</version>
+			</dependency>
+
+			<!-- SPRING -->
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-context</artifactId>
+				<version>${spring.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-web</artifactId>
+				<version>${spring.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-webflux</artifactId>
+				<version>${spring.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-autoconfigure</artifactId>
+				<version>2.3.0.RELEASE</version>
+				<scope>compile</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-tx</artifactId>
+				<version>${spring.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-jdbc</artifactId>
+				<version>${spring.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-orm</artifactId>
+				<version>${spring.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.8.1</version>
+					<configuration>
+						<release>${java.sdk.version}</release>
+						<compilerArgs>
+							<arg>--enable-preview</arg>
+							<arg>-Xlint:all</arg>
+						</compilerArgs>
+						<forceJavacCompilerUse>true</forceJavacCompilerUse>
+						<parameters>true</parameters>
+					</configuration>
+				</plugin>
+				<plugin>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>3.0.0-M4</version>
+					<configuration>
+						<argLine>--enable-preview</argLine>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-enforcer-plugin</artifactId>
+					<version>3.0.0-M3</version>
+					<executions>
+						<execution>
+							<id>enforce-build-environment</id>
+							<goals>
+								<goal>enforce</goal>
+							</goals>
+							<configuration>
+								<rules>
+									<bannedDependencies>
+										<searchTransitive>true</searchTransitive>
+										<excludes>
+											<exclude>commons-logging:commons-logging</exclude>
+											<exclude>*:log4j</exclude>
+											<exclude>org.slf4j:slf4j-log4j*</exclude>
+										</excludes>
+									</bannedDependencies>
+
+									<requireMavenVersion>
+										<version>[${mavenVersion},)</version>
+									</requireMavenVersion>
+
+									<requireJavaVersion>
+										<version>[${java.sdk.version},)</version>
+									</requireJavaVersion>
+								</rules>
+								<fail>true</fail>
+							</configuration>
+						</execution>
+						<execution>
+							<id>enforce-dependency-convergence</id>
+							<!--
+                                Postpone the check until the verification phase in the lifecycle,
+                                in order to guarantee resolution of all dependencies,
+                                and to reduce the amount of logging in the early phases.
+                            -->
+							<phase>verify</phase>
+							<goals>
+								<goal>enforce</goal>
+							</goals>
+							<configuration>
+								<rules>
+									<dependencyConvergence>
+										<!--
+                                            Make sure all direct and transitive dependencies
+                                            converge to the same versions
+                                        -->
+									</dependencyConvergence>
+								</rules>
+								<!-- Generate warnings only, we will need to circle back to this later -->
+								<fail>false</fail>
+							</configuration>
+						</execution>
+						<execution>
+							<id>enforce-latest-dependency-versions</id>
+							<!--
+                                Postpone the check until the verification phase in the lifecycle,
+                                in order to guarantee resolution of all dependencies,
+                                and to reduce the amount of logging in the early phases.
+                            -->
+							<phase>verify</phase>
+							<goals>
+								<goal>enforce</goal>
+							</goals>
+							<configuration>
+								<rules>
+									<requireUpperBoundDeps>
+										<!--
+                                            Make sure that the latest of available dependency versions is selected
+                                        -->
+									</requireUpperBoundDeps>
+								</rules>
+								<!-- Generate warnings only -->
+								<fail>false</fail>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
+</project>
