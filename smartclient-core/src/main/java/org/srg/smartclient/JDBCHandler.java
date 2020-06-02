@@ -143,7 +143,7 @@ public class JDBCHandler extends AbstractDSHandler {
                     .collect(Collectors.toList());
 
         final String whereClause = filterData.isEmpty() ?  "" : " \n\tWHERE \n\t\t" +
-                String.join("\n\t\t AND",
+                String.join("\n\t\t AND ",
                         filterData.stream()
                                 .map(fd -> fd.sqlFilter)
                                 .collect(Collectors.toList())
