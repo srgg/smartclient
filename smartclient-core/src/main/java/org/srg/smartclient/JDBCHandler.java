@@ -53,8 +53,21 @@ public class JDBCHandler extends AbstractDSHandler {
                 String.join(",\n  " ,
                     getFields()
                         .stream()
-                        .map( dsf -> formatFieldName(dsf))
-                        .collect(Collectors.toList())
+                            .map( dsf -> {
+                                // If a custom SQL snippet is provided for column -- use it
+                                if (dsf.isCustomSQL()
+                                        && dsf.getSql() != null
+                                        && !dsf.getSql().isBlank()) {
+                                    return "%s AS \"%s\""
+                                            .formatted(
+                                                    dsf.getSql(),
+                                                    dsf.getDbName()
+                                            );
+                                } else {
+                                    return formatFieldName(dsf);
+                                }
+                            })
+                            .collect(Collectors.toList())
                 )
         );
 
@@ -62,7 +75,7 @@ public class JDBCHandler extends AbstractDSHandler {
         final String fromClause = String.format("FROM %s", getDatasource().getTableName());
 
         // -- JOIN ON
-        final String joinClause = String.join(",\n ",
+        final String joinClause = String.join(" \n ",
                 getFields()
                     .stream()
                     .filter( dsf -> dsf.isIncludeField())

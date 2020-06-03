@@ -1,13 +1,11 @@
 package org.srg.smartclient;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
 
-import javax.persistence.Entity;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.JoinColumn;
-import javax.persistence.Table;
+import javax.persistence.*;
 import javax.persistence.metamodel.*;
 import java.lang.reflect.Field;
 import java.util.*;
@@ -33,15 +31,9 @@ public class JpaDSDispatcher extends DSDispatcher {
     }
 
     protected <T> DataSource describeEntity(Class<T> entityClass) {
-        final DataSource datasource = new DataSource();
+        final DataSource ds  = super.describeEntity(entityClass);
 
-        final String id = getDsId(entityClass);
-
-        datasource.setId(id);
-        datasource.setServerType(DataSource.DSServerType.GENERIC);
-        datasource.setBeanClassName(entityClass.getCanonicalName());
-
-        datasource.setTableName(
+        ds.setTableName(
             sqlTableName(entityClass)
         );
 
@@ -50,11 +42,13 @@ public class JpaDSDispatcher extends DSDispatcher {
         final Set<Attribute<? super T, ?>> attrs = et.getAttributes();
 
         final List<DSField> fields = new ArrayList<>(attrs.size());
+        final Map<String, Attribute<? super T, ?>> skippedAttrs = new HashMap<>(attrs.size());
 
         for (Attribute<? super T, ?> a :attrs) {
             DSField f = describeField(a);
             if (f == null) {
                 // TODO: add proper logging
+                skippedAttrs.put(a.getName(), a);
                 continue;
             }
             fields.add(f);
@@ -84,12 +78,33 @@ public class JpaDSDispatcher extends DSDispatcher {
                     throw new IllegalStateException("Unsupported Attribute class '%s'".formatted(a.getClass()));
                 }
 
-                final Attribute<?,?> targetDisplayFieldAttr =  targetEntity.getAttribute(f.getForeignDisplayField());
-                assert targetDisplayFieldAttr != null;
-
                 final Class<?> targetClass = targetEntity.getJavaType();
+                final DSField targetField;
+
+                // -- handle case when ForeignDisplayField is @Transient
+                final Field javaTargetField = FieldUtils.getField(targetClass, f.getForeignDisplayField(), true);
+                if (javaTargetField == null) {
+                    throw new IllegalStateException(
+                            "Datasource '%s', field '%s': Nothing known about foreignDisplayField '%s' in the target java class '%s'"
+                            .formatted( ds.getId(),
+                                    f.getName(),
+                                    f.getForeignDisplayField(),
+                                    targetClass.getCanonicalName()
+                            )
+                    );
+                }
+
+                if (javaTargetField.isAnnotationPresent(Transient.class) ) {
+                    targetField = describeField( javaTargetField);
+                } else {
+                    final Attribute<?,?> targetDisplayFieldAttr =  targetEntity.getAttribute(f.getForeignDisplayField());
+                    assert targetDisplayFieldAttr != null;
+
+                    targetField = describeField(targetDisplayFieldAttr);
+                }
+
+                // --
                 final String targetDsId = getDsId(targetClass);
-                final DSField targetField = describeField(targetDisplayFieldAttr);
 
                 String displayField = f.getDisplayField();
                 if (displayField == null || displayField.isBlank()) {
@@ -123,9 +138,18 @@ public class JpaDSDispatcher extends DSDispatcher {
             }
         }
 
-        datasource.setFields(fields);
-
-        return datasource;
+        // -- populate data source with JPA @Transient Fields
+        final List<DSField> oldFields = ds.getFields();
+        for (DSField dsf :oldFields) {
+            if (!fields.contains(dsf)
+                && !skippedAttrs.containsKey(dsf.getName())) {
+                // since it is @Transient field and JPA does not have any clue about it's processing, -
+                // the field will be exclueded from SQL generation
+                fields.add(dsf);
+            }
+        }
+        ds.setFields(fields);
+        return ds;
     }
 
     protected <T> DSField describeField(Attribute<? super T, ?> attr) {
@@ -134,10 +158,6 @@ public class JpaDSDispatcher extends DSDispatcher {
         // -- Generic
         final DSField f = describeField(field);
 
-        // Convert field name to snake case
-        f.setDbName(
-                f.getDbName().replaceAll("([A-Z]+)([A-Z][a-z])", "$1_$2").replaceAll("([a-z])([A-Z])", "$1_$2")
-        );
 
         // -- JPA
         final JoinColumn jca = field.getAnnotation(JoinColumn.class);
@@ -233,37 +253,7 @@ public class JpaDSDispatcher extends DSDispatcher {
 
     protected <X> DSField.FieldType fieldType(Type<X> type) {
         final Class<X> clazz = type.getJavaType();
-
-        if (clazz.equals(Integer.class)
-                || clazz.equals(Short.class)
-                || clazz.equals(int.class)
-                || clazz.equals(short.class)) {
-            return DSField.FieldType.INTEGER;
-        }
-
-        if(clazz.equals(Long.class)
-                || clazz.equals(long.class) ){
-            return DSField.FieldType.INTEGER;
-        }
-
-        if (clazz.equals(String.class)) {
-            return DSField.FieldType.TEXT;
-        }
-
-        if (clazz.equals(java.sql.Date.class)) {
-            return DSField.FieldType.DATE;
-        }
-
-        if (clazz.equals(java.sql.Timestamp.class)) {
-            return DSField.FieldType.DATETIME;
-        }
-
-        if( clazz.equals(Boolean.class)
-                || type.equals(boolean.class) ){
-            return DSField.FieldType.BOOLEAN;
-        }
-
-        throw new RuntimeException(String.format("Smart Client -- Unmapped field type %s.", clazz.getName()));
+        return fieldType(clazz);
     }
 
     protected DSField getDSIDField(Class<?> clazz) {

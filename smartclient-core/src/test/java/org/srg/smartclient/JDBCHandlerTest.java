@@ -405,7 +405,7 @@ public class JDBCHandlerTest {
     }
 
     @Test
-    public void fetchWithIncludeFromFilter() throws Exception {
+    public void fetchWithIncludeFromField() throws Exception {
         addExtraFields(IncludeFromFields);
 
         Mockito.doReturn(locationDS)
@@ -420,7 +420,7 @@ public class JDBCHandlerTest {
         request.wrapAndSetData(Map.of("location", 1));
 
         // -- check default order (should be ascending)
-        final DSResponse response1 = handler.handleFetch(request);
+        final DSResponse response = handler.handleFetch(request);
         JsonTestSupport.assertJsonEquals("""
             {
                 response: {
@@ -443,7 +443,46 @@ public class JDBCHandlerTest {
                         }
                     ]    
                 }
-            }""", response1);
+            }""", response);
+    }
+
+    @Test
+    public void fetchWithCalculatedField() throws Exception {
+        addExtraFields("""
+                [ {
+                  name: "calculated",
+                  type: "text",
+                  sql: "CONCAT(users.id, '_', users.name)"                    
+                }]""");
+
+        DSRequest request = new DSRequest();
+        request.setStartRow(0);
+        request.setEndRow(2);
+
+        final DSResponse response = handler.handleFetch(request);
+        JsonTestSupport.assertJsonEquals("""
+            {
+                response:{
+                    status:0,
+                    startRow:0,
+                    endRow:2,
+                    totalRows:5,
+                    data: [
+                        {
+                            id:1,
+                            name:"user1",
+                            calculated:"1_user1"
+                        },
+                        {
+                            id:2,
+                            name:"user2",
+                            calculated:"2_user2"
+                        }
+                    ]
+                }
+            }""",
+                response);
+
     }
 
 //    @Test

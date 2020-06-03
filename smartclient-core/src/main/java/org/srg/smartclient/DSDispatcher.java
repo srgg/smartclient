@@ -9,12 +9,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srg.smartclient.annotations.SmartClientField;
 import org.srg.smartclient.annotations.SmartClientHandler;
 import org.srg.smartclient.isomorphic.*;
 
+import javax.persistence.metamodel.Type;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -22,6 +24,7 @@ import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class DSDispatcher implements IDSDispatcher {
     private static Logger logger = LoggerFactory.getLogger(DSDispatcher.class);
@@ -246,6 +249,14 @@ public class DSDispatcher implements IDSDispatcher {
 
         f.setName( field.getName() );
 
+        try {
+            f.setType(fieldType(field.getType()));
+        } catch (Throwable t) {
+            logger.warn("DataSource 's': Can't determine field type for field '%s'"
+                    .formatted("<UNknown>", f.getName()));
+            f.setType(null);
+        }
+
 
         final SmartClientField sfa = field.getAnnotation(SmartClientField.class);
         if (sfa != null) {
@@ -265,11 +276,75 @@ public class DSDispatcher implements IDSDispatcher {
             if (!sfa.type().equals(DSField.FieldType.ANY)) {
                 f.setType(sfa.type());
             }
+
+            if (sfa.hidden()) {
+                f.setHidden(true);
+            }
+
+            if (!sfa.sql().isBlank()) {
+                f.setSql(sfa.sql());
+            }
         }
 
         // -- set DB field name
         f.setDbName( f.getName());
 
+
+        // Convert field name to snake case
+        f.setDbName(
+                f.getDbName().replaceAll("([A-Z]+)([A-Z][a-z])", "$1_$2").replaceAll("([a-z])([A-Z])", "$1_$2")
+        );
+
         return f;
     }
+
+    protected <T> DataSource describeEntity(Class<T> entityClass) {
+        final DataSource ds = new DataSource();
+        final String id = getDsId(entityClass);
+        ds.setId(id);
+        ds.setServerType(DataSource.DSServerType.GENERIC);
+        ds.setBeanClassName(entityClass.getCanonicalName());
+
+        final List<Field> fields = FieldUtils.getAllFieldsList(entityClass);
+
+        final List<DSField> dsFields = fields.stream()
+                .map( f -> describeField(f))
+                .collect(Collectors.toList());
+
+        ds.setFields(dsFields);
+        return ds;
+    }
+    protected <X> DSField.FieldType fieldType(Class<X> clazz) {
+        if (clazz.equals(Integer.class)
+                || clazz.equals(Short.class)
+                || clazz.equals(int.class)
+                || clazz.equals(short.class)) {
+            return DSField.FieldType.INTEGER;
+        }
+
+        if(clazz.equals(Long.class)
+                || clazz.equals(long.class) ){
+            return DSField.FieldType.INTEGER;
+        }
+
+        if (clazz.equals(String.class)) {
+            return DSField.FieldType.TEXT;
+        }
+
+        if (clazz.equals(java.sql.Date.class)) {
+            return DSField.FieldType.DATE;
+        }
+
+        if (clazz.equals(java.sql.Timestamp.class)) {
+            return DSField.FieldType.DATETIME;
+        }
+
+        if( clazz.equals(Boolean.class)
+                || clazz.equals(boolean.class) ){
+            return DSField.FieldType.BOOLEAN;
+        }
+
+        throw new RuntimeException(String.format("Smart Client -- Unmapped field type %s.", clazz.getName()));
+    }
+
 }

@@ -1,11 +1,12 @@
 package org.srg.smartclient;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSTransaction;
 import org.srg.smartclient.isomorphic.IDSRequest;
 import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
+import org.srg.smartclient.isomorphic.criteria.Criteria;
+import org.srg.smartclient.isomorphic.criteria.OperatorId;
 
 import java.io.IOException;
 import java.util.Map;
@@ -121,45 +122,6 @@ public class DSRequestDeserializationTest {
         assertEquals(DSRequest.TextMatchStyle.SUBSTRING, req.getTextMatchStyle());
     }
 
-
-    @Disabled
-    @Test
-    public void parseFetchWithAdvancedCriteria() throws IOException {
-        final String FETCH_WITH_ADVANCED_CRITERIA_OPERATION = """
-            {
-                "dataSource":"userAssignmentsDS", 
-                "operationType":"fetch", 
-                "startRow":0, 
-                "endRow":75, 
-                "sortBy":[
-                ], 
-                "textMatchStyle":"substring", 
-                "componentId":"AssignmentsList", 
-                "data":{
-                    "operator" : "and",
-                    "_constructor" : "AdvancedCriteria",
-                    "criteria": [ 
-                        {
-                           "fieldName" : "firedAt",
-                            "operator" : "notBlank",
-                            "_constructor" : "AdvancedCriteria"
-                        } 
-                     ]
-                }, 
-                "oldValues":null
-            }""";
-
-        final DSRequest req = deserialize(FETCH_WITH_ADVANCED_CRITERIA_OPERATION);
-
-        assertEquals(DSRequest.OperationType.FETCH, req.getOperationType());
-        assertEquals(0, (Object)req.getStartRow());
-        assertEquals(75, (Object)req.getEndRow() );
-        assertTrue(req.getData() instanceof AdvancedCriteria);
-        assertNull(req.getOldValues());
-        assertEquals(DSRequest.TextMatchStyle.SUBSTRING, req.getTextMatchStyle());
-    }
-
-
     @Test
     public void parseAdd() throws IOException {
         final String ADD_OPERATION = """
@@ -207,5 +169,52 @@ public class DSRequestDeserializationTest {
         final DSRequest req = deserialize(REMOVE_OPERATION);
 
         assertEquals(DSRequest.OperationType.REMOVE, req.getOperationType());
+    }
+
+    @Test
+    public void parseFetchWithAdvancedCriteria() throws IOException {
+        final String FETCH_WITH_ADVANCED_CRITERIA_OPERATION = """
+            {
+                "dataSource":"userAssignmentsDS", 
+                "operationType":"fetch", 
+                "startRow":0, 
+                "endRow":75, 
+                "sortBy":[
+                ], 
+                "textMatchStyle":"substring", 
+                "componentId":"AssignmentsList", 
+                "data":{
+                    "operator" : "and",
+                    "_constructor" : "AdvancedCriteria",
+                    "criteria": [ 
+                        {
+                           "fieldName" : "firedAt",
+                            "operator" : "notBlank",
+                            "_constructor" : "AdvancedCriteria"
+                        } 
+                     ]
+                }, 
+                "oldValues":null
+            }""";
+
+        final DSRequest req = deserialize(FETCH_WITH_ADVANCED_CRITERIA_OPERATION);
+
+        assertEquals(DSRequest.OperationType.FETCH, req.getOperationType());
+        assertEquals(0, (Object)req.getStartRow());
+        assertEquals(75, (Object)req.getEndRow() );
+
+        assertTrue(req.getData() instanceof AdvancedCriteria);
+        final AdvancedCriteria ac = (AdvancedCriteria) req.getData();
+        assertEquals(OperatorId.AND, ac.getOperator());
+        assertTrue(ac.getCriteria() != null);
+        assertEquals(1, ac.getCriteria().size());
+
+        final Criteria c = ac.getCriteria().get(0);
+        assertEquals("firedAt", c.getFieldName());
+        assertEquals(OperatorId.NOT_BLANK, c.getOperator());
+
+
+        assertNull(req.getOldValues());
+        assertEquals(DSRequest.TextMatchStyle.SUBSTRING, req.getTextMatchStyle());
     }
 }

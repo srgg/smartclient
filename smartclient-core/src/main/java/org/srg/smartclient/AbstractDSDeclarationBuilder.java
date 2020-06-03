@@ -221,6 +221,16 @@ abstract class AbstractDSDeclarationBuilder {
 
         context.write_if(f.getRootValue() != null, ", rootValue: %s\n", f.getRootValue());
 
+        context.write_if(f.isCustomSQL(),
+                "\t\t\t,customSQL:%b\n",
+                    f.isCustomSQL()
+        );
+
+        context.write_if_notBlank(f.getSql(),
+                "\t\t\t,sql:\"%s\"\n",
+                f.getSql()
+        );
+
         context.write("\t\t}");
     }
 
@@ -230,35 +240,35 @@ abstract class AbstractDSDeclarationBuilder {
         }
     }
 
-    protected static DSField.FieldType javatype2smartclient(Class clazz) {
-        if (clazz.equals(Integer.class)
-                || clazz.equals(Short.class)
-                || clazz.equals(int.class)
-                || clazz.equals(short.class)) {
-            return DSField.FieldType.INTEGER;
-        }
-
-        if(clazz.equals(Long.class)
-                || clazz.equals(long.class) ){
-//            return DSField.FieldType.LONG;
-            return DSField.FieldType.INTEGER;
-        }
-
-        if (clazz.equals(String.class)) {
-            return DSField.FieldType.TEXT;
-        }
-
-        if (clazz.equals(java.sql.Date.class)) {
-            return DSField.FieldType.DATE;
-        }
-
-        if( clazz.equals(Boolean.class)
-                || clazz.equals(boolean.class) ){
-            return DSField.FieldType.BOOLEAN;
-        }
-
-        throw new RuntimeException(String.format("SmartClient -- Unmapped field type %s.", clazz.getName()));
-    }
+//    protected static DSField.FieldType javatype2smartclient(Class clazz) {
+//        if (clazz.equals(Integer.class)
+//                || clazz.equals(Short.class)
+//                || clazz.equals(int.class)
+//                || clazz.equals(short.class)) {
+//            return DSField.FieldType.INTEGER;
+//        }
+//
+//        if(clazz.equals(Long.class)
+//                || clazz.equals(long.class) ){
+////            return DSField.FieldType.LONG;
+//            return DSField.FieldType.INTEGER;
+//        }
+//
+//        if (clazz.equals(String.class)) {
+//            return DSField.FieldType.TEXT;
+//        }
+//
+//        if (clazz.equals(java.sql.Date.class)) {
+//            return DSField.FieldType.DATE;
+//        }
+//
+//        if( clazz.equals(Boolean.class)
+//                || clazz.equals(boolean.class) ){
+//            return DSField.FieldType.BOOLEAN;
+//        }
+//
+//        throw new RuntimeException(String.format("SmartClient -- Unmapped field type %s.", clazz.getName()));
+//    }
 
 //    protected static StringBuilder buildValueMapContent(StringBuilder builder, Field.ValueMap vm, String delimiter ){
 //        if(delimiter == null){

@@ -127,7 +127,7 @@ public abstract class AbstractDSHandler implements DSHandler {
 
         // -- foreign Display field
         final DSField foreignDisplayField = foreignDS.getFields().stream()
-                .filter( f -> f.getDbName().equals( parsedIncludeFrom[1] ))
+                .filter( f -> f.getName().equals( parsedIncludeFrom[1] ))
                 .reduce( (d1, d2) -> {
                     throw new IllegalStateException("DataSource '%s' has  not unique field name '%s'."
                             .formatted(

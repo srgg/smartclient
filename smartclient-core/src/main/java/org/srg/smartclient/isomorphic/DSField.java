@@ -47,8 +47,12 @@ public class DSField {
     private String displayField;
     private String rootValue;
     private String dbName;
+    private String sql;
 
     private boolean canEdit;
+
+    // https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/CustomQuerying.html
+    private boolean customSQL;
 
     public String getTitle() {
         return title;
@@ -170,6 +174,18 @@ public class DSField {
 
     public void setCanEdit(boolean canEdit) {
         this.canEdit = canEdit;
+    }
+
+    public boolean isCustomSQL() {
+        return getSql() != null && !getSql().isBlank();
+    }
+
+    public String getSql() {
+        return sql;
+    }
+
+    public void setSql(String sql) {
+        this.sql = sql;
     }
 
     @Override

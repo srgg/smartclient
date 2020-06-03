@@ -112,8 +112,12 @@ public class SmartClientAutoConfiguration {
                 .route(GET("/ds-loader"), (r) -> {
                     final StringBuilder sbld = new StringBuilder();
                     try {
-                        dsDispatcher
-                                .generateDSJavaScript(sbld, REST_URL);
+                        dsDispatcher.generateDSJavaScript(sbld, REST_URL);
+
+                        if (sbld.length() == 0) {
+                            sbld.append("// There is no any registered smartclient data source");
+                        }
+
                         return ServerResponse
                                 .ok()
                                 .cacheControl(CacheControl.noCache())
