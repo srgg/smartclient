@@ -111,8 +111,15 @@ public class JsonSerde {
 //                    break;
 
                 case DATETIME:
+
+                case INTENUM:
+
+                    // TODO: write ENUM name instead of  writing ordinal
+                case ENUM:
+//                    jsonGenerator.writeString(value.toString());
                     jsonGenerator.writeObject(value);
                     break;
+
 
                 case DATE:
                     final String s = "%tF".formatted(value);

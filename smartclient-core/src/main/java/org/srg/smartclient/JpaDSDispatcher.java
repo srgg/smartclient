@@ -226,7 +226,13 @@ public class JpaDSDispatcher extends DSDispatcher {
     }
 
     protected static String sqlTableName(Class<?> entityClass) {
-        String tableName = entityClass.getSimpleName().toLowerCase();
+        String tableName = entityClass.getSimpleName();
+
+        // Convert table name to snake case
+        tableName = tableName
+                .replaceAll("([A-Z]+)([A-Z][a-z])", "$1_$2")
+                .replaceAll("([a-z])([A-Z])", "$1_$2")
+                .toLowerCase();
 
         // -- check entity name
         final Entity[] entities =  entityClass.getAnnotationsByType(Entity.class);

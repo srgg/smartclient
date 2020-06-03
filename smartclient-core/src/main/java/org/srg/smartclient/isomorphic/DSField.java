@@ -1,5 +1,6 @@
 package org.srg.smartclient.isomorphic;
 
+import java.util.Map;
 import java.util.Objects;
 
 // https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/serverds/DataSourceField.html
@@ -47,7 +48,21 @@ public class DSField {
     private String displayField;
     private String rootValue;
     private String dbName;
-    private String sql;
+
+    /**
+     * https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/CustomQuerying.html
+     */
+    private String customSelectExpression;
+
+    /**
+     * https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/serverds/DataSourceField.html#valueMap
+     */
+    private Map valueMap;
+
+    /**
+     * https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/serverds/DataSourceField.html#valueMapEnum
+     */
+    private String valueMapEnum;
 
     private boolean canEdit;
 
@@ -177,15 +192,31 @@ public class DSField {
     }
 
     public boolean isCustomSQL() {
-        return getSql() != null && !getSql().isBlank();
+        return getCustomSelectExpression() != null && !getCustomSelectExpression().isBlank();
     }
 
-    public String getSql() {
-        return sql;
+    public String getCustomSelectExpression() {
+        return customSelectExpression;
     }
 
-    public void setSql(String sql) {
-        this.sql = sql;
+    public void setCustomSelectExpression(String customSelectExpression) {
+        this.customSelectExpression = customSelectExpression;
+    }
+
+    public Map getValueMap() {
+        return valueMap;
+    }
+
+    public void setValueMap(Map valueMap) {
+        this.valueMap = valueMap;
+    }
+
+    public String getValueMapEnum() {
+        return valueMapEnum;
+    }
+
+    public void setValueMapEnum(String valueMapEnum) {
+        this.valueMapEnum = valueMapEnum;
     }
 
     @Override

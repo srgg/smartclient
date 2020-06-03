@@ -56,11 +56,11 @@ public class JDBCHandler extends AbstractDSHandler {
                             .map( dsf -> {
                                 // If a custom SQL snippet is provided for column -- use it
                                 if (dsf.isCustomSQL()
-                                        && dsf.getSql() != null
-                                        && !dsf.getSql().isBlank()) {
+                                        && dsf.getCustomSelectExpression() != null
+                                        && !dsf.getCustomSelectExpression().isBlank()) {
                                     return "%s AS \"%s\""
                                             .formatted(
-                                                    dsf.getSql(),
+                                                    dsf.getCustomSelectExpression(),
                                                     dsf.getDbName()
                                             );
                                 } else {

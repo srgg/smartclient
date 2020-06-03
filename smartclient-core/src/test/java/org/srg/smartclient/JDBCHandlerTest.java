@@ -452,7 +452,7 @@ public class JDBCHandlerTest {
                 [ {
                   name: "calculated",
                   type: "text",
-                  sql: "CONCAT(users.id, '_', users.name)"                    
+                  customSelectExpression: "CONCAT(users.id, '_', users.name)"                    
                 }]""");
 
         DSRequest request = new DSRequest();

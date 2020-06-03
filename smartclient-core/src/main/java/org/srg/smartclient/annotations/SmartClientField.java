@@ -16,7 +16,7 @@ public @interface SmartClientField {
      * Custom sql Column clause to make a calculated field for SQL and JPA Data Source
      * @return
      */
-    String sql() default "";
+    String customSelectExpression() default "";
     String displayField() default "";
     String foreignDisplayField() default "";
     DSField.FieldType type() default DSField.FieldType.ANY;

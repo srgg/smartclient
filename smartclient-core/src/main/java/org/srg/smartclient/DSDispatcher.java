@@ -16,7 +16,7 @@ import org.srg.smartclient.annotations.SmartClientField;
 import org.srg.smartclient.annotations.SmartClientHandler;
 import org.srg.smartclient.isomorphic.*;
 
-import javax.persistence.metamodel.Type;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -251,12 +251,33 @@ public class DSDispatcher implements IDSDispatcher {
 
         try {
             f.setType(fieldType(field.getType()));
+
+            switch (f.getType()) {
+                case ENUM:
+                case INTENUM:
+                    final Class<?> type = field.getType();
+                    if (!type.isEnum()) {
+                        throw new IllegalStateException();
+                    }
+
+                    f.setValueMapEnum(type.getCanonicalName());
+
+                    Enum  constants[] = (Enum[]) type.getEnumConstants();
+
+                    final Map<Integer, String> vm = new HashMap<>(constants.length);
+
+                    for (int i=0; i<constants.length; ++i) {
+                        vm.put(i, constants[i].name());
+                    }
+
+                    f.setValueMap(vm);
+                    break;
+            }
         } catch (Throwable t) {
             logger.warn("DataSource 's': Can't determine field type for field '%s'"
                     .formatted("<UNknown>", f.getName()));
             f.setType(null);
         }
-
 
         final SmartClientField sfa = field.getAnnotation(SmartClientField.class);
         if (sfa != null) {
@@ -281,8 +302,8 @@ public class DSDispatcher implements IDSDispatcher {
                 f.setHidden(true);
             }
 
-            if (!sfa.sql().isBlank()) {
-                f.setSql(sfa.sql());
+            if (!sfa.customSelectExpression().isBlank()) {
+                f.setCustomSelectExpression(sfa.customSelectExpression());
             }
         }
 
@@ -342,6 +363,14 @@ public class DSDispatcher implements IDSDispatcher {
         if( clazz.equals(Boolean.class)
                 || clazz.equals(boolean.class) ){
             return DSField.FieldType.BOOLEAN;
+        }
+
+        if (clazz.isEnum()) {
+            return DSField.FieldType.ENUM;
+        }
+
+        if (clazz.equals(java.sql.Time.class)) {
+            return DSField.FieldType.TIME;
         }
 
         throw new RuntimeException(String.format("Smart Client -- Unmapped field type %s.", clazz.getName()));

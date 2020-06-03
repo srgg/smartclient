@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.DSField;
 
 import java.util.Collection;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -226,10 +228,34 @@ abstract class AbstractDSDeclarationBuilder {
                     f.isCustomSQL()
         );
 
-        context.write_if_notBlank(f.getSql(),
-                "\t\t\t,sql:\"%s\"\n",
-                f.getSql()
-        );
+//        context.write_if_notBlank(f.getCustomSelectExpression(),
+//                "\t\t\t,customSelectExpression:\"%s\"\n",
+//                f.getCustomSelectExpression()
+//        );
+
+
+        if (f.getValueMap() != null) {
+            final String s = ((Map<Object, Object>)f.getValueMap()).entrySet()
+                    .stream()
+//                    .map( entry -> "{ %s:'%s'}"
+//                            .formatted(entry.getKey(),
+//                                    entry.getValue()
+//                                            .toString()
+//                                            .replaceAll("'", "\'")
+//                            )
+//                    )
+                    .map( entry -> "'%s'"
+                            .formatted(
+                                    entry.getValue()
+                                            .toString()
+                                            .replaceAll("'", "\'")
+                            )
+                    )
+                    .collect(Collectors.joining("\n\t\t\t   ,"));
+
+
+            context.write("\t\t\t,valueMap:[\n\t\t\t   %s\n\t\t\t]\n", s);
+        }
 
         context.write("\t\t}");
     }
