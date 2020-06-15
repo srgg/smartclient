@@ -1,126 +1,26 @@
 package org.srg.smartclient;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.h2.jdbcx.JdbcDataSource;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
-import org.srg.smartclient.isomorphic.DataSource;
 
-import java.io.IOException;
 import java.sql.Connection;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
-public class JDBCHandlerTest {
-    private static String LocationDSDescription = """
-        {
-          id: "LocationDS",
-          tableName: "locations",
-          fields: [
-            {
-              name: "id",
-              type: "integer",
-              required: true,
-              primaryKey: true
-            },
-            {
-              name: "country",
-              type: "text"
-            },
-            {
-              name: "city",
-              type: "text"
-            }
-          ]
-        }""";
+public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
 
-    private static String UserDSDescription = """
-        {
-           id: 'usersDS',
-           serverType: 'sql',
-           tableName: 'users',
-           fields: [
-               {
-                   name: 'id',
-                   type: 'integer',
-                   primaryKey: true
-               },
-               {
-                   name: 'name',
-                   type: 'text',
-                   required: true
-               }
-           ]
-        }""";
-
-    private static String IncludeFromFields = """
-            [
-                {
-                    name: 'location'
-                    ,dbName: 'location_id'
-                    ,type: "INTEGER"
-                    ,foreignKey:"LocationDS.id"
-                    ,displayField:"locationCity"
-                },
-                {
-                    name:"locationCity"
-                    ,type:"TEXT"
-                    ,includeFrom:"LocationDS.city"
-                }
-            ]""";
-
-    private static JdbcDataSource jdbcDataSource = new JdbcDataSource();
-    private DataSource locationDS;
-    private DataSource userDS;
-    private JDBCHandler handler;
-
-    @BeforeAll
-    public static void setupDB() {
-        JsonTestSupport.defaultMapper = JsonSerde.createMapper();
-
-        jdbcDataSource.setURL("jdbc:h2:mem:test:˜/test;INIT=RUNSCRIPT FROM 'classpath:test-data.sql'");
-        jdbcDataSource.setUser("sa");
-        jdbcDataSource.setPassword("sa");
-    }
-
-    @AfterAll
-    public static void shutdownDB() {
-    }
-
-    @BeforeEach
-    public void setup() {
-        locationDS = JsonTestSupport.fromJSON(DataSource.class, LocationDSDescription);
-        userDS = JsonTestSupport.fromJSON(DataSource.class, UserDSDescription);
-
-        handler = Mockito.spy(
+    @Override
+    protected JDBCHandler initHandler(JdbcDataSource dataSource) {
+        return Mockito.spy(
                 new JDBCHandler((database, callback) -> {
                     try (Connection connection = jdbcDataSource.getConnection()) {
                         callback.apply(connection);
                     }
                 }, null, userDS)
         );
-    }
-
-    protected void addExtraFields(String jsonFieldsDescription) throws IOException {
-        final List<DSField> extraFields = JsonTestSupport.fromJSON(new TypeReference<>() {}, jsonFieldsDescription);
-
-        handler.getDatasource()
-                .getFields()
-                .addAll(extraFields);
-
-
-    }
-
-    protected void addExtraFields(String...jsonFieldDescription) throws IOException {
-        final String asJson = JsonTestSupport.asStrictJSON(jsonFieldDescription);
-        addExtraFields(asJson);
     }
 
     @Test
@@ -237,7 +137,7 @@ public class JDBCHandlerTest {
 
     @Test
     public void fetchIncludeFromField() throws Exception {
-        addExtraFields( IncludeFromFields);
+        withExtraFields(ExtraField.IncludeFrom);
 
         Mockito.doReturn(locationDS)
                 .when(handler)
@@ -371,12 +271,7 @@ public class JDBCHandlerTest {
 
     @Test
     public void fetchWithTextFilter() throws Exception {
-        addExtraFields("""
-                [{
-                  name: "email",
-                  type: "text"
-                }]
-            """);
+        withExtraFields(ExtraField.Email);
 
         DSRequest request = new DSRequest();
         request.setStartRow(0);
@@ -406,7 +301,7 @@ public class JDBCHandlerTest {
 
     @Test
     public void fetchWithIncludeFromField() throws Exception {
-        addExtraFields(IncludeFromFields);
+        withExtraFields(ExtraField.IncludeFrom);
 
         Mockito.doReturn(locationDS)
                 .when(handler)
@@ -448,12 +343,7 @@ public class JDBCHandlerTest {
 
     @Test
     public void fetchWithCalculatedField() throws Exception {
-        addExtraFields("""
-                [ {
-                  name: "calculated",
-                  type: "text",
-                  customSelectExpression: "CONCAT(users.id, '_', users.name)"                    
-                }]""");
+        withExtraFields(ExtraField.Calculated);
 
         DSRequest request = new DSRequest();
         request.setStartRow(0);
@@ -484,22 +374,4 @@ public class JDBCHandlerTest {
                 response);
 
     }
-
-//    @Test
-//    public void fetchWithAdvancedCriteria() throws Exception {
-//        DSRequest request = new DSRequest();
-//
-//                """
-//
-//
-//    }
-
-//    "data" : {
-//        "operator" : "and",
-//                "_constructor" : "AdvancedCriteria",
-//                "criteria" : [ {
-//            "fieldName" : "firedAt",
-//                    "operator" : "notBlank",
-//                    "_constructor" : "AdvancedCriteria"
-//        } ]
 }

@@ -72,6 +72,13 @@
 			</dependency>
 
 			<dependency>
+				<groupId>org.junit.jupiter</groupId>
+				<artifactId>junit-jupiter-params</artifactId>
+				<version>5.7.0-M1</version>
+				<scope>test</scope>
+			</dependency>
+
+			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-databind</artifactId>
 				<version>${jackson.version}</version>

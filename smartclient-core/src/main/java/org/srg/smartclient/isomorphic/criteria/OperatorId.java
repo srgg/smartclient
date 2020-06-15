@@ -4,23 +4,24 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 // https://www.smartclient.com/smartclient-release/isomorphic/system/reference/?id=type..OperatorId
 public enum OperatorId {
+    IS_BLANK("isBlank"),
     NOT_BLANK("notBlank"),
 
     /**
      * all subcriteria (criterion.criteria) are true
      */
-    AND("and");
+    AND("and"),
 
-    private String jsonValue;
+    /**
+     *  (criterion.criteria) are false
+     */
+    NOT("not"),
 
-    OperatorId(String jsonValue){
-        this.jsonValue = jsonValue;
-    }
+    /**
+     * at least one subcriteria (criterion.criteria) is true
+     */
+    OR("or"),
 
-    @JsonValue
-    final String jsonValue() {
-        return this.jsonValue;
-    }
 
 //
 //    /**
@@ -33,30 +34,50 @@ public enum OperatorId {
 //     */
 //    BETWEEN_INCLUSIVE,
 //
-//    /**
-//     * Contains as sub-string (match case)
-//     */
-//    CONTAINS,
+    /**
+     * Contains as sub-string (match case)
+     */
+    CONTAINS("contains"),
 //
 //    /**
 //     * Contains as sub-string (match case) another field value (specify fieldName as criterion.value)
 //     */
 //    CONTAINS_FIELD,
 //
-//    /**
-//     *  Ends with (match case)
-//     */
-//    ENDS_WITH,
+    /**
+     *  Ends with (match case)
+     */
+    ENDS_WITH("endsWith"),
+
+    /**
+     *  Ends with (case insensitive)
+     */
+    IENDS_WITH("iEndsWith"),
+
 //
 //    /**
 //     * Ends with (match case) another field value (specify fieldName as criterion.value)
 //     */
 //    ENDS_WITH_FIELD,
 //
-//    /**
-//     * exactly equal to
-//     */
-//    EQUALS,
+    /**
+     * exactly equal to
+     */
+    EQUALS("equals"),
+
+    NOT_EQUAL("notEqual"),
+
+    /**
+     * exactly equal to, if case is disregarded
+     */
+    IEQUALS("iEquals"),
+
+    /**
+     * not equal to, if case is disregarded
+     */
+    INOT_EQUAL("iNotEqual"),
+
+
 //
 //    /**
 //     * matches another field (match case, specify fieldName as criterion.value)
@@ -86,30 +107,26 @@ public enum OperatorId {
 //     */
 //    IBETWEEN_INCLUSIVE,
 //
-//    /**
-//     * Contains as sub-string (case insensitive)
-//     */
-//    ICONTAINS,
-//
+    /**
+     * Contains as sub-string (case insensitive)
+     */
+    ICONTAINS("iContains"),
+
+    /**
+     * Does not contain as sub-string (case insensitive)
+     */
+    INOT_CONTAINS("iNotContains"),
+
 //    /**
 //     * Contains as sub-string (case insensitive) another field value (specify fieldName as criterion.value)
 //      */
 //    ICONTAINS_FIELD,
 //
-//    /**
-//     * Ends with (case insensitive)
-//      */
-//    IENDS_WITH,
-//
-//    /**
+//   /**
 //     * Ends with (case insensitive) another field value (specify fieldName as criterion.value)
 //     */
 //    IENDS_WITH_FIELD,
 //
-//    /**
-//     * exactly equal to, if case is disregarded
-//     */
-//    IEQUALS,
 //
 //    /**
 //     * matches another field (case insensitive, specify fieldName as criterion.value)
@@ -121,11 +138,8 @@ public enum OperatorId {
 //     */
 //    IN_SET,
 //
-//    /**
-//     * Does not contain as sub-string (case insensitive)
-//     */
-//    INOT_CONTAINS,
 //
+
 //    /**
 //     * Does not contain as sub-string (case insensitive) another field value (specify fieldName as criterion.value)
 //     */
@@ -141,10 +155,6 @@ public enum OperatorId {
 //     */
 //    INOT_ENDS_WITH_FIELD,
 //
-//    /**
-//     * not equal to, if case is disregarded
-//     */
-//    INOT_EQUAL,
 //
 //    /**
 //     * does not match another field (case insensitive, specify fieldName as criterion.value)
@@ -166,11 +176,11 @@ public enum OperatorId {
 //     */
 //    IREGEXP,
 //
-//    /**
-//     * value is null
-//     */
-//    IS_NULL,
-//
+    /**
+     * value is null
+     */
+    IS_NULL("isNull"),
+
 //    /**
 //     * Starts with (case insensitive)
 //     */
@@ -200,12 +210,6 @@ public enum OperatorId {
 //     * Less than another field (specify fieldName as criterion.value)
 //     */
 //    LESS_THAN_FIELD,
-//
-//
-//    /**
-//     * all subcriteria (criterion.criteria) are false
-//     */
-//    NOT,
 //
 //    /**
 //     * Does not contain as sub-string (match case)
@@ -242,10 +246,10 @@ public enum OperatorId {
 //     */
 //    NOT_IN_SET,
 //
-//    /**
-//     * value is non-null.
-//     */
-//    NOT_NULL,
+    /**
+     * value is non-null.
+     */
+    NOT_NULL("notNull"),
 //
 //    /**
 //     * Does not start with (match case)
@@ -256,11 +260,6 @@ public enum OperatorId {
 //     * Does not start with (match case) another field value (specify fieldName as criterion.value)
 //     */
 //    NOT_STARTS_WITH_FIELD,
-//
-//    /**
-//     * at least one subcriteria (criterion.criteria) is true
-//     */
-//    OR,
 //
 //    /**
 //     * Regular expression match
@@ -277,4 +276,16 @@ public enum OperatorId {
 //     * Starts with (match case) another field value (specify fieldName as criterion.value)
 //     */
 //    STARTS_WITH_FIELD
+
+    NOOP("");
+    private String jsonValue;
+
+    OperatorId(String jsonValue){
+        this.jsonValue = jsonValue;
+    }
+
+    @JsonValue
+    final String jsonValue() {
+        return this.jsonValue;
+    }
 }

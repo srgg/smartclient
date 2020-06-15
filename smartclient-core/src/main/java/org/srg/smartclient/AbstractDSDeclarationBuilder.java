@@ -54,31 +54,36 @@ abstract class AbstractDSDeclarationBuilder {
     }
     private BuilderContext context = new BuilderContext();
 
-    public String build(String name, String dispatcherUrl, Collection<DSField> fields) throws ClassNotFoundException {
+    public String build(String dispatcherUrl, DSHandler dsHandler) throws ClassNotFoundException {
         context.clear();
 
-        context.dsName = name;
+        context.dsName = dsHandler.id();
+        final Collection<DSField> allFields = dsHandler.dataSource().getFields();
 
-        context.write(
-                "isc.RestDataSource.create({\n"
-                + "  ID:\"%s\",\n"
-                + "  dataFormat:\"json\",\n"
-                + "  dataURL:\"%s\",\n"
-                + "  dataProtocol: \"postMessage\",\n"
-                + "  dataTransport: \"xmlHttpRequest\",\n"
-                + "  disableQueuing: false,\n"
-                + "  useStrictJSON: true,\n"
-                + "  operationBindings:[\n"
-                + "    {operationType:\"fetch\", dataProtocol:\"postMessage\"},\n"
-                + "    {operationType:\"add\", dataProtocol:\"postMessage\"},\n"
-                + "    {operationType:\"remove\", dataProtocol:\"postMessage\"},\n"
-                + "    {operationType:\"update\", dataProtocol:\"postMessage\"}\n"
-                + "  ],\n"
-                + "  fields:[\n",
-                name,
-                dispatcherUrl);
 
-        buildFields(fields);
+        context.write("""                        
+                isc.RestDataSource.create({
+                  ID: "%s",
+                  dataFormat:"json",
+                  dataURL:"%s",
+                  dataProtocol:"postMessage",
+                  dataTransport:"xmlHttpRequest",
+                  disableQueuing:false,
+                  useStrictJSON:true,
+                  allowAdvancedCriteria: %b,
+                  operationBindings:[
+                    {operationType:"fetch", dataProtocol:"postMessage"},
+                    {operationType:"add", dataProtocol:"postMessage"},
+                    {operationType:"remove", dataProtocol:"postMessage"},
+                    {operationType:"update", dataProtocol:"postMessage"}
+                  ],
+                  fields:[""",
+                context.dsName,
+                dispatcherUrl,
+                dsHandler.allowAdvancedCriteria()
+        );
+
+        buildFields(allFields);
 
         context.write("]});\n");
         return context.builder.toString();

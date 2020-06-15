@@ -8,4 +8,8 @@ public interface DSHandler {
     String id();
     DataSource dataSource();
     DSResponse handle(DSRequest request) throws Exception;
+
+    default boolean allowAdvancedCriteria() {
+        return false;
+    }
 }

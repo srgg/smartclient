@@ -158,13 +158,15 @@ public class DSDispatcher implements IDSDispatcher {
         for (String name : dsId) {
             final DSHandler ds = getHandlerByName(name);
 
-            if (ds instanceof AbstractDSHandler) {
-                Collection<DSField> allFields = ((AbstractDSHandler)ds).getFields();
-                out.append(builder.build(name, dispatcherUrl, allFields));
-            } else {
-                throw new RuntimeException(String.format("Can't generate DS Script: Data source with name '%s' is not an instance of AbstractDSHandler",
-                        name));
-            }
+            out.append(builder.build(dispatcherUrl, ds));
+
+//            if (ds instanceof AbstractDSHandler) {
+//                Collection<DSField> allFields = ((AbstractDSHandler)ds).getFields();
+//                out.append(builder.build(name, dispatcherUrl, allFields));
+//            } else {
+//                throw new RuntimeException(String.format("Can't generate DS Script: Data source with name '%s' is not an instance of AbstractDSHandler",
+//                        name));
+//            }
         }
         return out;
     }
@@ -221,7 +223,7 @@ public class DSDispatcher implements IDSDispatcher {
 
 
     protected JDBCHandler createJDBCHandler(DataSource ds) {
-        return new JDBCHandler( getJdbcPolicy(), this, ds);
+        return new AdvancedJDBCHandler( getJdbcPolicy(), this, ds);
     }
 
     @Override

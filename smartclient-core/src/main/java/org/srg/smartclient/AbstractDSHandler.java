@@ -18,7 +18,7 @@ public abstract class AbstractDSHandler implements DSHandler {
         if (fieldMap == null) {
             final Map<String, DSField> m = new LinkedHashMap<>();
 
-            for (DSField f: getDatasource().getFields()) {
+            for (DSField f: getDataSource().getFields()) {
                 m.put(f.getName(), f);
             }
 
@@ -44,16 +44,7 @@ public abstract class AbstractDSHandler implements DSHandler {
     }
 
     protected DSField getField(String fieldName) {
-        final DSField retVal = getFieldMap().get(fieldName);
-        return retVal;
-    }
-
-    protected Set<String> getFieldNames() {
-        return getFieldMap().keySet();
-    }
-
-    protected Collection<String> getDBFieldNames() {
-        return getDbFieldMap().keySet();
+        return getFieldMap().get(fieldName);
     }
 
     protected Collection<DSField> getFields() {
@@ -65,14 +56,14 @@ public abstract class AbstractDSHandler implements DSHandler {
         this.datasource = datasource;
     }
 
-    protected DataSource getDatasource() {
+    protected DataSource getDataSource() {
         assert datasource != null;
         return datasource;
     }
 
     @Override
     public String id() {
-        return getDatasource().getId();
+        return getDataSource().getId();
     }
 
     protected DSResponse handleFetch(DSRequest request) throws Exception {
@@ -88,7 +79,7 @@ public abstract class AbstractDSHandler implements DSHandler {
 
     @Override
     final public DSResponse handle(DSRequest request) throws Exception {
-        if (!getDatasource().getId().equalsIgnoreCase(request.getDataSource())) {
+        if (!getDataSource().getId().equalsIgnoreCase(request.getDataSource())) {
             // TODO: Add proper error handling
             throw new IllegalStateException();
         }
@@ -117,7 +108,7 @@ public abstract class AbstractDSHandler implements DSHandler {
         if (parsedIncludeFrom.length != 2) {
             throw new IllegalStateException("DataSource '%s' field '%s', all 'includeFrom' fields must be prefixed with DataSource ID, but actual value is '%s'."
                     .formatted(
-                            this.getDatasource().getId(),
+                            this.getDataSource().getId(),
                             importFromField.getName(),
                             importFromField.getIncludeFrom()
                     )
@@ -159,7 +150,7 @@ public abstract class AbstractDSHandler implements DSHandler {
         if (parsedForeignKey.length != 2) {
             throw new IllegalStateException("DataSource '%s' field '%s', 'foreignKey' field should be prefixed with DataSource ID, but the actual value is '%s'."
                     .formatted(
-                            this.getDatasource().getId(),
+                            this.getDataSource().getId(),
                             sourceField.getName(),
                             sourceField.getForeignKey()
                     )

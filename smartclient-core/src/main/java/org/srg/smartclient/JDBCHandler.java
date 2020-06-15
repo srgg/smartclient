@@ -7,6 +7,7 @@ import org.srg.smartclient.isomorphic.*;
 import java.sql.*;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 
 public class JDBCHandler extends AbstractDSHandler {
@@ -15,7 +16,7 @@ public class JDBCHandler extends AbstractDSHandler {
         void withConnectionDo(String database, Utils.CheckedFunction<Connection, Void> callback) throws Exception;
     }
 
-    private static Logger logger = LoggerFactory.getLogger(JDBCHandler.class);
+    private  Logger logger = LoggerFactory.getLogger(getClass());
 
     private final JDBCPolicy policy;
 
@@ -34,7 +35,7 @@ public class JDBCHandler extends AbstractDSHandler {
                     );
         } else {
             return "%s.%s".formatted(
-                    getDatasource().getTableName(),
+                    getDataSource().getTableName(),
                     dsf.getDbName()
             );
         }
@@ -51,7 +52,7 @@ public class JDBCHandler extends AbstractDSHandler {
         // -- SELECT
         final String selectClause = String.format("SELECT %s",
                 String.join(",\n  " ,
-                    getFields()
+                    getDataSource().getFields()
                         .stream()
                             .map( dsf -> {
                                 // If a custom SQL snippet is provided for column -- use it
@@ -72,7 +73,7 @@ public class JDBCHandler extends AbstractDSHandler {
         );
 
         // -- FROM
-        final String fromClause = String.format("FROM %s", getDatasource().getTableName());
+        final String fromClause = String.format("FROM %s", getDataSource().getTableName());
 
         // -- JOIN ON
         final String joinClause = String.join(" \n ",
@@ -86,7 +87,7 @@ public class JDBCHandler extends AbstractDSHandler {
                         return " JOIN %s ON %s.%s = %s.%s"
                                 .formatted(
                                         relation.foreignDataSource().getTableName(),
-                                        this.getDatasource().getTableName(), relation.sourceField().getDbName(),
+                                        this.getDataSource().getTableName(), relation.sourceField().getDbName(),
                                         relation.foreignDataSource().getTableName(), relation.foreignKey().getDbName()
                                 );
                     })
@@ -107,7 +108,7 @@ public class JDBCHandler extends AbstractDSHandler {
                         default:
                             return "%s.%s%s"
                                     .formatted(
-                                        getDatasource().getTableName(),
+                                        getDataSource().getTableName(),
                                         getField(s).getDbName(),
                                         order
                                     );
@@ -116,49 +117,12 @@ public class JDBCHandler extends AbstractDSHandler {
                 .collect(Collectors.joining(", "));
 
         // -- WHERE
-        final List<FilterData> filterData  = request.getData() == null ? Collections.EMPTY_LIST :
-                ((Map<String,Object>)request.getData()).entrySet()
-                    .stream()
-                    .map(e -> {
-                        final DSField dsf = getField(e.getKey());
-
-                        if (dsf == null) {
-                            throw new RuntimeException("DataSource '%s': nothing known about field '%s'"
-                                    .formatted(
-                                            request.getDataSource(),
-                                            e.getKey()
-                                    )
-                            );
-                        }
-
-                        final Object value = switch (dsf.getType()) {
-                            case TEXT ->
-                                    switch ( request.getTextMatchStyle()) {
-                                        case EXACT -> e.getValue();
-
-                                        case SUBSTRING -> "%%%s%%".formatted(e.getValue());
-
-                                        default -> "%s%%".formatted(e.getValue());
-                                    };
-                            default -> e.getValue();
-                        };
-
-
-                        String filterStr = switch (dsf.getType()) {
-                            case TEXT -> "%s like ?";
-                            default -> "%s = ?";
-                        };
-
-                        filterStr = filterStr.formatted(formatFieldName(dsf));
-
-                        return new FilterData(dsf, filterStr, value);
-                    })
-                    .collect(Collectors.toList());
+        final List<IFilterData> filterData  = generateFilterData(request.getTextMatchStyle(), request.getData());
 
         final String whereClause = filterData.isEmpty() ?  "" : " \n\tWHERE \n\t\t" +
                 String.join("\n\t\t AND ",
                         filterData.stream()
-                                .map(fd -> fd.sqlFilter)
+                                .map(fd -> fd.sql())
                                 .collect(Collectors.toList())
                 );
 
@@ -171,26 +135,29 @@ public class JDBCHandler extends AbstractDSHandler {
 
         final int totalRows[] = new int[] {-1};
 
-        policy.withConnectionDo(this.getDatasource().getDbName(), connn-> {
+        policy.withConnectionDo(this.getDataSource().getDbName(), connn-> {
             // -- calculate total
             final String countQuery = String.join("\n ", "SELECT count(*)", fromClause, joinClause, whereClause);
 
             if (logger.isDebugEnabled()) {
-                logger.debug("DataSource %s fetch count(*) query:\n%s"
+                logger.debug("DataSource %s fetch count(*) query:\n%s\n\nparams:\n%s"
                         .formatted(
-                                getDatasource().getId(),
-                                countQuery
+                                getDataSource().getId(),
+                                countQuery,
+                                filterData.stream()
+                                        .flatMap(fd -> StreamSupport.stream(fd.values().spliterator(), false))
+                                        .map(d-> "%s".formatted(d))
+                                        .collect(Collectors.joining(", "))
                         )
                 );
             }
 
             try (PreparedStatement st = connn.prepareStatement(countQuery, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY)) {
                 int idx =0;
-                for (FilterData fd: filterData) {
-                    st.setObject(++idx, fd.value());
-                }
 
-                //applyParameters(st, params);
+                for (IFilterData fd: filterData) {
+                    idx = fd.setStatementParameters(idx, st);
+                }
 
                 try (ResultSet rs = st.executeQuery()) {
                     rs.next();
@@ -202,10 +169,14 @@ public class JDBCHandler extends AbstractDSHandler {
             final String query = String.join("\n ", Arrays.asList(selectClause, fromClause, joinClause, whereClause, orderClause, paginationClause ));
 
             if (logger.isDebugEnabled()) {
-                logger.debug("DataSource %s fetch query:\n%s"
+                logger.debug("DataSource %s fetch query:\n%s\n\nparams:\n%s"
                     .formatted(
-                        getDatasource().getId(),
-                        query
+                        getDataSource().getId(),
+                        query,
+                            filterData.stream()
+                                .flatMap(fd -> StreamSupport.stream(filterData.spliterator(), false))
+                                .map(d-> "%s".formatted(d))
+                                .collect(Collectors.joining(", "))
                     )
                 );
             }
@@ -216,8 +187,8 @@ public class JDBCHandler extends AbstractDSHandler {
                 st.setFetchDirection(ResultSet.FETCH_FORWARD);
 
                 int idx =0;
-                for (FilterData fd: filterData) {
-                    st.setObject(++idx, fd.value());
+                for (IFilterData fd: filterData) {
+                    idx = fd.setStatementParameters(idx, st);
                 }
 
                 try (ResultSet rs = st.executeQuery() ) {
@@ -226,7 +197,7 @@ public class JDBCHandler extends AbstractDSHandler {
 
                         int i =0;
                         // ORIGINAL FIELD ORDER MUST BE USED
-                        for (DSField dsf: getDatasource().getFields()) {
+                        for (DSField dsf: getDataSource().getFields()) {
                             Object v = rs.getObject(i + 1);
                             if (rs.wasNull()) {
                                 v = null;
@@ -246,5 +217,98 @@ public class JDBCHandler extends AbstractDSHandler {
                 data);
     }
 
-    protected record FilterData(DSField field, String sqlFilter, Object value) {}
+    protected  List<IFilterData> generateFilterData(DSRequest.TextMatchStyle textMatchStyle, IDSRequestData data ) {
+        if (data instanceof Map) {
+            return ((Map<String, Object>) data).entrySet()
+                    .stream()
+                    .map(e -> {
+                        final DSField dsf = getField(e.getKey());
+
+                        if (dsf == null) {
+                            throw new RuntimeException("DataSource '%s': nothing known about field '%s'"
+                                    .formatted(
+                                            getDataSource().getId(),
+                                            e.getKey()
+                                    )
+                            );
+                        }
+
+                        final Object value = switch (dsf.getType()) {
+                            case TEXT -> switch (textMatchStyle) {
+                                case EXACT -> e.getValue();
+
+                                case SUBSTRING -> "%%%s%%".formatted(e.getValue());
+
+                                default -> "%s%%".formatted(e.getValue());
+                            };
+                            default -> e.getValue();
+                        };
+
+
+                        String filterStr = switch (dsf.getType()) {
+                            case TEXT -> "%s like ?";
+                            default -> "%s = ?";
+                        };
+
+                        filterStr = filterStr.formatted(formatFieldName(dsf));
+
+                        return new FilterData(dsf, filterStr, value);
+                    })
+                    .collect(Collectors.toList());
+        } else if (data == null){
+            return Collections.EMPTY_LIST;
+        } else {
+            throw new IllegalStateException("DataSource '%s': data has unsupported format '%s'."
+                    .formatted(
+                            getDataSource().getId(),
+                            data.getClass().getCanonicalName()
+                    )
+            );
+        }
+    }
+
+
+    protected interface IFilterData {
+        String sql();
+        Iterable<Object> values();
+
+        default int setStatementParameters(int idx, PreparedStatement preparedStatement) throws SQLException {
+            for (Object v : values()) {
+                preparedStatement.setObject(++idx, v);
+            }
+            return idx;
+        }
+
+    }
+
+    protected static class FilterData implements IFilterData{
+        private final DSField field;
+        private final String sql;
+        private final Object value;
+
+        public FilterData(DSField field, String sql, Object value) {
+            this.field = field;
+            this.sql = sql;
+            this.value = value;
+        }
+
+        public FilterData(DSField field, String sql, Object... values) {
+            this.field = field;
+            this.sql = sql;
+            this.value = values;
+        }
+
+        @Override
+        public String sql() {
+            return sql;
+        }
+
+        public DSField field() {
+            return field;
+        }
+
+        public Iterable<Object> values() {
+            return Collections.singletonList(value);
+        }
+    }
 }
