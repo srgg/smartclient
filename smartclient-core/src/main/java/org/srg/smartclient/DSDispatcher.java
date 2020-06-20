@@ -246,7 +246,7 @@ public class DSDispatcher implements IDSDispatcher {
         return clazz.getSimpleName() +"DS";
     }
 
-    protected <T> DSField describeField(Field field) {
+    protected <T> DSField describeField(String dsId, Field field) {
         final DSField f = new DSField();
 
         f.setName( field.getName() );
@@ -254,30 +254,32 @@ public class DSDispatcher implements IDSDispatcher {
         try {
             f.setType(fieldType(field.getType()));
 
-            switch (f.getType()) {
-                case ENUM:
-                case INTENUM:
-                    final Class<?> type = field.getType();
-                    if (!type.isEnum()) {
-                        throw new IllegalStateException();
-                    }
+            if (f.getType() != null) {
+                switch (f.getType()) {
+                    case ENUM:
+                    case INTENUM:
+                        final Class<?> type = field.getType();
+                        if (!type.isEnum()) {
+                            throw new IllegalStateException();
+                        }
 
-                    f.setValueMapEnum(type.getCanonicalName());
+                        f.setValueMapEnum(type.getCanonicalName());
 
-                    Enum  constants[] = (Enum[]) type.getEnumConstants();
+                        Enum constants[] = (Enum[]) type.getEnumConstants();
 
-                    final Map<Integer, String> vm = new HashMap<>(constants.length);
+                        final Map<Integer, String> vm = new HashMap<>(constants.length);
 
-                    for (int i=0; i<constants.length; ++i) {
-                        vm.put(i, constants[i].name());
-                    }
+                        for (int i = 0; i < constants.length; ++i) {
+                            vm.put(i, constants[i].name());
+                        }
 
-                    f.setValueMap(vm);
-                    break;
+                        f.setValueMap(vm);
+                        break;
+                }
             }
         } catch (Throwable t) {
-            logger.warn("DataSource 's': Can't determine field type for field '%s'"
-                    .formatted("<UNknown>", f.getName()));
+            logger.warn("DataSource '%s': Can't determine field type for field '%s'"
+                    .formatted(dsId, f.getName()), t);
             f.setType(null);
         }
 
@@ -331,7 +333,7 @@ public class DSDispatcher implements IDSDispatcher {
         final List<Field> fields = FieldUtils.getAllFieldsList(entityClass);
 
         final List<DSField> dsFields = fields.stream()
-                .map( f -> describeField(f))
+                .map( f -> describeField(ds.getId(), f))
                 .collect(Collectors.toList());
 
         ds.setFields(dsFields);
@@ -375,7 +377,8 @@ public class DSDispatcher implements IDSDispatcher {
             return DSField.FieldType.TIME;
         }
 
-        throw new RuntimeException(String.format("Smart Client -- Unmapped field type %s.", clazz.getName()));
+        //throw new RuntimeException(String.format("Smart Client -- Unmapped field type %s.", clazz.getName()));
+        return null;
     }
 
 }

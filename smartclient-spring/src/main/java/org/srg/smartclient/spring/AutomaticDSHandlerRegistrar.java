@@ -207,7 +207,17 @@ public class AutomaticDSHandlerRegistrar implements Ordered, SmartLifecycle, App
             }
         }
 
-        final String msg = "\nSmartClient handler scan was completed, %d classes was found, %d will be skipped:\n"
+        // -- sort in accordance to thre provided order, if any
+        entitiesFound.sort( (e1,e2) -> {
+            final SmartClientHandler sch1 = (SmartClientHandler) e1.getAnnotation(SmartClientHandler.class);
+            final SmartClientHandler sch2 = (SmartClientHandler) e2.getAnnotation(SmartClientHandler.class);
+            int o1 = sch1 != null ? sch1.loadOrder() : 0;
+            int o2 = sch2 != null ? sch2.loadOrder() : 0;
+
+            return Integer.compare(02, 01);
+        });
+
+        final String msg = "\nSmartClient JPA handler scan was completed, %d persistable entities were found, %d will be skipped:\n"
                 .formatted(entitiesFound.size() + classesSkipped.size(), classesSkipped.size()) +
 
                 entitiesFound.stream()
@@ -219,16 +229,6 @@ public class AutomaticDSHandlerRegistrar implements Ordered, SmartLifecycle, App
                         .collect(Collectors.joining());
 
         logger.debug(msg);
-
-//        // -- determine proper load sequence
-        entitiesFound.sort( (e1,e2) -> {
-            final SmartClientHandler sch1 = (SmartClientHandler) e1.getAnnotation(SmartClientHandler.class);
-            final SmartClientHandler sch2 = (SmartClientHandler) e2.getAnnotation(SmartClientHandler.class);
-            int o1 = sch1 != null ? sch1.loadOrder() : 0;
-            int o2 = sch2 != null ? sch2.loadOrder() : 0;
-
-            return Integer.compare(01, 02);
-        });
 
         // -- register
         final HashSet<Class>  registrationFailed = new HashSet<>();
@@ -250,7 +250,7 @@ public class AutomaticDSHandlerRegistrar implements Ordered, SmartLifecycle, App
         }
 
         final int ignoredQnt =  classesSkipped.size() + classesFailed.size();
-        final String msg2 = "\nSmartClient Handler Registration was completed, %d classes were registered and  %d were ignored:\n"
+        final String msg2 = "\nSmartClient JPA Handler Registration was completed, %d persistable entities were registered and  %d were ignored:\n"
                 .formatted(entitiesFound.size() - classesFailed.size(), ignoredQnt) +
 
                 entitiesFound.stream()

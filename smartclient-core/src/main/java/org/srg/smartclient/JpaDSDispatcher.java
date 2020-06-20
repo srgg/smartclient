@@ -2,6 +2,8 @@ package org.srg.smartclient;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
 
@@ -12,22 +14,50 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class JpaDSDispatcher extends DSDispatcher {
+    private static Logger logger = LoggerFactory.getLogger(JpaDSDispatcher.class);
     private EntityManagerFactory emf;
 
     public JpaDSDispatcher(EntityManagerFactory emf) {
         this.emf = emf;
     }
 
-    public <T> void registerJPAEntity(Class<T> clazz) {
-        final Entity[] annotations =  clazz.getAnnotationsByType(Entity.class);
+    public <T> void registerJPAEntity(Class<T> entityClass) {
+        logger.trace("Building DataSource definition for entity '%s'..."
+                .formatted(
+                        entityClass.getCanonicalName()
+                )
+        );
+
+        final Entity[] annotations =  entityClass.getAnnotationsByType(Entity.class);
 
         if (annotations.length == 0) {
             throw new IllegalStateException("Class '%s' does not marked  by @Entity");
         }
 
-        final DataSource ds = describeEntity(clazz);
+        final DataSource ds = describeEntity(entityClass);
         JDBCHandler jdbcDS = createJDBCHandler(ds);
         registerDatasource(jdbcDS);
+
+        if (logger.isDebugEnabled()) {
+
+            final StringBuilder sbld = new StringBuilder();
+            try {
+                generateDSJavaScript(sbld, "<URL-PLACE-HOLDER>", ds.getId());
+            } catch (Exception e) {
+                sbld.append("Can't serialize Data Source definition, unexpected error occurred: %s"
+                        .formatted(
+                                e.getMessage()
+                        )
+                );
+            }
+
+            logger.debug("DataSource definition for entity '%s' has been built:\n%s"
+                    .formatted(
+                            entityClass.getCanonicalName(),
+                            sbld
+                    )
+            );
+        }
     }
 
     protected <T> DataSource describeEntity(Class<T> entityClass) {
@@ -45,7 +75,7 @@ public class JpaDSDispatcher extends DSDispatcher {
         final Map<String, Attribute<? super T, ?>> skippedAttrs = new HashMap<>(attrs.size());
 
         for (Attribute<? super T, ?> a :attrs) {
-            DSField f = describeField(a);
+            DSField f = describeField(ds.getId(), a);
             if (f == null) {
                 // TODO: add proper logging
                 skippedAttrs.put(a.getName(), a);
@@ -95,12 +125,12 @@ public class JpaDSDispatcher extends DSDispatcher {
                 }
 
                 if (javaTargetField.isAnnotationPresent(Transient.class) ) {
-                    targetField = describeField( javaTargetField);
+                    targetField = describeField(ds.getId(), javaTargetField);
                 } else {
                     final Attribute<?,?> targetDisplayFieldAttr =  targetEntity.getAttribute(f.getForeignDisplayField());
                     assert targetDisplayFieldAttr != null;
 
-                    targetField = describeField(targetDisplayFieldAttr);
+                    targetField = describeField(ds.getId(), targetDisplayFieldAttr);
                 }
 
                 // --
@@ -152,11 +182,11 @@ public class JpaDSDispatcher extends DSDispatcher {
         return ds;
     }
 
-    protected <T> DSField describeField(Attribute<? super T, ?> attr) {
+    protected <T> DSField describeField(String dsId, Attribute<? super T, ?> attr) {
         final Field field = (Field) attr.getJavaMember();
 
         // -- Generic
-        final DSField f = describeField(field);
+        final DSField f = describeField(dsId, field);
 
 
         // -- JPA
