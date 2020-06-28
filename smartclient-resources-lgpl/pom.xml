@@ -9,9 +9,8 @@
 	</parent>
 
 	<artifactId>smartclient-resources-lgpl</artifactId>
-
 	<properties>
-		<smartclient-lgpl.version>SmartClient_v120p_2020-06-19_LGPL</smartclient-lgpl.version>
+		<smartclient-lgpl.version>SmartClient_v121p_${YESTERDAY}_LGPL</smartclient-lgpl.version>
 	</properties>
 	<build>
 		<resources>
@@ -33,8 +32,13 @@
 						<phase>generate-resources</phase>
 						<configuration>
 							<target>
-								<echo message="downloading smartclient lgpl" />
-								<get src="https://www.smartclient.com/builds/SmartClient/12.0p/LGPL/latest/${smartclient-lgpl.version}.zip"
+								<tstamp>
+									<format property="YESTERDAY" pattern="yyyy-MM-dd" offset="-1"/>
+								</tstamp>
+
+								<echo message="downloading smartclient lgpl ${smartclient-lgpl.version}" />
+
+								<get src="https://www.smartclient.com/builds/SmartClient/12.1p/LGPL/latest/${smartclient-lgpl.version}.zip"
 								dest="${project.build.directory}"
 								skipexisting="true"
 								verbose="false"
