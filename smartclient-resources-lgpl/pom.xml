@@ -10,19 +10,21 @@
 
 	<artifactId>smartclient-resources-lgpl</artifactId>
 	<properties>
-		<smartclient-lgpl.version>SmartClient_v121p_${YESTERDAY}_LGPL</smartclient-lgpl.version>
+		<!--
+			SmartClient release date override- just  uncomment variable above, this can be used to stick
+			with a corespondent release date/version.
+
+			On the one hand - it is hard to predict a date of the next patched release, and, moreover, Isomorphic team treats
+			the patched distros as a nightly builds and removes a stale ones, - it is really hard to automate
+			distro download.
+
+			On the other hand - size of the source is bigger than allowed by GitHub, therefore distro can not be uploaded to GH.
+		  -->
+		<SMART_CLIENT_RELEASE_DATE>2020-06-27</SMART_CLIENT_RELEASE_DATE>
+
+		<smartclient-lgpl.version>SmartClient_v121p_${SMART_CLIENT_RELEASE_DATE}_LGPL</smartclient-lgpl.version>
 	</properties>
 	<build>
-		<resources>
-			<resource>
-				<directory>${project.build.directory}/generated-resources/${smartclient-lgpl.version}/smartclientRuntime/isomorphic</directory>
-				<targetPath>${project.build.outputDirectory}/assets/isomorphic</targetPath>
-				<includes>
-					<include>**/*.*</include>
-				</includes>
-			</resource>
-		</resources>
-
 		<plugins>
 			<plugin>
 				<artifactId>maven-antrun-plugin</artifactId>
@@ -31,12 +33,13 @@
 					<execution>
 						<phase>generate-resources</phase>
 						<configuration>
+							<exportAntProperties>true</exportAntProperties>
 							<target>
 								<tstamp>
-									<format property="YESTERDAY" pattern="yyyy-MM-dd" offset="-1"/>
+									<format property="SMART_CLIENT_RELEASE_DATE" pattern="yyyy-MM-dd" offset="-1"/>
 								</tstamp>
 
-								<echo message="downloading smartclient lgpl ${smartclient-lgpl.version}" />
+								<echo message="downloading smartclient lgpl ${smartclient-lgpl.version}.zip" />
 
 								<get src="https://www.smartclient.com/builds/SmartClient/12.1p/LGPL/latest/${smartclient-lgpl.version}.zip"
 								dest="${project.build.directory}"
@@ -44,7 +47,7 @@
 								verbose="false"
 								usetimestamp="true"/>
 
-								<echo message="unzipping file" />
+								<echo message="unpacking file ${smartclient-lgpl.version}.zip" />
 								<unzip src="${project.build.directory}/${smartclient-lgpl.version}.zip" dest="${project.build.directory}/generated-resources" />
 							</target>
 						</configuration>
@@ -55,6 +58,28 @@
 				</executions>
 			</plugin>
 
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<id>add-resource</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>add-resource</goal>
+						</goals>
+						<configuration>
+							<resources>
+								<resource>
+									<directory>${project.build.directory}/generated-resources/${smartclient-lgpl.version}/smartclientRuntime/isomorphic</directory>
+									<targetPath>${project.build.outputDirectory}/assets/isomorphic</targetPath>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
