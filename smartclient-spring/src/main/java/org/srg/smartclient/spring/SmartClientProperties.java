@@ -9,15 +9,15 @@ import org.srg.smartclient.DSDispatcher;
 @ConfigurationProperties(prefix = "spring.smartclient")
 public class SmartClientProperties {
 
-    private String dispatcherUrl;
+    private String dispatcherPath = "/dispatcher";
     private String sharedDirectory = DSDispatcher.DEFAULT_DS_PATH;
 
-    public String getDispatcherUrl() {
-        return dispatcherUrl;
+    public String getDispatcherPath() {
+        return dispatcherPath;
     }
 
-    public void setDispatcherUrl(String dispatcherUrl) {
-        this.dispatcherUrl = dispatcherUrl;
+    public void setDispatcherPath(String dispatcherPath) {
+        this.dispatcherPath = dispatcherPath;
     }
 
     public String getSharedDirectory() {

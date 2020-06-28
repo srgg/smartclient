@@ -141,7 +141,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
 
         Mockito.doReturn(locationDS)
                 .when(handler)
-                .getDataSource(Mockito.anyString());
+                .getDataSourceById(Mockito.anyString());
 
         final DSRequest request = new DSRequest();
 
@@ -305,7 +305,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
 
         Mockito.doReturn(locationDS)
                 .when(handler)
-                .getDataSource(Mockito.anyString());
+                .getDataSourceById(Mockito.anyString());
 
 
         DSRequest request = new DSRequest();

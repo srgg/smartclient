@@ -29,7 +29,6 @@ import reactor.core.publisher.Mono;
 import javax.sql.DataSource;
 import java.io.StringWriter;
 import java.util.Collection;
-import java.util.Collections;
 
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
@@ -47,7 +46,10 @@ import static org.springframework.web.reactive.function.server.RequestPredicates
 @Import(SmartclientConfigurerConfiguration.class)
 public class SmartClientAutoConfiguration {
     private static Logger logger = LoggerFactory.getLogger(SmartClientAutoConfiguration.class);
-    private static final String REST_URL = "/dispatcher";
+//    private static final String REST_URL = "/dispatcher";
+
+    @Autowired
+    private SmartClientProperties smartClientProperties;
 
     @Autowired
     private IDSDispatcher dsDispatcher;
@@ -94,7 +96,7 @@ public class SmartClientAutoConfiguration {
     @Bean
     public RouterFunction<ServerResponse> smartClientRESTHandler() {
         //https://www.programcreek.com/java-api-examples/?code=hantsy/spring-reactive-sample/spring-reactive-sample-master/routes/src/main/java/com/example/demo/PostHandler.java
-        return RouterFunctions.route(POST(REST_URL), r ->
+        return RouterFunctions.route(POST(smartClientProperties.getDispatcherPath()), r ->
              r.bodyToMono(String.class)
                     .flatMap( body -> this.processRequest(body))
         );
@@ -112,7 +114,7 @@ public class SmartClientAutoConfiguration {
                 .route(GET("/ds-loader"), (r) -> {
                     final StringBuilder sbld = new StringBuilder();
                     try {
-                        dsDispatcher.generateDSJavaScript(sbld, REST_URL);
+                        dsDispatcher.generateDSJavaScript(sbld, smartClientProperties.getDispatcherPath());
 
                         if (sbld.length() == 0) {
                             sbld.append("// There is no any registered smartclient data source");

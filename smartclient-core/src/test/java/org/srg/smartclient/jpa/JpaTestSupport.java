@@ -25,12 +25,14 @@ public class JpaTestSupport {
                                     .map( c -> c.getCanonicalName())
                                 .collect(Collectors.toList())
                         ),
-                        Map.of("hibernate.connection.url", "jdbc:h2:mem:testdb;USER=sa;DB_CLOSE_DELAY=-1;MODE=Oracle;TRACE_LEVEL_SYSTEM_OUT=2",
+                        Map.of("hibernate.connection.url", "jdbc:h2:mem:test;USER=sa;DB_CLOSE_DELAY=0;MODE=MySql;TRACE_LEVEL_SYSTEM_OUT=0;DATABASE_TO_LOWER=TRUE;INIT=RUNSCRIPT FROM 'classpath:test-data.sql';",
                                 "hibernate.connection.driver_class", "org.h2.Driver",
-                                "hibernate.dialect", "org.hibernate.dialect.H2Dialect",
-                                "hibernate.hbm2ddl.auto", "create-drop",
+                                "hibernate.dialect", "org.hibernate.dialect.MySQL5InnoDBDialect",
+                                "hibernate.hbm2ddl.auto", "none",
                                 "hibernate.connection.username", "sa",
-                                "hibernate.connection.password","")
+                                "hibernate.connection.password","sa",
+                                "hibernate.show_sql", "true"
+                        )
                 );
     }
 

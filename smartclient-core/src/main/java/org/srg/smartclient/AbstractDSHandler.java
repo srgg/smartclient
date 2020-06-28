@@ -1,5 +1,7 @@
 package org.srg.smartclient;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
@@ -8,11 +10,16 @@ import org.srg.smartclient.isomorphic.DataSource;
 import java.util.*;
 
 public abstract class AbstractDSHandler implements DSHandler {
-    private final DataSource datasource;
-    private final IDSDispatcher dispatcher;
+    private static Logger logger = LoggerFactory.getLogger(AbstractDSHandler.class);
 
+    private final IDSRegistry dsRegistry;
+    private final DataSource datasource;
     private transient Map<String, DSField> fieldMap;
-    private transient Map<String, String> dbFieldMap;
+
+    public AbstractDSHandler(IDSRegistry dsRegistry, DataSource datasource) {
+        this.dsRegistry = dsRegistry;
+        this.datasource = datasource;
+    }
 
     protected Map<String, DSField> getFieldMap() {
         if (fieldMap == null) {
@@ -28,32 +35,12 @@ public abstract class AbstractDSHandler implements DSHandler {
         return fieldMap;
     }
 
-    protected Map<String, String> getDbFieldMap() {
-        if (dbFieldMap == null) {
-            final Map<String, String> m = new LinkedHashMap<>();
-
-            // as a positive side effect will trigger fieldMap population
-            for ( DSField dsf: getFieldMap().values()) {
-                m.put(dsf.getDbName(), dsf.getName());
-            }
-
-            dbFieldMap = Collections.unmodifiableMap(m);
-        }
-
-        return dbFieldMap;
-    }
-
     protected DSField getField(String fieldName) {
         return getFieldMap().get(fieldName);
     }
 
     protected Collection<DSField> getFields() {
         return getFieldMap().values();
-    }
-
-    public AbstractDSHandler(IDSDispatcher dispatcher, DataSource datasource) {
-        this.dispatcher = dispatcher;
-        this.datasource = datasource;
     }
 
     protected DataSource getDataSource() {
@@ -84,6 +71,11 @@ public abstract class AbstractDSHandler implements DSHandler {
             throw new IllegalStateException();
         }
 
+        if (request.getOperationType() == null) {
+            logger.warn("DSHandler '%s': incoming request does not have operation specified, 'FETCH' operation will be performed by default.".formatted(this.getDataSource().getId()));
+            request.setOperationType(DSRequest.OperationType.FETCH);
+        }
+
         switch (request.getOperationType()) {
             case FETCH:
                 return handleFetch(request);
@@ -93,9 +85,9 @@ public abstract class AbstractDSHandler implements DSHandler {
         }
     }
 
-    protected DataSource getDataSource(String dsId) {
-        assert dispatcher != null;
-        return dispatcher.dataSource(dsId);
+    protected DataSource getDataSourceById(String dsId) {
+        assert dsRegistry != null;
+        return dsRegistry.getDataSourceById(dsId);
     }
 
     protected ImportFromRelation describeImportFrom(DSField importFromField) {
@@ -114,7 +106,7 @@ public abstract class AbstractDSHandler implements DSHandler {
                     )
             );
         }
-        final DataSource foreignDS = getDataSource(parsedIncludeFrom[0]);
+        final DataSource foreignDS = getDataSourceById(parsedIncludeFrom[0]);
 
         // -- foreign Display field
         final DSField foreignDisplayField = foreignDS.getFields().stream()

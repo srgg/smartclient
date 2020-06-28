@@ -41,13 +41,8 @@ public class BasicSmartClientConfigurer implements SmartClientConfigurer, Initia
         return dataSourceJDBCPolicy;
     }
 
-    protected IDSDispatcher buildDSDispather() {
-        return new DSDispatcher() {
-            @Override
-            protected JDBCHandler.JDBCPolicy getJdbcPolicy() {
-                return BasicSmartClientConfigurer.this.getJdbcPolicy();
-            }
-        };
+    protected IDSDispatcher buildDSDispatcher() {
+        return new DSDispatcher(BasicSmartClientConfigurer.this.getJdbcPolicy());
     }
 
     private PlatformTransactionManager buildTransactionManager() {
@@ -70,7 +65,7 @@ public class BasicSmartClientConfigurer implements SmartClientConfigurer, Initia
             dataSourceJDBCPolicy = new DataSourceJDBCPolicy(dataSource);
 
             this.transactionManager = buildTransactionManager();
-            this.dsDispatcher = buildDSDispather();
+            this.dsDispatcher = buildDSDispatcher();
         }
         catch (Exception ex) {
             throw new IllegalStateException("Unable to initialize Smart Client", ex);
