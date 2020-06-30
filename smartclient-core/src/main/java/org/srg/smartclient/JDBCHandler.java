@@ -20,8 +20,8 @@ public class JDBCHandler extends AbstractDSHandler {
 
     private final JDBCPolicy policy;
 
-    public JDBCHandler(JDBCPolicy jdbcPolicy, IDSDispatcher dispatcher, DataSource datasource) {
-        super(dispatcher, datasource);
+    public JDBCHandler(JDBCPolicy jdbcPolicy, IDSRegistry dsRegistry, DataSource datasource) {
+        super(dsRegistry, datasource);
         policy = jdbcPolicy;
     }
 

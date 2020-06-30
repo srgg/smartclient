@@ -3,6 +3,7 @@ package org.srg.smartclient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.DSField;
+import org.srg.smartclient.isomorphic.DataSource;
 
 import java.util.Collection;
 import java.util.Map;
@@ -12,18 +13,19 @@ import java.util.stream.Collectors;
  *
  * @author srg
  */
-abstract class AbstractDSDeclarationBuilder {
+abstract class DSDeclarationBuilder {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractDSDeclarationBuilder.class);
+    private DSDeclarationBuilder() {}
 
-    private class BuilderContext {
+    private static final Logger logger = LoggerFactory.getLogger(DSDeclarationBuilder.class);
+
+    private static class BuilderContext {
         private String dsName;
         private int qntGeneratedFields;
         private StringBuilder builder;
 
         public BuilderContext() {
             clear();
-            builder = null;
         }
 
         final public void clear() {
@@ -52,16 +54,20 @@ abstract class AbstractDSDeclarationBuilder {
             }
         }
     }
-    private BuilderContext context = new BuilderContext();
 
-    public String build(String dispatcherUrl, DSHandler dsHandler) throws ClassNotFoundException {
-        context.clear();
+    public static String build(String dispatcherUrl, DSHandler dsHandler) throws ClassNotFoundException {
+        return build(dispatcherUrl, dsHandler.dataSource(), dsHandler.allowAdvancedCriteria());
+    }
 
-        context.dsName = dsHandler.id();
-        final Collection<DSField> allFields = dsHandler.dataSource().getFields();
+    public static String build(String dispatcherUrl, DataSource dataSource, boolean allowAdvancedCriteria) throws ClassNotFoundException {
+
+        final BuilderContext ctx = new BuilderContext();
+
+        ctx.dsName = dataSource.getId();
+        final Collection<DSField> allFields = dataSource.getFields();
 
 
-        context.write("""                        
+        ctx.write("""                        
                 isc.RestDataSource.create({
                   ID: "%s",
                   dataFormat:"json",
@@ -78,22 +84,24 @@ abstract class AbstractDSDeclarationBuilder {
                     {operationType:"update", dataProtocol:"postMessage"}
                   ],
                   fields:[""",
-                context.dsName,
+                ctx.dsName,
                 dispatcherUrl,
-                dsHandler.allowAdvancedCriteria()
+                allowAdvancedCriteria
         );
 
-        buildFields(allFields);
+        for (DSField f : dataSource.getFields()) {
+            buildField(ctx, f);
+        }
 
-        context.write("]});\n");
-        return context.builder.toString();
+        ctx.write("]});\n");
+        return ctx.builder.toString();
     }
 
     protected static boolean isNotBlank( String value) {
         return value != null && !value.isEmpty();
     }
 
-    protected void buildField(DSField f) throws ClassNotFoundException {
+    protected static void buildField(BuilderContext ctx, DSField f) throws ClassNotFoundException {
 
 //        final Class javaClass = Utils.classForName(f.getJavaClass());
         final boolean isSubEntity = /*(f.getFields() != null && !f.getFields().isEmpty() ) ||*/ isNotBlank(f.getForeignKey());
@@ -113,25 +121,25 @@ abstract class AbstractDSDeclarationBuilder {
                 logger.warn(
                         String.format("FIELD '%s' WON'T EXPOSED through the Datasource '%s' due type mapping error.",
                         f.getName(),
-                        context.dsName),
+                        ctx.dsName),
                         ex);
                 return;
             }
         }
 
-        if (context.qntGeneratedFields > 0) {
-            context.write(",\n");
+        if (ctx.qntGeneratedFields > 0) {
+            ctx.write(",\n");
         } else {
-            context.write("\n");
+            ctx.write("\n");
         }
-        ++context.qntGeneratedFields;
+        ++ctx.qntGeneratedFields;
 
-        context.write(
+        ctx.write(
                 "\t\t{\n"
                 + "\t\t\tname:\"%s\"\n",
                 f.getName());
 
-        context.write_if_notBlank(f.getTitle(),
+        ctx.write_if_notBlank(f.getTitle(),
                 "\t\t\t, title:'%s'\n", f.getTitle());
 
 //        context.write_if(f.canEdit() != null && !f.canEdit(),
@@ -140,21 +148,15 @@ abstract class AbstractDSDeclarationBuilder {
 //        context.write_if(f.getCanFilter() !=null && !f.getCanFilter(),
 //                "\t\t\t, canFilter:false\n");
 //
-//        if(f.getValueMap() != null ){
-//            final Field.ValueMap vm = f.getValueMap();
-//            context.write("\t\t\t, valueMap:{\n");
-//            buildValueMapContent(context.builder, vm, "\t\t\t\t");
-//            context.write("\t\t\t }\n");
-//        }
 
         if (!isSubEntity) {
 
-            context.write("\t\t\t,type:\"%s\"\n",
+            ctx.write("\t\t\t,type:\"%s\"\n",
                     ft.name());
 
         } else {
             if( isNotBlank(f.getForeignKey())){
-                context.write(
+                ctx.write(
                         "\t\t\t,foreignKey:\"%s\"\n",
                         f.getForeignKey());
             } else {
@@ -188,47 +190,47 @@ abstract class AbstractDSDeclarationBuilder {
 //                context.write_if(isComposite, "}");
             }
 
-            context.write_if_notBlank(f.getDisplayField(),
+            ctx.write_if_notBlank(f.getDisplayField(),
                     "\t\t\t,displayField:\"%s\"\n",
                     f.getDisplayField()
             );
 
-            context.write_if_notBlank(f.getForeignDisplayField(),
+            ctx.write_if_notBlank(f.getForeignDisplayField(),
                     "\t\t\t,foreignDisplayField:\"%s\"\n",
                     f.getForeignDisplayField()
             );
         }
 
-            context.write_if_notBlank(f.getIncludeFrom(),
+            ctx.write_if_notBlank(f.getIncludeFrom(),
                     "\t\t\t,includeFrom:\"%s\"\n",
                     f.getIncludeFrom()
             );
 
-            context.write_if_notBlank(f.getIncludeVia(),
+            ctx.write_if_notBlank(f.getIncludeVia(),
                     "\t\t\t,includeVia:\"%s\"\n",
                     f.getIncludeVia()
             );
 
 //        context.write_if(f.getMultiple(), "\t\t\t,multiple:true\n");
 
-        context.write_if(f.isPrimaryKey(),
+        ctx.write_if(f.isPrimaryKey(),
                 "\t\t\t,hidden:true\n"
                 + "\t\t\t,primaryKey:true\n"
                 + "\t\t\t,canEdit:false\n");
 
-        context.write_if(!f.isPrimaryKey(),
+        ctx.write_if(!f.isPrimaryKey(),
                 "\t\t\t,canEdit:%b\n",
                 f.isCanEdit()
         );
 
-        context.write_if(!f.isPrimaryKey(),
+        ctx.write_if(!f.isPrimaryKey(),
                 "\t\t\t,hidden:%b\n",
                 f.isHidden()
         );
 
-        context.write_if(f.getRootValue() != null, ", rootValue: %s\n", f.getRootValue());
+        ctx.write_if(f.getRootValue() != null, ", rootValue: %s\n", f.getRootValue());
 
-        context.write_if(f.isCustomSQL(),
+        ctx.write_if(f.isCustomSQL(),
                 "\t\t\t,customSQL:%b\n",
                     f.isCustomSQL()
         );
@@ -238,6 +240,12 @@ abstract class AbstractDSDeclarationBuilder {
 //                f.getCustomSelectExpression()
 //        );
 
+//        if(f.getValueMap() != null ){
+//            final Field.ValueMap vm = f.getValueMap();
+//            context.write("\t\t\t, valueMap:{\n");
+//            buildValueMapContent(context.builder, vm, "\t\t\t\t");
+//            context.write("\t\t\t }\n");
+//        }
 
         if (f.getValueMap() != null) {
             final String s = ((Map<Object, Object>)f.getValueMap()).entrySet()
@@ -259,67 +267,9 @@ abstract class AbstractDSDeclarationBuilder {
                     .collect(Collectors.joining("\n\t\t\t   ,"));
 
 
-            context.write("\t\t\t,valueMap:[\n\t\t\t   %s\n\t\t\t]\n", s);
+            ctx.write("\t\t\t,valueMap:[\n\t\t\t   %s\n\t\t\t]\n", s);
         }
 
-        context.write("\t\t}");
+        ctx.write("\t\t}");
     }
-
-    protected void buildFields(Iterable<DSField> fields) throws ClassNotFoundException {
-        for (DSField f : fields) {
-            buildField(f);
-        }
-    }
-
-//    protected static DSField.FieldType javatype2smartclient(Class clazz) {
-//        if (clazz.equals(Integer.class)
-//                || clazz.equals(Short.class)
-//                || clazz.equals(int.class)
-//                || clazz.equals(short.class)) {
-//            return DSField.FieldType.INTEGER;
-//        }
-//
-//        if(clazz.equals(Long.class)
-//                || clazz.equals(long.class) ){
-////            return DSField.FieldType.LONG;
-//            return DSField.FieldType.INTEGER;
-//        }
-//
-//        if (clazz.equals(String.class)) {
-//            return DSField.FieldType.TEXT;
-//        }
-//
-//        if (clazz.equals(java.sql.Date.class)) {
-//            return DSField.FieldType.DATE;
-//        }
-//
-//        if( clazz.equals(Boolean.class)
-//                || clazz.equals(boolean.class) ){
-//            return DSField.FieldType.BOOLEAN;
-//        }
-//
-//        throw new RuntimeException(String.format("SmartClient -- Unmapped field type %s.", clazz.getName()));
-//    }
-
-//    protected static StringBuilder buildValueMapContent(StringBuilder builder, Field.ValueMap vm, String delimiter ){
-//        if(delimiter == null){
-//            delimiter = "\t";
-//        }
-//
-//        boolean isFirst = true;
-//        for(Field.ValueMap.Value v: vm.getValue()){
-//            builder.append(delimiter);
-//            if(!isFirst){
-//                builder.append(',');
-//            } else {
-//                isFirst = false;
-//            }
-//
-//            builder.append(String.format("%s: '%s'\n",
-//                    v.getID(),
-//                    v.getContent().replaceAll("'", "\'")));
-//        }
-//        return builder;
-//    }
-
 }

@@ -3,7 +3,6 @@ package org.srg.smartclient.spring.autoconfiguration;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.srg.smartclient.IDSDispatcher;
-import org.srg.smartclient.JDBCHandler;
 import org.srg.smartclient.JpaDSDispatcher;
 import org.srg.smartclient.spring.SmartClientProperties;
 
@@ -24,13 +23,8 @@ public class JpaSmartClientConfigurer extends BasicSmartClientConfigurer {
     }
 
     @Override
-    protected IDSDispatcher buildDSDispather() {
-        return new JpaDSDispatcher(entityManagerFactory){
-            @Override
-            protected JDBCHandler.JDBCPolicy getJdbcPolicy() {
-                return JpaSmartClientConfigurer.this.getJdbcPolicy();
-            }
-        };
+    protected IDSDispatcher buildDSDispatcher() {
+        return new JpaDSDispatcher(entityManagerFactory, JpaSmartClientConfigurer.this.getJdbcPolicy());
     }
 
     @Override

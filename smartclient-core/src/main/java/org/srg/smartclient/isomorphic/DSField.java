@@ -100,8 +100,9 @@ public class DSField {
         return hidden;
     }
 
-    public void setHidden(boolean hidden) {
+    public DSField setHidden(boolean hidden) {
         this.hidden = hidden;
+        return this;
     }
 
     public FieldType getType() {
@@ -135,31 +136,35 @@ public class DSField {
         return foreignDisplayField;
     }
 
-    public void setForeignDisplayField(String foreignDisplayField) {
+    public DSField setForeignDisplayField(String foreignDisplayField) {
         this.foreignDisplayField = foreignDisplayField;
+        return this;
     }
 
     public String getIncludeFrom() {
         return includeFrom;
     }
 
-    public void setIncludeFrom(String includeFrom) {
+    public DSField setIncludeFrom(String includeFrom) {
         this.includeFrom = includeFrom;
+        return this;
     }
 
     public String getIncludeVia() {
         return includeVia;
     }
 
-    public void setIncludeVia(String includeVia) {
+    public DSField setIncludeVia(String includeVia) {
         this.includeVia = includeVia;
+        return this;
     }
 
     public String getDisplayField() {
         return displayField;
     }
-    public void setDisplayField(String displayField) {
+    public DSField setDisplayField(String displayField) {
         this.displayField = displayField;
+        return this;
     }
 
     public String getRootValue() {
@@ -178,8 +183,9 @@ public class DSField {
         return dbName;
     }
 
-    public void setDbName(String dbName) {
+    public DSField setDbName(String dbName) {
         this.dbName = dbName;
+        return this;
     }
 
 
@@ -187,8 +193,9 @@ public class DSField {
         return canEdit;
     }
 
-    public void setCanEdit(boolean canEdit) {
+    public DSField setCanEdit(boolean canEdit) {
         this.canEdit = canEdit;
+        return this;
     }
 
     public boolean isCustomSQL() {
@@ -199,24 +206,27 @@ public class DSField {
         return customSelectExpression;
     }
 
-    public void setCustomSelectExpression(String customSelectExpression) {
+    public DSField setCustomSelectExpression(String customSelectExpression) {
         this.customSelectExpression = customSelectExpression;
+        return this;
     }
 
     public Map getValueMap() {
         return valueMap;
     }
 
-    public void setValueMap(Map valueMap) {
+    public DSField setValueMap(Map valueMap) {
         this.valueMap = valueMap;
+        return this;
     }
 
     public String getValueMapEnum() {
         return valueMapEnum;
     }
 
-    public void setValueMapEnum(String valueMapEnum) {
+    public DSField setValueMapEnum(String valueMapEnum) {
         this.valueMapEnum = valueMapEnum;
+        return this;
     }
 
     @Override

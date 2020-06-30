@@ -11,12 +11,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * @see https://isomorphic.atlassian.net/wiki/spaces/Main/pages/525155/5.+Adding+support+for+AdvancedCriteria
- * @see https://stackoverrun.com/ru/q/5891230
+ * https://isomorphic.atlassian.net/wiki/spaces/Main/pages/525155/5.+Adding+support+for+AdvancedCriteria
+ * https://stackoverrun.com/ru/q/5891230
  */
 public class AdvancedJDBCHandler extends JDBCHandler {
-    public AdvancedJDBCHandler(JDBCPolicy jdbcPolicy, IDSDispatcher dispatcher, DataSource datasource) {
-        super(jdbcPolicy, dispatcher, datasource);
+    public AdvancedJDBCHandler(JDBCPolicy jdbcPolicy, IDSRegistry dsRegistry, DataSource datasource) {
+        super(jdbcPolicy, dsRegistry, datasource);
     }
 
     @Override
