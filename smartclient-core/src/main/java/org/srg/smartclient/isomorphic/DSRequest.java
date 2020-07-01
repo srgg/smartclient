@@ -4,6 +4,9 @@ import org.apache.commons.collections.map.LinkedMap;
 
 import java.util.*;
 
+/**
+ * https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/data/DSRequest.html
+ */
 public class DSRequest implements IDSRequest {
     @Override
     public Iterator<DSRequest> iterator() {
@@ -53,6 +56,15 @@ public class DSRequest implements IDSRequest {
     private String componentId;
     private int startRow;
     private int endRow;
+
+    /**
+     * https://www.smartclient.com/smartclient-latest/isomorphic/system/reference/?id=attr..DSRequest.outputs
+     *
+     *
+     * The list of fields to return in the response, specified as a comma-separated string (eg, "foo, bar, baz"). You can use this property to indicate to the server that you are only interested in a subset of the fields that would normally be returned.
+     * Note that you cannot use this property to request a superset of the fields that would normally be returned, because that would be a security hole. It is possible to configure individual OperationBindings to return extra fields, but this must be done in the server's DataSource descriptor; it cannot be altered on the fly from the client side.
+     */
+    private String outputs;
     private TextMatchStyle textMatchStyle;
     private List<String> sortBy;
 //    private Map<String,Object> data;
@@ -155,8 +167,15 @@ public class DSRequest implements IDSRequest {
         this.oldValues = oldValues;
     }
 
-    public static class MapData extends LinkedMap implements IDSRequestData {
+    public String getOutputs() {
+        return outputs;
+    }
 
+    public void setOutputs(String outputs) {
+        this.outputs = outputs;
+    }
+
+    public static class MapData extends LinkedMap implements IDSRequestData {
 
     }
 }

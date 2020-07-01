@@ -7,6 +7,7 @@ import org.srg.smartclient.isomorphic.*;
 import java.sql.*;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 
@@ -50,9 +51,31 @@ public class JDBCHandler extends AbstractDSHandler {
                 request.getEndRow(),  request.getStartRow());
 
         // -- SELECT
+
+        // -- filter requested columns if any provided, or stick with all
+        final List<DSField> requestedFields;
+
+        if (request.getOutputs() == null || request.getOutputs().isBlank()) {
+            requestedFields = getDataSource().getFields();
+        } else {
+            requestedFields = request.getOutputs() == null ? null : Stream.of(request.getOutputs().split(","))
+                    .map(str -> str.trim().toLowerCase())
+                    .map( fn -> {
+                        final DSField dsf = getField( fn);
+
+                        if (dsf == null) {
+                            throw new RuntimeException("%s: nothing known about requested field '%s', data soure: %s."
+                                    .formatted(getClass().getSimpleName(), fn, getDataSource().getId()));
+                        }
+
+                        return dsf;
+                    } )
+                    .collect(Collectors.toList());
+        }
+
         final String selectClause = String.format("SELECT %s",
                 String.join(",\n  " ,
-                    getDataSource().getFields()
+                    requestedFields
                         .stream()
                             .map( dsf -> {
                                 // If a custom SQL snippet is provided for column -- use it
@@ -196,8 +219,9 @@ public class JDBCHandler extends AbstractDSHandler {
                         final Object[] r = new Object[getFields().size()];
 
                         int i =0;
+
                         // ORIGINAL FIELD ORDER MUST BE USED
-                        for (DSField dsf: getDataSource().getFields()) {
+                        for (DSField dsf: requestedFields) {
                             Object v = rs.getObject(i + 1);
                             if (rs.wasNull()) {
                                 v = null;
@@ -213,7 +237,7 @@ public class JDBCHandler extends AbstractDSHandler {
         });
 
         return DSResponse.success(request.getStartRow(), request.getStartRow() + data.size(), totalRows[0],
-                dataSource().getFields(),
+                requestedFields,
                 data);
     }
 

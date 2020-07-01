@@ -62,6 +62,49 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
     }
 
     @Test
+    public void fetchSpecifiedFields() throws Exception {
+        withExtraFields(ExtraField.Email);
+
+        DSRequest request = new DSRequest();
+        request.setOutputs("id, email");
+        final DSResponse response = handler.handleFetch(request);
+
+        JsonTestSupport.assertJsonEquals("""
+            {
+               response:{
+                  status:0,
+                  startRow:0,
+                  endRow:5,
+                  totalRows:5,
+                  data:[
+                     {
+                        id:1,
+                        email:'u1@acmE.org'
+                     },
+                     {
+                        id:2,
+                        email:'u2@acme.org'
+                     },
+                     {
+                        id:3,
+                        email:'u3@emca.org'
+                     },
+                     {
+                        id:4,
+                        email:'u4@acmE.org'
+                     },
+                     {
+                        id:5,
+                        email:'u5@acme.org'
+                     }
+                  ]
+               }
+            }""", response
+        );
+    }
+
+
+    @Test
     public void fetchPaginated() throws Exception {
         // -- the 1'st page
         DSRequest request = new DSRequest();
