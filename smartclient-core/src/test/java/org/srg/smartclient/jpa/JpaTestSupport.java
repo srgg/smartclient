@@ -25,7 +25,9 @@ public class JpaTestSupport {
                                     .map( c -> c.getCanonicalName())
                                 .collect(Collectors.toList())
                         ),
-                        Map.of("hibernate.connection.url", "jdbc:h2:mem:test;USER=sa;DB_CLOSE_DELAY=0;MODE=MySql;TRACE_LEVEL_SYSTEM_OUT=0;DATABASE_TO_LOWER=TRUE;INIT=RUNSCRIPT FROM 'classpath:test-data.sql';",
+                        Map.of(
+//                                "hibernate.connection.url", "jdbc:h2:mem:test;USER=sa;DB_CLOSE_DELAY=0;MODE=MySql;TRACE_LEVEL_SYSTEM_OUT=0;DATABASE_TO_LOWER=TRUE;INIT=RUNSCRIPT FROM 'classpath:test-data.sql';",
+                                "hibernate.connection.url", "jdbc:h2:mem:test;USER=sa;DB_CLOSE_DELAY=0;MODE=MySql;TRACE_LEVEL_SYSTEM_OUT=0;DATABASE_TO_LOWER=TRUE;",
                                 "hibernate.connection.driver_class", "org.h2.Driver",
                                 "hibernate.dialect", "org.hibernate.dialect.MySQL5InnoDBDialect",
                                 "hibernate.hbm2ddl.auto", "none",

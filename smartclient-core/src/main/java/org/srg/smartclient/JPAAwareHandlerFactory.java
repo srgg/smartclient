@@ -10,6 +10,7 @@ import org.srg.smartclient.isomorphic.DataSource;
 import javax.persistence.*;
 import javax.persistence.metamodel.*;
 import java.lang.reflect.Field;
+import java.lang.reflect.Member;
 import java.util.*;
 
 public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
@@ -32,7 +33,7 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
 
             String dsDefinition;
             try {
-                dsDefinition = DSDeclarationBuilder.build("<URL-PLACE-HOLDER>", ds, true);
+                dsDefinition = DSDeclarationBuilder.build(dsRegistry, "<URL-PLACE-HOLDER>", ds, true);
             } catch (Exception e) {
                 dsDefinition = "Can't serialize Data Source definition, unexpected error occurred: %s"
                         .formatted(
@@ -196,19 +197,18 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
 
 
         // -- JPA
-        final JoinColumn jca = field.getAnnotation(JoinColumn.class);
+        final JoinColumn joinColumnAnnotation = field.getAnnotation(JoinColumn.class);
 
-        if (jca != null
-                && !jca.name().isBlank()) {
-            f.setDbName(jca.name());
+        if (joinColumnAnnotation != null
+                && !joinColumnAnnotation.name().isBlank()) {
+            f.setDbName(joinColumnAnnotation.name());
         }
 
 
         // --
 
         final DSField.FieldType preserveType = f.getType();
-        if (attr instanceof SingularAttribute) {
-            SingularAttribute sa = (SingularAttribute) attr;
+        if (attr instanceof SingularAttribute sa) {
             f.setPrimaryKey(sa.isId());
             f.setRequired(!sa.isOptional());
 
@@ -227,15 +227,57 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                         case MANY_TO_ONE:
                         case ONE_TO_ONE:
                             final DSField fff =  getDSIDField(mm, type.getJavaType());
+
+                            // -- foreign key
+                            final String foreignDataSourceId = getDsId(type.getJavaType());
+                            final String foreignFieldName;
+                            if (joinColumnAnnotation != null) {
+                                foreignFieldName = fff.getName();
+                            } else {
+                                /**
+                                 * As soon as entity does not declare any mapping for the attribute,
+                                 * by default
+                                 */
+                                final Member member = attr.getJavaMember();
+                                final Field memberField = (Field) member;
+
+                                switch (pat) {
+                                    case ONE_TO_ONE:
+                                        final OneToOne oneToOne = memberField.getAnnotation(OneToOne.class);
+
+                                        if (oneToOne == null || oneToOne.mappedBy() == null || oneToOne.mappedBy().isBlank()) {
+                                            throw new IllegalStateException();
+                                        }
+
+                                        foreignFieldName = oneToOne.mappedBy();
+                                        break;
+
+                                    default:
+                                        throw new IllegalStateException();
+                                }
+                            }
+
                             f.setForeignKey(
-                                    "%s.%s"
-                                            .formatted(
-                                                    getDsId(type.getJavaType()),
-                                                    fff.getName()
-                                            )
+                                "%s.%s"
+                                    .formatted(
+                                            foreignDataSourceId,
+                                            foreignFieldName
+                                    )
                             );
 
-                            f.setType(fff.getType());
+                            // -- field type
+
+                            if ((f.getForeignDisplayField() == null
+                                    || f.getForeignDisplayField().isBlank()) && joinColumnAnnotation == null) {
+
+                                /**
+                                 * As soon as entity does not declare any mapping for the attribute,
+                                 * by default entire foreign entity  will be fetched
+                                 */
+                                f.setType(DSField.FieldType.ENTITY);
+                            } else {
+                                f.setType(fff.getType());
+                            }
                             break;
 
                         default:
@@ -250,9 +292,46 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                     break;
 
             }
+        } else if (attr instanceof PluralAttribute pa){
+            final Type<T> type = pa.getElementType();
+            final Attribute.PersistentAttributeType pat = attr.getPersistentAttributeType();
+
+            switch (type.getPersistenceType()) {
+                case ENTITY:
+                    switch (pat) {
+                        case ONE_TO_MANY:
+                            final String s = getDsId(type.getJavaType());
+                            final Class<?> javaType = type.getJavaType();
+                            f.setMultiple(true);
+
+                            final DSField fff =  getDSIDField(mm, javaType);
+
+                            f.setForeignKey(
+                                    "%s.%s"
+                                            .formatted(
+                                                    getDsId(javaType),
+                                                    fff.getName()
+                                            )
+                            );
+
+                            f.setType(DSField.FieldType.ENTITY);
+                            break;
+
+                        default:
+                            return null;
+//                            throw new IllegalStateException("Unsupported PersistentAttributeType '%s'.".formatted(
+//                                    pat
+//                            ));
+                    }
+                    break;
+
+                default:
+                    Utils.throw_it("Unsupported Persistence Type %s.", type.getPersistenceType());
+            }
+
+//            return null;
         } else {
-            return null;
-//            Utils.throw_it("Unsupported Attribute Type %s.", attr.getClass());
+            Utils.throw_it("Unsupported Attribute Type %s.", attr.getClass());
         }
 
         if (preserveType != null) {

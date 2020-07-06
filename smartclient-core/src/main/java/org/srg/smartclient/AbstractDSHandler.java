@@ -9,7 +9,7 @@ import org.srg.smartclient.isomorphic.DataSource;
 
 import java.util.*;
 
-public abstract class AbstractDSHandler implements DSHandler {
+public abstract class AbstractDSHandler extends RelationSupport implements DSHandler {
     private static Logger logger = LoggerFactory.getLogger(AbstractDSHandler.class);
 
     private final IDSRegistry dsRegistry;
@@ -85,93 +85,27 @@ public abstract class AbstractDSHandler implements DSHandler {
         }
     }
 
+    protected DSHandler getDataSourceHandlerById(String id) {
+        final DSDispatcher dispatcher = (DSDispatcher) dsRegistry;
+        final DSHandler dsHandler = dispatcher.getHandlerByName(id);
+        return dsHandler;
+    }
+
     protected DataSource getDataSourceById(String dsId) {
         assert dsRegistry != null;
         return dsRegistry.getDataSourceById(dsId);
     }
 
     protected ImportFromRelation describeImportFrom(DSField importFromField) {
-        if (!importFromField.isIncludeField()) {
-            throw new IllegalStateException();
-        }
+        return RelationSupport.describeImportFrom(dsId -> this.getDataSourceById(dsId), this.getDataSource(), importFromField);
+    }
 
-        // -- foreign DS
-        final String parsedIncludeFrom[] = importFromField.getIncludeFrom().split("\\.");
-        if (parsedIncludeFrom.length != 2) {
-            throw new IllegalStateException("DataSource '%s' field '%s', all 'includeFrom' fields must be prefixed with DataSource ID, but actual value is '%s'."
-                    .formatted(
-                            this.getDataSource().getId(),
-                            importFromField.getName(),
-                            importFromField.getIncludeFrom()
-                    )
-            );
-        }
-        final DataSource foreignDS = getDataSourceById(parsedIncludeFrom[0]);
-
-        // -- foreign Display field
-        final DSField foreignDisplayField = foreignDS.getFields().stream()
-                .filter( f -> f.getName().equals( parsedIncludeFrom[1] ))
-                .reduce( (d1, d2) -> {
-                    throw new IllegalStateException("DataSource '%s' has  not unique field name '%s'."
-                            .formatted(
-                                    foreignDS.getId(),
-                                    parsedIncludeFrom[1]
-                            )
-                    );
-                })
-                .get();
-
-
-        // -- source field
-        final DSField sourceField = getFields().stream()
-                .filter( f -> f.getDisplayField() != null
-                        && f.getDisplayField().equals(importFromField.getName())
-                )
-                .reduce((d1, d2) -> {
-                    throw new IllegalStateException("DataSource '%s' can't determine a sourceField for importFromField  '%s'."
-                            .formatted(
-                                    foreignDS.getId(),
-                                    importFromField.getName()
-                            )
-                    );
-                })
-                .get();
-
-        // -- foreign key
-        final String parsedForeignKey[] = sourceField.getForeignKey().split("\\.");
-        if (parsedForeignKey.length != 2) {
-            throw new IllegalStateException("DataSource '%s' field '%s', 'foreignKey' field should be prefixed with DataSource ID, but the actual value is '%s'."
-                    .formatted(
-                            this.getDataSource().getId(),
-                            sourceField.getName(),
-                            sourceField.getForeignKey()
-                    )
-            );
-        }
-
-        if (!foreignDS.getId().equals( parsedForeignKey[0])) {
-            throw new IllegalStateException("");
-        }
-
-        final DSField foreignKey = foreignDS.getFields().stream()
-                .filter( f -> f.getDbName().equals( parsedForeignKey[1] ))
-                .reduce( (d1, d2) -> {
-                    throw new IllegalStateException("DataSource '%s' has  not unique field name '%s'."
-                            .formatted(
-                                    foreignDS.getId(),
-                                    parsedForeignKey[1]
-                            )
-                    );
-                })
-                .get();
-
-        return new ImportFromRelation(sourceField, foreignDS, foreignKey, foreignDisplayField);
+    protected ForeignKeyRelation describeForeignKey(DSField foreignKeyField) {
+        return RelationSupport.describeForeignKey(dsId -> this.getDataSourceById(dsId), this.getDataSource(), foreignKeyField);
     }
 
     @Override
     public DataSource dataSource() {
         return this.datasource;
     }
-
-    protected static record ImportFromRelation(DSField sourceField, DataSource foreignDataSource, DSField foreignKey, DSField foreignDisplay){}
 }

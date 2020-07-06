@@ -40,7 +40,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                     try (Connection connection = jdbcDataSource.getConnection()) {
                         callback.apply(connection);
                     }
-                }, null, userDS)
+                }, null, employeeDS)
         );
     }
 

@@ -19,12 +19,17 @@ abstract class DSDeclarationBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(DSDeclarationBuilder.class);
 
-    private static class BuilderContext {
+    private static class BuilderContext extends RelationSupport {
         private String dsName;
         private int qntGeneratedFields;
         private StringBuilder builder;
+        private final IDSRegistry dsRegistry;
+        private final DataSource dataSource;
 
-        public BuilderContext() {
+        public BuilderContext(IDSRegistry dsRegistry, DataSource dataSource) {
+            this.dsRegistry = dsRegistry;
+            this.dataSource = dataSource;
+
             clear();
         }
 
@@ -53,15 +58,23 @@ abstract class DSDeclarationBuilder {
                 write(fmt, args);
             }
         }
+
+//        public ImportFromRelation describeImportFrom(DSField importFromField) {
+//            return RelationSupport.describeImportFrom(this.dsRegistry, this.dataSource, importFromField);
+//        }
+
+        public ForeignKeyRelation describeForeignKey(DSField foreignKeyField) {
+            return RelationSupport.describeForeignKey(this.dsRegistry, this.dataSource, foreignKeyField);
+        }
     }
 
-    public static String build(String dispatcherUrl, DSHandler dsHandler) throws ClassNotFoundException {
-        return build(dispatcherUrl, dsHandler.dataSource(), dsHandler.allowAdvancedCriteria());
+    public static String build(IDSRegistry dsRegistry, String dispatcherUrl, DSHandler dsHandler) throws ClassNotFoundException {
+        return build(dsRegistry, dispatcherUrl, dsHandler.dataSource(), dsHandler.allowAdvancedCriteria());
     }
 
-    public static String build(String dispatcherUrl, DataSource dataSource, boolean allowAdvancedCriteria) throws ClassNotFoundException {
+    public static String build(IDSRegistry dsRegistry, String dispatcherUrl, DataSource dataSource, boolean allowAdvancedCriteria) throws ClassNotFoundException {
 
-        final BuilderContext ctx = new BuilderContext();
+        final BuilderContext ctx = new BuilderContext(dsRegistry, dataSource);
 
         ctx.dsName = dataSource.getId();
         final Collection<DSField> allFields = dataSource.getFields();
@@ -89,7 +102,7 @@ abstract class DSDeclarationBuilder {
                 allowAdvancedCriteria
         );
 
-        for (DSField f : dataSource.getFields()) {
+        for (DSField f : allFields) {
             buildField(ctx, f);
         }
 
@@ -127,12 +140,11 @@ abstract class DSDeclarationBuilder {
             }
         }
 
-        if (ctx.qntGeneratedFields > 0) {
+        if (ctx.qntGeneratedFields++ > 0) {
             ctx.write(",\n");
         } else {
             ctx.write("\n");
         }
-        ++ctx.qntGeneratedFields;
 
         ctx.write(
                 "\t\t{\n"
@@ -190,6 +202,19 @@ abstract class DSDeclarationBuilder {
 //                context.write_if(isComposite, "}");
             }
 
+            if (DSField.FieldType.ENTITY.equals(f.getType())) {
+                // Due to the SmartClient documentation,it is required to specify a  Data Source Id as a field type:
+                //      "declares its "type" to be the ID of the related DataSource"
+                //
+                // https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/JpaHibernateRelations.html
+
+
+                final RelationSupport.ForeignKeyRelation foreignKeyRelation = ctx.describeForeignKey(f);
+                ctx.write("\t\t\t,type:\"%s\"\n",
+                        foreignKeyRelation.foreign().dataSourceId());
+
+            }
+
             ctx.write_if_notBlank(f.getDisplayField(),
                     "\t\t\t,displayField:\"%s\"\n",
                     f.getDisplayField()
@@ -201,15 +226,15 @@ abstract class DSDeclarationBuilder {
             );
         }
 
-            ctx.write_if_notBlank(f.getIncludeFrom(),
-                    "\t\t\t,includeFrom:\"%s\"\n",
-                    f.getIncludeFrom()
-            );
+        ctx.write_if_notBlank(f.getIncludeFrom(),
+                "\t\t\t,includeFrom:\"%s\"\n",
+                f.getIncludeFrom()
+        );
 
-            ctx.write_if_notBlank(f.getIncludeVia(),
-                    "\t\t\t,includeVia:\"%s\"\n",
-                    f.getIncludeVia()
-            );
+        ctx.write_if_notBlank(f.getIncludeVia(),
+                "\t\t\t,includeVia:\"%s\"\n",
+                f.getIncludeVia()
+        );
 
 //        context.write_if(f.getMultiple(), "\t\t\t,multiple:true\n");
 

@@ -52,7 +52,12 @@ public class DSDispatcher implements IDSDispatcher {
 
     @Override
     public DataSource getDataSourceById(String dsId) {
-        return getHandlerByName(dsId).dataSource();
+        final DSHandler dsHandler = datasourceMap.get(dsId);
+        if (dsHandler == null){
+            return null;
+        }
+
+        return dsHandler.dataSource();
     }
 
     protected DSResponse handleRequest(DSRequest request) {
@@ -151,7 +156,7 @@ public class DSDispatcher implements IDSDispatcher {
 
         for (String name : dsId) {
             final DSHandler ds = getHandlerByName(name);
-            out.append(DSDeclarationBuilder.build(dispatcherUrl, ds));
+            out.append(DSDeclarationBuilder.build(this, dispatcherUrl, ds));
         }
         return out;
     }

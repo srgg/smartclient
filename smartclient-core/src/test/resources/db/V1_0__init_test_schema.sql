@@ -6,8 +6,6 @@ CREATE TABLE simpleentity
     CONSTRAINT pk_simple_entity PRIMARY KEY (id)
 );
 
--- DROP TABLE IF EXISTS locations;
-
 CREATE TABLE locations(
     id          INT AUTO_INCREMENT,
     country     VARCHAR(40),
@@ -16,34 +14,30 @@ CREATE TABLE locations(
     CONSTRAINT pk_locations PRIMARY KEY (id)
 );
 
--- DROP TABLE IF EXISTS users;
-
-CREATE TABLE users (
+CREATE TABLE employee (
     id              INT AUTO_INCREMENT,
     name            VARCHAR(100),
     email           VARCHAR(50),
     location_id     INT,
     firedAt         TIMESTAMP(6),
 
-    CONSTRAINT pk_users PRIMARY KEY (id),
-    CONSTRAINT fk_users_locations foreign key (location_id) REFERENCES locations(id)
+    CONSTRAINT pk_employee PRIMARY KEY (id),
+    CONSTRAINT fkEmployeeLocations foreign key (location_id) REFERENCES locations(id)
 );
 
--- Test Data
+CREATE TABLE employee_role
+(
+    employee_id int NOT NULL,
+    role ENUM ('EMPLOYEE', 'PM', 'AM', 'C-Level', 'FM', 'Admin', 'Developer') NOT NULL,
 
-INSERT INTO locations VALUES (1, 'Ukraine', 'Kharkiv');
-INSERT INTO locations VALUES (2, 'Ukraine', 'Lviv');
-INSERT INTO locations VALUES (3, 'USA', 'USA');
+    CONSTRAINT pkEmployeeRole PRIMARY KEY  (employee_id, role),
 
+    CONSTRAINT fkEmployeeId
+        FOREIGN KEY (employee_id) REFERENCES employee (id),
 
-INSERT INTO users VALUES (1, 'user1', 'u1@acmE.org', 1, '2000-01-02 03:04:05');
-INSERT INTO users VALUES (2, 'user2', 'u2@acme.org', 2, null);
-INSERT INTO users VALUES (3, 'user3', 'u3@emca.org', 3, null);
-INSERT INTO users VALUES (4, 'user4', 'u4@acmE.org', 1, null);
-INSERT INTO users VALUES (5, 'user5', 'u5@acme.org', 2, '2000-05-04 03:02:01');
+    CONSTRAINT uqUserRole UNIQUE (employee_id, role)
+);
 
--- Schema for JPA Tests
--- DROP TABLE IF EXISTS client;
 
 CREATE TABLE client
 (
@@ -52,7 +46,6 @@ CREATE TABLE client
 
     CONSTRAINT pk_clients PRIMARY KEY (id)
 );
-
 
 CREATE TABLE client_data
 (
@@ -66,7 +59,6 @@ CREATE TABLE client_data
         FOREIGN KEY (client_id) REFERENCES CLIENT (id)
 );
 
--- DROP TABLE IF EXISTS project;
 CREATE TABLE project
 (
     id INT NOT NULL,
@@ -83,8 +75,31 @@ CREATE TABLE project
 --         foreign key (manager_id) references employee (id)
 );
 
+CREATE TABLE project_team
+(
+    project_id INT NOT NULL,
+    employee_id INT NOT NULL,
 
--- Test Data for JPA
+    primary key (project_id, employee_id),
+
+    constraint fkProjectTeamProject
+        foreign key (project_id) references project (id),
+
+    constraint fkProjectTeamEmployee
+        foreign key (employee_id) references employee (id)
+);
+
+INSERT INTO locations VALUES (1, 'Ukraine', 'Kharkiv');
+INSERT INTO locations VALUES (2, 'Ukraine', 'Lviv');
+INSERT INTO locations VALUES (3, 'USA', 'USA');
+
+
+INSERT INTO employee VALUES (1, 'user1', 'u1@acmE.org', 1, '2000-01-02 03:04:05');
+INSERT INTO employee VALUES (2, 'user2', 'u2@acme.org', 2, null);
+INSERT INTO employee VALUES (3, 'user3', 'u3@emca.org', 3, null);
+INSERT INTO employee VALUES (4, 'user4', 'u4@acmE.org', 1, null);
+INSERT INTO employee VALUES (5, 'user5', 'u5@acme.org', 2, '2000-05-04 03:02:01');
+
 
 INSERT INTO client VALUES (1, 'client 1');
 INSERT INTO client VALUES (2, 'client 2');
@@ -97,3 +112,12 @@ INSERT INTO project VALUES (2, 1, 'Project 2 for client 1');
 INSERT INTO project VALUES (3, 2, 'Project 1 for client 2');
 INSERT INTO project VALUES (4, 2, 'Project 2 for client 2');
 INSERT INTO project VALUES (5, 2, 'Project 3 for client 2');
+
+INSERT INTO project_team VALUES (1, 1);
+INSERT INTO project_team VALUES (1, 2);
+
+INSERT INTO project_team VALUES (2, 2);
+INSERT INTO project_team VALUES (2, 3);
+
+INSERT INTO project_team VALUES (3, 4);
+INSERT INTO project_team VALUES (3, 5);

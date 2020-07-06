@@ -33,8 +33,15 @@ public class DSField {
         PHONENUMBER,
         SEQUENCE,
         TEXT,
-        TIME
+        TIME,
+
+        /**
+         * IS not originally supported by SmartClient.
+         * Can be used ONLY in conjunction with foreignKey
+         */
+        ENTITY
     }
+
     private String name;
     private String title;
     private boolean required;
@@ -48,6 +55,7 @@ public class DSField {
     private String displayField;
     private String rootValue;
     private String dbName;
+    private boolean multiple;
 
     /**
      * https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/CustomQuerying.html
@@ -227,6 +235,14 @@ public class DSField {
     public DSField setValueMapEnum(String valueMapEnum) {
         this.valueMapEnum = valueMapEnum;
         return this;
+    }
+
+    public boolean isMultiple() {
+        return multiple;
+    }
+
+    public void setMultiple(boolean multiple) {
+        this.multiple = multiple;
     }
 
     @Override

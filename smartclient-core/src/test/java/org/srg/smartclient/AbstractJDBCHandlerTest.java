@@ -50,7 +50,7 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                 {
                     name: "calculated",
                     type: "text",
-                    customSelectExpression: "CONCAT(users.id, '_', users.name)"                    
+                    customSelectExpression: "CONCAT(employee.id, '_', employee.name)"                    
                 }
             ]
             """);
@@ -85,11 +85,11 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
           ]
         }""";
 
-    private static String UserDSDescription = """
+    private static String EmployeeDSDescription = """
         {
-           id: 'usersDS',
+           id: 'employeeDS',
            serverType: 'sql',
-           tableName: 'users',
+           tableName: 'employee',
            fields: [
                {
                    name: 'id',
@@ -106,7 +106,7 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
 
     protected JdbcDataSource jdbcDataSource = new JdbcDataSource();
     protected DataSource locationDS;
-    protected DataSource userDS;
+    protected DataSource employeeDS;
 
     protected H handler;
 
@@ -121,12 +121,12 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
 
     @BeforeEach
     public void setupDataSources() throws Exception {
-        jdbcDataSource.setURL("jdbc:h2:mem:test:˜/test;INIT=RUNSCRIPT FROM 'classpath:test-data.sql'");
+        jdbcDataSource.setURL("jdbc:h2:mem:test:˜/test;INIT=RUNSCRIPT FROM 'classpath:db/V1_0__init_test_schema.sql'");
         jdbcDataSource.setUser("sa");
         jdbcDataSource.setPassword("sa");
 
         locationDS = JsonTestSupport.fromJSON(DataSource.class, LocationDSDescription);
-        userDS = JsonTestSupport.fromJSON(DataSource.class, UserDSDescription);
+        employeeDS = JsonTestSupport.fromJSON(DataSource.class, EmployeeDSDescription);
 
         handler = initHandler(jdbcDataSource);
     }

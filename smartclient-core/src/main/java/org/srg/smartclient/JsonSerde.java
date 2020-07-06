@@ -55,36 +55,10 @@ public class JsonSerde {
         }
     }
 
-    private static class DSResponseSerialize extends  JsonSerializer<DSResponse> {
+    private static class RawDataResponseSerializer extends JsonSerializer<DSResponseDataContainer.RawDataResponse> {
+
         @Override
-        public void serialize(DSResponse dsResponse, JsonGenerator jg, SerializerProvider serializerProvider) throws IOException {
-            jg.writeStartObject();
-            jg.writeFieldName("response");
-            jg.writeStartObject();
-            jg.writeNumberField("status", dsResponse.getStatus());
-            jg.writeNumberField("startRow", dsResponse.getStartRow());
-            jg.writeNumberField("endRow", dsResponse.getEndRow());
-            jg.writeNumberField("totalRows", dsResponse.getTotalRows());
-
-            final DSResponseDataContainer rc = dsResponse.getData();
-            switch (dsResponse.getData().getResponseType()) {
-                case GENERAL_ERROR:
-                    jg.writeStringField("data", rc.getGeneralFailureMessage());
-                    break;
-
-                case RAW:
-                    jg.writeFieldName("data");
-                    serializeRawResponse(rc, jg);
-                    break;
-
-            }
-            jg.writeEndObject();
-            jg.writeEndObject();
-        }
-
-        private void serializeRawResponse(DSResponseDataContainer rc, JsonGenerator jg) throws IOException {
-            final DSResponseDataContainer.RawDataResponse rr = rc.getRawDataResponse();
-
+        public void serialize(DSResponseDataContainer.RawDataResponse rr, JsonGenerator jg, SerializerProvider serializers) throws IOException {
             jg.writeStartArray();
             for (Object r[]: rr.getData()) {
                 jg.writeStartObject();
@@ -114,7 +88,7 @@ public class JsonSerde {
 
                 case INTENUM:
 
-                    // TODO: write ENUM name instead of  writing ordinal
+                    // TODO: write ENUM name instead of  writing ordina
                 case ENUM:
 //                    jsonGenerator.writeString(value.toString());
                     jsonGenerator.writeObject(value);
@@ -131,9 +105,41 @@ public class JsonSerde {
                     jsonGenerator.writeString(s2);
                     break;
 
+                case ENTITY:
+                    jsonGenerator.writeObject(value);
+                    break;
+
                 default:
                     throw new IllegalStateException("Unsupported DSField type '%s'.".formatted(field.getType()));
             }
+        }
+    }
+
+    private static class DSResponseSerialize extends  JsonSerializer<DSResponse> {
+        @Override
+        public void serialize(DSResponse dsResponse, JsonGenerator jg, SerializerProvider serializerProvider) throws IOException {
+            jg.writeStartObject();
+            jg.writeFieldName("response");
+            jg.writeStartObject();
+            jg.writeNumberField("status", dsResponse.getStatus());
+            jg.writeNumberField("startRow", dsResponse.getStartRow());
+            jg.writeNumberField("endRow", dsResponse.getEndRow());
+            jg.writeNumberField("totalRows", dsResponse.getTotalRows());
+
+            final DSResponseDataContainer rc = dsResponse.getData();
+            switch (dsResponse.getData().getResponseType()) {
+                case GENERAL_ERROR:
+                    jg.writeStringField("data", rc.getGeneralFailureMessage());
+                    break;
+
+                case RAW:
+                    jg.writeFieldName("data");
+                    jg.writeObject(rc.getRawDataResponse());
+                    break;
+
+            }
+            jg.writeEndObject();
+            jg.writeEndObject();
         }
     }
 
@@ -141,6 +147,7 @@ public class JsonSerde {
         final ObjectMapper mapper = new ObjectMapper();
         final SimpleModule module = new SimpleModule("DSResponse-Serialization", Version.unknownVersion());
         module.addSerializer(DSResponse.class, new DSResponseSerialize() );
+        module.addSerializer(DSResponseDataContainer.RawDataResponse.class, new RawDataResponseSerializer());
         module.addDeserializer(IDSRequestData.class, new DSRequestDeserializer());
 
         mapper.registerModule(module);

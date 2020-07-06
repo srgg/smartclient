@@ -14,13 +14,15 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
 
     @Override
     protected JDBCHandler initHandler(JdbcDataSource dataSource) {
-        return Mockito.spy(
+        final JDBCHandler spy = Mockito.spy(
                 new JDBCHandler((database, callback) -> {
                     try (Connection connection = jdbcDataSource.getConnection()) {
                         callback.apply(connection);
                     }
-                }, null, userDS)
+                }, null, employeeDS)
         );
+
+        return spy;
     }
 
     @Test

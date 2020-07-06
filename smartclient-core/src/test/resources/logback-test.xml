@@ -9,8 +9,10 @@
         </encoder>
     </appender>
 
-    <logger name="org.hibernate.cfg" level="INFO" />
+    <logger name="org.hibernate" level="WARN" />
+    <logger name="org.hibernate.cfg" level="WARN" />
     <logger name="org.srg.smartclient" level="DEBUG" />
+    <logger name="org.flywaydb.core.Flyway" level="WARN"/>
 
     <!-- turn OFF all logging (children can override) -->
     <root level="OFF">
