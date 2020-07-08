@@ -182,6 +182,15 @@ public class DSDispatcher implements IDSDispatcher {
                 .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
 
         final DataSource ds = mapper.readValue(file, DataSource.class);
+
+        if (DataSource.DSServerType.SQL.equals(ds.getServerType())
+            && ( ds.getTableName() == null || ds.getTableName().isBlank()) ) {
+
+            throw new RuntimeException("Can't load Data source '%s': Table name must be specified for a sql-based datasource."
+                .formatted(ds.getId())
+            );
+        }
+
         return createHandler(ds);
     }
 
