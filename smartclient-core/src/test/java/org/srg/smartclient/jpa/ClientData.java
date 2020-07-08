@@ -1,12 +1,11 @@
 package org.srg.smartclient.jpa;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import org.srg.smartclient.annotations.SmartClientField;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.OneToOne;
+import javax.persistence.*;
 
+@Table(name = "client_data")
 @Entity
 public class ClientData {
         @Id
@@ -15,6 +14,7 @@ public class ClientData {
         @SmartClientField(foreignDisplayField = "name")
         @OneToOne
         @JoinColumn(name = "client_id", nullable = false)
+        @JsonBackReference
         private Client client;
 
         private String data;

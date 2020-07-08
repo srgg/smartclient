@@ -66,31 +66,6 @@ public class RelationSupport {
 
         // -- foreign DS
         final ForeignRelation foreignRelation = describeForeignRelation(idsRegistry, importFromField.getIncludeFrom());
-//        final String parsedIncludeFrom[] = importFromField.getIncludeFrom().split("\\.");
-//        if (parsedIncludeFrom.length != 2) {
-//            throw new IllegalStateException("DataSource '%s' field '%s', all 'includeFrom' fields must be prefixed with DataSource ID, but actual value is '%s'."
-//                    .formatted(
-//                            dataSource.getId(),
-//                            importFromField.getName(),
-//                            importFromField.getIncludeFrom()
-//                    )
-//            );
-//        }
-//        final DataSource foreignDS = idsRegistry.getDataSourceById(parsedIncludeFrom[0]);
-//
-//        // -- foreign Display field
-//        final DSField foreignDisplayField = foreignDS.getFields().stream()
-//                .filter( f -> f.getName().equals( parsedIncludeFrom[1] ))
-//                .reduce( (d1, d2) -> {
-//                    throw new IllegalStateException("DataSource '%s' has  not unique field name '%s'."
-//                            .formatted(
-//                                    foreignDS.getId(),
-//                                    parsedIncludeFrom[1]
-//                            )
-//                    );
-//                })
-//                .get();
-
 
         // -- source field
         final DSField sourceField = dataSource.getFields().stream()
@@ -110,7 +85,8 @@ public class RelationSupport {
         // -- foreign key
         final String parsedForeignKey[] = sourceField.getForeignKey().split("\\.");
         if (parsedForeignKey.length != 2) {
-            throw new IllegalStateException("DataSource '%s' field '%s', 'foreignKey' field should be prefixed with DataSource ID, but the actual value is '%s'."
+            throw new RuntimeException(("Can't determine ImportFromRelation for '%s.%s': " +
+                    "invalid foreignKey value '%s'; 'foreignKey' field MUST be prefixed with a DataSource ID.")
                     .formatted(
                             dataSource.getId(),
                             sourceField.getName(),
@@ -123,11 +99,25 @@ public class RelationSupport {
             throw new IllegalStateException("");
         }
 
+        if (foreignRelation.dataSource == null) {
+            throw new RuntimeException(("Can't determine ImportFromRelation for '%s.%s': " +
+                    "nothing known about a foreign data source '%s'.")
+                    .formatted(
+                            dataSource.getId(),
+                            sourceField.getName(),
+                            foreignRelation.dataSourceId
+                    )
+            );
+        }
+
         final DSField foreignKey = foreignRelation.dataSource.getFields().stream()
-                .filter( f -> f.getDbName().equals( parsedForeignKey[1] ))
+                .filter( f -> f.getName().equals( parsedForeignKey[1] ))
                 .reduce( (d1, d2) -> {
-                    throw new IllegalStateException("DataSource '%s' has  not unique field name '%s'."
+                    throw new RuntimeException("Can't determine ImportFromRelation for '%s.%s': " +
+                            "foreign key field name '%s.%s' is not unique within  the data source."
                             .formatted(
+                                    dataSource.getId(),
+                                    sourceField.getName(),
                                     foreignRelation.dataSourceId,
                                     parsedForeignKey[1]
                             )
@@ -146,14 +136,10 @@ public class RelationSupport {
     protected static ForeignRelation describeForeignRelation(IDSRegistry dsRegistry, String relation) {
         final String parsedIncludeFrom[] = relation.trim().split("\\.");
         if (parsedIncludeFrom.length != 2) {
-            throw new IllegalStateException();
-//            throw new IllegalStateException("DataSource '%s' field '%s', all 'includeFrom' fields must be prefixed with DataSource ID, but actual value is '%s'."
-//                    .formatted(
-//                            dataSource.getId(),
-//                            importFromField.getName(),
-//                            importFromField.getIncludeFrom()
-//                    )
-//            );
+            throw new RuntimeException(("Can't determine ForeignRelation for relation '%s': " +
+                    "'foreignKey' field MUST be prefixed with a DataSource ID.")
+                    .formatted(relation)
+            );
         }
 
         final String foreignDsId = parsedIncludeFrom[0].trim();

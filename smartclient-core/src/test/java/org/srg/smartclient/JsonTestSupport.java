@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import net.javacrumbs.jsonunit.JsonAssert;
 import net.javacrumbs.jsonunit.core.Configuration;
+import net.javacrumbs.jsonunit.core.Option;
 
 import java.io.IOException;
 
@@ -50,7 +51,7 @@ public class JsonTestSupport {
     }
 
     public static void assertJsonEquals(Object expected, Object actual) {
-        assertEqualsUsingJSONImpl(expected, actual, Configuration.empty());
+        assertEqualsUsingJSONImpl(expected, actual, Configuration.empty().withOptions(Option.IGNORING_ARRAY_ORDER));
     }
 
     protected static void assertEqualsUsingJSONImpl(Object expected, Object actual, Configuration configuration) {

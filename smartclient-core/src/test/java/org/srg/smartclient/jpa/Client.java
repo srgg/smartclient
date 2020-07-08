@@ -1,5 +1,8 @@
 package org.srg.smartclient.jpa;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import javax.persistence.*;
 import java.util.List;
 
@@ -10,10 +13,12 @@ public class Client {
 
         private String name;
 
-        @OneToOne(mappedBy = "client")
+        @OneToOne(mappedBy = "client", fetch = FetchType.EAGER)
+        @JsonManagedReference
         private ClientData data;
 
-        @OneToMany(mappedBy = "client")
+        @OneToMany(mappedBy = "client", fetch = FetchType.EAGER)
+        @JsonBackReference
         private List<Project> projects;
 
         public int getId() {

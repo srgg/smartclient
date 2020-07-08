@@ -101,7 +101,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 data:[
                                     {
                                         id:1,
-                                        name:'user1',
+                                        name:'admin',
                                         firedAt: '2000-01-02T01:04:05.000+00:00'
                                     },
                                     {
@@ -146,9 +146,9 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 data:[
                                     {
                                         id:1,
-                                        name:'user1',
+                                        name:'admin',
                                         firedAt: '2000-01-02T01:04:05.000+00:00',
-                                        email:"u1@acmE.org"
+                                        email:"admin@acmE.org"
                                     },
                                     {
                                         id:5,
@@ -193,9 +193,9 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             data:[
                                 {
                                     id:1,
-                                    name:'user1',
+                                    name:'admin',
                                     firedAt: '2000-01-02T01:04:05.000+00:00',
-                                    email:"u1@acmE.org"
+                                    email:"admin@acmE.org"
                                 },
                                 {
                                     id:4,
@@ -315,7 +315,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                     data:[
                         {
                             id:1,
-                            name:'user1',
+                            name:'admin',
                             firedAt: '2000-01-02T01:04:05.000+00:00'
                         },
                         {

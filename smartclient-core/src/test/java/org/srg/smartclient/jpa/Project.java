@@ -1,5 +1,7 @@
 package org.srg.smartclient.jpa;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import org.srg.smartclient.annotations.OperationBinding;
 import org.srg.smartclient.annotations.SmartClientField;
 import org.srg.smartclient.isomorphic.DSRequest;
@@ -21,13 +23,15 @@ public class Project {
     @SmartClientField(foreignDisplayField = "name")
     @ManyToOne
     @JoinColumn(name="client_id", nullable=false)
+    @JsonManagedReference
     private Client client;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "project_team",
             joinColumns = @JoinColumn(name = "project_id"),
             inverseJoinColumns = @JoinColumn(name = "employee_id"))
+    @JsonIgnore
     private Set<Employee> teamMembers;
 
 

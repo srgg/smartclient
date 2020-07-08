@@ -236,7 +236,7 @@ abstract class DSDeclarationBuilder {
                 f.getIncludeVia()
         );
 
-//        context.write_if(f.getMultiple(), "\t\t\t,multiple:true\n");
+        ctx.write_if(f.isMultiple(), "\t\t\t,multiple:true\n");
 
         ctx.write_if(f.isPrimaryKey(),
                 "\t\t\t,hidden:true\n"

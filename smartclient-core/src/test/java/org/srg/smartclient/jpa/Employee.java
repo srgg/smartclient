@@ -1,34 +1,43 @@
 package org.srg.smartclient.jpa;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
+import javax.persistence.*;
 import java.util.Set;
 
 @Entity
 public class Employee {
     @Id
     private int id;
-    private String firstName;
-    private String lastName;
+    private String name;
 
-    @OneToMany(mappedBy = "employee")
+    @OneToMany(mappedBy = "employee", fetch = FetchType.EAGER)
+    @JsonManagedReference
     private Set<EmployeeRole> roles;
 
-    @OneToMany(mappedBy = "teamMembers")
+    @ManyToMany(mappedBy = "teamMembers",  fetch = FetchType.EAGER)
     private Set<Project> projects;
 
+    public Employee() {
+    }
+
+    public Employee(int id, String name, Set<EmployeeRole> roles) {
+        this.id = id;
+        this.name = name;
+        this.roles = roles;
+    }
 
     public int getId() {
         return id;
     }
 
-    public String getFirstName() {
-        return firstName;
+
+    public String getName() {
+        return name;
     }
 
-    public String getLastName() {
-        return lastName;
+    public Set<EmployeeRole> getRoles() {
+        return roles;
     }
 
     public Set<Project> getProjects() {

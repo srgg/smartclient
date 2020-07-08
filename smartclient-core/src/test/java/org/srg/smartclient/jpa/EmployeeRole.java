@@ -1,13 +1,12 @@
 package org.srg.smartclient.jpa;
 
-import org.srg.smartclient.annotations.SmartClientField;
-import org.srg.smartclient.isomorphic.DSField;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import javax.persistence.*;
 import java.io.Serializable;
-import java.sql.Timestamp;
 import java.util.Objects;
 
+@Table(name = "employee_role")
 @Entity
 @IdClass(EmployeeRole.EmployeeRoleId.class)
 public class EmployeeRole {
@@ -62,15 +61,11 @@ public class EmployeeRole {
     @Id
     @ManyToOne
     @JoinColumn(name = "employee_id")
+    @JsonBackReference
     private Employee employee;
 
     @Id
     private String role;
-
-    @SmartClientField(type = DSField.FieldType.DATE)
-    private Timestamp createdAt;
-
-    private Timestamp modifiedAt;
 
     public Employee getEmployee() {
         return employee;
@@ -88,17 +83,6 @@ public class EmployeeRole {
         this.role = role;
     }
 
-    public Timestamp getCreatedAt() {
-        return createdAt;
-    }
-
-    public Timestamp getModifiedAt() {
-        return modifiedAt;
-    }
-
-    public void setModifiedAt(Timestamp modifiedAt) {
-        this.modifiedAt = modifiedAt;
-    }
 
     @Override
     public boolean equals(Object o) {
