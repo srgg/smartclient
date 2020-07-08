@@ -1,0 +1,38 @@
+{
+  "id":"HProjectDS",
+  "serverType":"sql",
+  "tableName": "project",
+  "fields":[
+    {
+      "name":"client",
+      "foreignKey":"ClientDS.id",
+      "displayField":"clientName",
+      "foreignDisplayField":"name",
+      "type":"INTEGER",
+      "canEdit":false,
+      "dbName": "client_id",
+      "hidden":false
+    },
+    {
+      "name":"clientName",
+      "type":"TEXT",
+      "includeFrom":"ClientDS.name",
+      "includeVia":"client",
+      "canEdit":false,
+      "hidden":true
+    },
+    {
+      "name":"name",
+      "type":"TEXT",
+      "canEdit":false,
+      "hidden":false
+    },
+    {
+      "name":"id",
+      "type":"INTEGER",
+      "hidden":true,
+      "primaryKey":true,
+      "canEdit":false
+    }
+  ]
+}

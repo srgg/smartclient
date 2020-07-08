@@ -577,4 +577,67 @@ public class JpaDSDispatcherTest {
                 responses
         );
     }
+
+
+    @Test
+    public void loadSqlDataSourceFromResource() {
+        dispatcher.registerJPAEntity(Employee.class);
+        dispatcher.registerJPAEntity(Client.class);
+        dispatcher.registerJPAEntity(ClientData.class);
+
+        final String hprjDSId = "HProjectDS";
+        dispatcher.loadFromResource("HProject.ds.json");
+        final org.srg.smartclient.isomorphic.DataSource ds = dispatcher.getDataSourceById(hprjDSId);
+        assertNotNull(ds);
+
+        final DSRequest request = new DSRequest();
+        request.setStartRow(0);
+        request.setDataSource( hprjDSId);
+
+        final Collection<DSResponse> responses = dispatcher.dispatch(request);
+        JsonTestSupport.assertJsonEquals(
+            """
+            [
+               {
+                  "response":{
+                     "data":[
+                        {
+                           "client":1,
+                           "clientName":"client 1",
+                           "id":1,
+                           "name":"Project 1 for client 1"
+                        },
+                        {
+                           "client":1,
+                           "clientName":"client 1",
+                           "id":2,
+                           "name":"Project 2 for client 1"
+                        },
+                        {
+                           "client":2,
+                           "clientName":"client 2",
+                           "id":3,
+                           "name":"Project 1 for client 2"
+                        },
+                        {
+                           "client":2,
+                           "clientName":"client 2",
+                           "id":4,
+                           "name":"Project 2 for client 2"
+                        },
+                        {
+                           "client":2,
+                           "clientName":"client 2",
+                           "id":5,
+                           "name":"Project 3 for client 2"
+                        }
+                     ],
+                     "endRow":5,
+                     "startRow":0,
+                     "status":0,
+                     "totalRows":5
+                  }
+               }                
+            ]""", responses);
+    }
 }
