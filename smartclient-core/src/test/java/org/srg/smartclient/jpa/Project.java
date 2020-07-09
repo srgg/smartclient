@@ -9,10 +9,10 @@ import org.srg.smartclient.isomorphic.DSRequest;
 import javax.persistence.*;
 import java.util.Set;
 
-@OperationBinding(
-        operationType = DSRequest.OperationType.FETCH,
-        whereClause = "($defaultWhereClause) AND"
-)
+//@OperationBinding(
+//        operationType = DSRequest.OperationType.FETCH,
+//        whereClause = "($defaultWhereClause) AND"
+//)
 @Entity
 public class Project {
     @Id
