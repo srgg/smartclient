@@ -46,7 +46,7 @@ public class DSField {
     private String title;
     private boolean required;
     private boolean primaryKey;
-    private boolean hidden;
+    private Boolean hidden;
     private FieldType type;
     private String foreignKey;
     private String foreignDisplayField;
@@ -104,11 +104,11 @@ public class DSField {
         return this;
     }
 
-    public boolean isHidden() {
+    public Boolean isHidden() {
         return hidden;
     }
 
-    public DSField setHidden(boolean hidden) {
+    public DSField setHidden(Boolean hidden) {
         this.hidden = hidden;
         return this;
     }

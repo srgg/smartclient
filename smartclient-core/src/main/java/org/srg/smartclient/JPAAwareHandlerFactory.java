@@ -4,6 +4,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.srg.smartclient.annotations.SmartClientField;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
 
@@ -25,7 +26,6 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                         entityClass.getCanonicalName()
                 )
         );
-
 
         final Metamodel mm = emf.getMetamodel();
         final DataSource ds = this.describeEntity(mm, entityClass);
@@ -83,7 +83,7 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
         final Map<String, Attribute<? super T, ?>> skippedAttrs = new HashMap<>(attrs.size());
 
         for (Attribute<? super T, ?> a :attrs) {
-            DSField f = describeField(mm, ds.getId(), a);
+            DSField f = describeField(mm, ds.getId(), et,  a);
             if (f == null) {
                 // TODO: add proper logging
                 skippedAttrs.put(a.getName(), a);
@@ -135,10 +135,10 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                 if (javaTargetField.isAnnotationPresent(Transient.class) ) {
                     targetField = describeField(ds.getId(), javaTargetField);
                 } else {
-                    final Attribute<?,?> targetDisplayFieldAttr =  targetEntity.getAttribute(f.getForeignDisplayField());
+                    final Attribute<? super T,?> targetDisplayFieldAttr =  targetEntity.getAttribute(f.getForeignDisplayField());
                     assert targetDisplayFieldAttr != null;
 
-                    targetField = describeField(mm, ds.getId(), targetDisplayFieldAttr);
+                    targetField = describeField(mm, ds.getId(), targetEntity, targetDisplayFieldAttr);
                 }
 
                 // --
@@ -190,13 +190,51 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
         return ds;
     }
 
-    protected <T> DSField describeField( Metamodel mm, String dsId, Attribute<? super T, ?> attr) {
+    protected <T> DSField describeField( Metamodel mm, String dsId, EntityType<? super T> entityType, Attribute<? super T, ?> attr) {
         final Field field = (Field) attr.getJavaMember();
 
         // -- Generic
         final DSField f = describeField(dsId, field);
 
         // -- JPA
+        final boolean attributeBelongsToCompositeId = !entityType.hasSingleIdAttribute()
+                && entityType.getIdClassAttributes().contains(attr);
+
+        if (attributeBelongsToCompositeId) {
+            /**
+             * Since attribute is a part of the composite Id/PK, it is possible that @SmartClientField annotation
+             * was put on the Entity field, rather than on the IdClass field, and,  in this case,
+             * generic method JDBCHandlerFactory#describeField(dsId, field)  will not find the annotation and
+             * do not apply it.
+             *
+             * Therefore, it is required to check the entity field for @SmartClientField and apply it if it exists
+             */
+            SmartClientField sfa = field.getAnnotation(SmartClientField.class);
+
+            if (sfa == null) {
+                /**
+                 * Ok, it is clear that IdClass field is not annotated with @SmartClientField and it is HIGHLY possible that
+                 * annotation was put at the correspondent entity field.
+                 *
+                 * I can't find any suitable JPA MetaModel API that returns attributes for the Entity,
+                 * all of them returns attributes for the IdClass. The only way to get correspondent entity fields
+                 * is to use Java Reflection API.
+                 */
+                final Class entityJavaType = entityType.getJavaType();
+
+                try {
+                    final Field entityField = entityJavaType.getDeclaredField(attr.getName());
+                    sfa = entityField.getAnnotation(SmartClientField.class);
+                } catch (NoSuchFieldException e) {
+                    throw new IllegalStateException(e);
+                }
+
+                if (sfa != null) {
+                    applySmartClientFieldAnnotation(sfa, f);
+                }
+            }
+        }
+
         final JpaRelation jpaRelation = describeRelation(mm, attr);
 
         if (jpaRelation != null
@@ -207,14 +245,22 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
             }
         }
 
-//        JoinColumn joinColumnAnnotation = field.getAnnotation(JoinColumn.class);
-
         // --
 
         final DSField.FieldType preserveType = f.getType();
         if (attr instanceof SingularAttribute sa) {
             f.setPrimaryKey(sa.isId());
-            f.setRequired(!sa.isOptional());
+
+            if (f.isHidden() == null ) {
+                f.setHidden( f.isPrimaryKey());
+            }
+
+            if (f.isPrimaryKey()) {
+                f.setCanEdit(false);
+                f.setRequired(true);
+            } else {
+                f.setRequired(!sa.isOptional());
+            }
 
             final Type<T> type = sa.getType();
             final Attribute.PersistentAttributeType pat = attr.getPersistentAttributeType();
@@ -411,7 +457,7 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
         final ManagedType<E> mt = mm.managedType(clazz);
 
         if ( et.hasSingleIdAttribute() ) {
-            final Attribute<?, ?> idAttribute = et.getId(et.getIdType().getJavaType());
+            final Attribute<? super E, ?> idAttribute = et.getId(et.getIdType().getJavaType());
 
             if (idAttribute == null) {
                 // No sure is it possible or not
@@ -424,7 +470,7 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
             switch (idAttribute.getPersistentAttributeType()) {
                 case BASIC:
                     return Collections.singleton(
-                            describeField(mm, "<>", idAttribute)
+                            describeField(mm, "<>", et, idAttribute)
                     );
 
                 default:
@@ -443,7 +489,7 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                 assert idAttributes != null;
 
                 final Set<DSField> ids = idAttributes.stream()
-                        .map(sa -> describeField(mm, "<>", sa))
+                        .map(sa -> describeField(mm, "<>", et, sa))
                         .collect(Collectors.toSet());
 
                 return ids;

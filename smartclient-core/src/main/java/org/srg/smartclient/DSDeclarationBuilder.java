@@ -239,8 +239,7 @@ abstract class DSDeclarationBuilder {
         ctx.write_if(f.isMultiple(), "\t\t\t,multiple:true\n");
 
         ctx.write_if(f.isPrimaryKey(),
-                "\t\t\t,hidden:true\n"
-                + "\t\t\t,primaryKey:true\n"
+                "\t\t\t,primaryKey:true\n"
                 + "\t\t\t,canEdit:false\n");
 
         ctx.write_if(!f.isPrimaryKey(),
@@ -248,7 +247,7 @@ abstract class DSDeclarationBuilder {
                 f.isCanEdit()
         );
 
-        ctx.write_if(!f.isPrimaryKey(),
+        ctx.write_if(Boolean.TRUE.equals(f.isHidden()),
                 "\t\t\t,hidden:%b\n",
                 f.isHidden()
         );

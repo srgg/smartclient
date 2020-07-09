@@ -78,32 +78,7 @@ public class JDBCHandlerFactory {
 
 
         final SmartClientField sfa = field.getAnnotation(SmartClientField.class);
-        if (sfa != null) {
-
-            if (!sfa.name().isBlank()) {
-                f.setName( sfa.name());
-            }
-
-            if (!sfa.foreignDisplayField().isBlank()) {
-                f.setForeignDisplayField(sfa.foreignDisplayField());
-            }
-
-            if (!sfa.displayField().isBlank()) {
-                f.setDisplayField(sfa.displayField());
-            }
-
-            if (!sfa.type().equals(DSField.FieldType.ANY)) {
-                f.setType(sfa.type());
-            }
-
-            if (sfa.hidden()) {
-                f.setHidden(true);
-            }
-
-            if (!sfa.customSelectExpression().isBlank()) {
-                f.setCustomSelectExpression(sfa.customSelectExpression());
-            }
-        }
+        applySmartClientFieldAnnotation(sfa, f);
 
         // -- set DB field name
         f.setDbName( f.getName());
@@ -117,6 +92,37 @@ public class JDBCHandlerFactory {
         return f;
     }
 
+    protected static void applySmartClientFieldAnnotation(SmartClientField sfa, DSField dsf) {
+        if (sfa != null) {
+
+            if (!sfa.name().isBlank()) {
+                dsf.setName( sfa.name());
+            }
+
+            if (!sfa.foreignDisplayField().isBlank()) {
+                dsf.setForeignDisplayField(sfa.foreignDisplayField());
+            }
+
+            if (!sfa.displayField().isBlank()) {
+                dsf.setDisplayField(sfa.displayField());
+            }
+
+            if (!sfa.type().equals(DSField.FieldType.ANY)) {
+                dsf.setType(sfa.type());
+            }
+
+            if (sfa.hidden()) {
+                dsf.setHidden(Boolean.TRUE);
+            }else {
+                dsf.setHidden(Boolean.FALSE);
+            }
+
+            if (!sfa.customSelectExpression().isBlank()) {
+                dsf.setCustomSelectExpression(sfa.customSelectExpression());
+            }
+        }
+
+    }
 
     protected <X> DSField.FieldType fieldType(Class<X> clazz) {
         if (clazz.equals(Integer.class)

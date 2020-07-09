@@ -50,6 +50,10 @@ public class JsonTestSupport {
         return data;
     }
 
+    public static void assertJsonEquals(Object expected, Object actual, Option...options) {
+        assertEqualsUsingJSONImpl(expected, actual, Configuration.empty().withOptions(Option.IGNORING_ARRAY_ORDER, options));
+    }
+
     public static void assertJsonEquals(Object expected, Object actual) {
         assertEqualsUsingJSONImpl(expected, actual, Configuration.empty().withOptions(Option.IGNORING_ARRAY_ORDER));
     }

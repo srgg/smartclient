@@ -1,6 +1,7 @@
 package org.srg.smartclient.jpa;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import org.srg.smartclient.annotations.SmartClientField;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -65,6 +66,7 @@ public class EmployeeRole {
     private Employee employee;
 
     @Id
+    @SmartClientField(hidden = false)
     private String role;
 
     public Employee getEmployee() {
