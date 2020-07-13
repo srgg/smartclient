@@ -15,6 +15,7 @@ import org.srg.smartclient.isomorphic.DataSource;
 import java.lang.reflect.Constructor;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.LinkedList;
 import java.util.List;
 
 public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
@@ -257,10 +258,11 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
 
     protected void withExtraFields(ExtraField... extraFields) {
         for (ExtraField ef: extraFields) {
+            final List<DSField> ofs = new LinkedList<>(handler.getDataSource().getFields());
             final List<DSField> efs = JsonTestSupport.fromJSON(new TypeReference<>() {}, ef.fieldDefinition);
-            handler.getDataSource()
-                    .getFields()
-                    .addAll(efs);
+            ofs.addAll(efs);
+
+            handler.getDataSource().setFields(ofs);
         }
     }
 
