@@ -2,9 +2,7 @@ package org.srg.smartclient.jpa;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
-import org.srg.smartclient.annotations.OperationBinding;
 import org.srg.smartclient.annotations.SmartClientField;
-import org.srg.smartclient.isomorphic.DSRequest;
 
 import javax.persistence.*;
 import java.util.Set;
