@@ -127,8 +127,12 @@ abstract class DSDeclarationBuilder {
                 ft = f.getType();
 
                 if( ft == null ){
+//                if( ft == null
+//                        && (f.getIncludeFrom() == null || f.getIncludeFrom().isBlank())){
 //                    ft = javatype2smartclient(javaClass);
-                    throw new IllegalStateException();
+                    throw new RuntimeException("Field '%s.%s': type is not set."
+                            .formatted(ctx.dsName, f.getName())
+                    );
                 }
             } catch (Exception ex) {
                 logger.warn(
@@ -163,9 +167,10 @@ abstract class DSDeclarationBuilder {
 
         if (!isSubEntity) {
 
-            ctx.write("\t\t\t,type:\"%s\"\n",
-                    ft.name());
-
+            if (ft != null) {
+                ctx.write("\t\t\t,type:\"%s\"\n",
+                        ft.name());
+            }
         } else {
             if( isNotBlank(f.getForeignKey())){
                 ctx.write(

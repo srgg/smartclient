@@ -11,7 +11,7 @@ import javax.persistence.EntityManagerFactory;
 public class JPAAwareHandlerFactoryTest {
 
     @Test
-    public void hiddenSetFromAnnotationShouldOverrideDefaultsForPrimaryKey() {
+    public void hiddenPropertySetFromAnnotationShouldOverrideDefaultsForPrimaryKey() {
         final EntityManagerFactory emf = JpaTestSupport.createEntityManagerFactory(
                 "testPU_hidden",
                 Employee.class,

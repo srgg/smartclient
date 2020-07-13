@@ -39,8 +39,8 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
         return getFieldMap().get(fieldName);
     }
 
-    protected Collection<DSField> getFields() {
-        return getFieldMap().values();
+    public List<DSField> getFields() {
+        return datasource.getFields();
     }
 
     protected DataSource getDataSource() {
@@ -86,8 +86,7 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
     }
 
     protected DSHandler getDataSourceHandlerById(String id) {
-        final DSDispatcher dispatcher = (DSDispatcher) dsRegistry;
-        final DSHandler dsHandler = dispatcher.getHandlerByName(id);
+        final DSHandler dsHandler = dsRegistry.getHandlerByName(id);
         return dsHandler;
     }
 
@@ -97,11 +96,11 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
     }
 
     protected ImportFromRelation describeImportFrom(DSField importFromField) {
-        return RelationSupport.describeImportFrom(dsId -> this.getDataSourceById(dsId), this.getDataSource(), importFromField);
+        return RelationSupport.describeImportFrom(dsId -> this.getDataSourceHandlerById(dsId), this.getDataSource(), importFromField);
     }
 
     protected ForeignKeyRelation describeForeignKey(DSField foreignKeyField) {
-        return RelationSupport.describeForeignKey(dsId -> this.getDataSourceById(dsId), this.getDataSource(), foreignKeyField);
+        return RelationSupport.describeForeignKey(dsId -> this.getDataSourceHandlerById(dsId), this.getDataSource(), foreignKeyField);
     }
 
     @Override

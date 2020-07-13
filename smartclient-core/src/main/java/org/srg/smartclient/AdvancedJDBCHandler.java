@@ -117,7 +117,7 @@ public class AdvancedJDBCHandler extends JDBCHandler {
             }
 
             filterStr = filterStr.formatted(
-                    formatFieldName(dsf)
+                    processFieldName(dsf)
             );
 
 

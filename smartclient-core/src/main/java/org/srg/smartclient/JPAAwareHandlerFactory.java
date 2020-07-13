@@ -117,28 +117,43 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                 }
 
                 final Class<?> targetClass = targetEntity.getJavaType();
-                final DSField targetField;
+                final DSField targetField = new DSField();
 
-                // -- handle case when ForeignDisplayField is @Transient
-                final Field javaTargetField = FieldUtils.getField(targetClass, f.getForeignDisplayField(), true);
-                if (javaTargetField == null) {
-                    throw new IllegalStateException(
-                            "Datasource '%s', field '%s': Nothing known about foreignDisplayField '%s' in the target java class '%s'"
-                                    .formatted( ds.getId(),
-                                            f.getName(),
-                                            f.getForeignDisplayField(),
-                                            targetClass.getCanonicalName()
-                                    )
-                    );
-                }
+                // -- detect target field type
+                {
+                    final DSField tf;
 
-                if (javaTargetField.isAnnotationPresent(Transient.class) ) {
-                    targetField = describeField(ds.getId(), javaTargetField);
-                } else {
-                    final Attribute<? super T,?> targetDisplayFieldAttr =  targetEntity.getAttribute(f.getForeignDisplayField());
-                    assert targetDisplayFieldAttr != null;
+                    /**
+                     *  Handles a case when ForeignDisplayField is @Transient, that can happen if it is a calculated field:
+                     *  <pre>
+                     *     @SmartClientField(hidden = true, customSelectExpression = "CONCAT(employee.last_Name, ' ', employee.first_Name)")
+                     *     @Transient
+                     *     private String fullName;
+                     *  </pre>
+                     *
+                     */
+                    final Field javaTargetField = FieldUtils.getField(targetClass, f.getForeignDisplayField(), true);
+                    if (javaTargetField == null) {
+                        throw new IllegalStateException(
+                                "Datasource '%s', field '%s': Nothing known about foreignDisplayField '%s' in the target java class '%s'"
+                                        .formatted(ds.getId(),
+                                                f.getName(),
+                                                f.getForeignDisplayField(),
+                                                targetClass.getCanonicalName()
+                                        )
+                        );
+                    }
 
-                    targetField = describeField(mm, ds.getId(), targetEntity, targetDisplayFieldAttr);
+                    if (javaTargetField.isAnnotationPresent(Transient.class)) {
+                        tf = describeField(ds.getId(), javaTargetField);
+                    } else {
+                        final Attribute<? super T, ?> targetDisplayFieldAttr = targetEntity.getAttribute(f.getForeignDisplayField());
+                        assert targetDisplayFieldAttr != null;
+
+                        tf = describeField(mm, ds.getId(), targetEntity, targetDisplayFieldAttr);
+                    }
+
+                    targetField.setType(tf.getType());
                 }
 
                 // --
@@ -351,7 +366,9 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                             f.setMultiple(true);
 
                             // should be hidden by default
-                            f.setHidden(true);
+                            if (f.isHidden() == null) {
+                                f.setHidden(true);
+                            }
 
                             final Set<DSField> dsIdFields =  getDSIDField(mm, javaType);
 

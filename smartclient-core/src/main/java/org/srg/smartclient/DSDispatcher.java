@@ -40,7 +40,8 @@ public class DSDispatcher implements IDSDispatcher {
         return jdbcPolicy;
     }
 
-    protected DSHandler getHandlerByName(String dsId) {
+
+    public DSHandler getHandlerByName(String dsId) {
         final DSHandler ds = datasourceMap.get(dsId);
 
         if (ds != null) {

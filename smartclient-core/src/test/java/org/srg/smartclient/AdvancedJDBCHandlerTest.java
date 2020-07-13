@@ -1,17 +1,14 @@
 package org.srg.smartclient;
 
-import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.aggregator.ArgumentsAccessor;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mockito;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
 import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
 
-import java.sql.Connection;
 import java.util.stream.Stream;
 
 public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDBCHandler> {
@@ -34,14 +31,8 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
     }
 
     @Override
-    protected AdvancedJDBCHandler initHandler(JdbcDataSource dataSource) {
-        return Mockito.spy(
-                new AdvancedJDBCHandler((database, callback) -> {
-                    try (Connection connection = jdbcDataSource.getConnection()) {
-                        callback.apply(connection);
-                    }
-                }, null, employeeDS)
-        );
+    protected Class<AdvancedJDBCHandler> getHandlerClass() {
+        return AdvancedJDBCHandler.class;
     }
 
     @ParameterizedTest(name = "run #{index}: {0}")
@@ -320,7 +311,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                         },
                         {
                             id:2,
-                            name:'user2',
+                            name:'developer',
                             firedAt: null
                         },
                         {

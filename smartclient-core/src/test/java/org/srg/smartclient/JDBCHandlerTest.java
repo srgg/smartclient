@@ -1,28 +1,17 @@
 package org.srg.smartclient;
 
-import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
 
-import java.sql.Connection;
 import java.util.Arrays;
 import java.util.Map;
 
 public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
 
     @Override
-    protected JDBCHandler initHandler(JdbcDataSource dataSource) {
-        final JDBCHandler spy = Mockito.spy(
-                new JDBCHandler((database, callback) -> {
-                    try (Connection connection = jdbcDataSource.getConnection()) {
-                        callback.apply(connection);
-                    }
-                }, null, employeeDS)
-        );
-
-        return spy;
+    protected Class<JDBCHandler> getHandlerClass() {
+        return JDBCHandler.class;
     }
 
     @Test
@@ -44,7 +33,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                              },
                              {
                                  id:2,
-                                 name: 'user2'
+                                 name: 'developer'
                              },
                              {
                                  id:3,
@@ -85,7 +74,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                      },
                      {
                         id:2,
-                        email:'u2@acme.org'
+                        email:'developer@acme.org'
                      },
                      {
                         id:3,
@@ -128,7 +117,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                             },
                             {
                                 id:2,
-                                name: 'user2'
+                                name: 'developer'
                             }
                         ]    
                     }
@@ -183,10 +172,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
     @Test
     public void fetchIncludeFromField() throws Exception {
         withExtraFields(ExtraField.IncludeFrom);
-
-        Mockito.doReturn(locationDS)
-                .when(handler)
-                .getDataSourceById(Mockito.anyString());
+        withHandlers(Handler.Location);
 
         final DSRequest request = new DSRequest();
 
@@ -209,7 +195,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                              },
                              {
                                  id:2,
-                                 name: 'user2',
+                                 name: 'developer',
                                  location: 2,
                                  locationCity: 'Lviv'
                              },
@@ -260,7 +246,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                         },
                         {
                             id:2,
-                            name: 'user2'
+                            name: 'developer'
                         }
                     ]    
                 }
@@ -307,7 +293,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                         },
                         {
                             id:2,
-                            name: 'user2'
+                            name: 'developer'
                         }
                     ]    
                 }
@@ -347,11 +333,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
     @Test
     public void fetchWithIncludeFromField() throws Exception {
         withExtraFields(ExtraField.IncludeFrom);
-
-        Mockito.doReturn(locationDS)
-                .when(handler)
-                .getDataSourceById(Mockito.anyString());
-
+        withHandlers(Handler.Location);
 
         DSRequest request = new DSRequest();
         request.setStartRow(0);
@@ -387,8 +369,8 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
     }
 
     @Test
-    public void fetchWithCalculatedField() throws Exception {
-        withExtraFields(ExtraField.Calculated);
+    public void fetchWithSQLCalculatedField() throws Exception {
+        withExtraFields(ExtraField.SqlCalculated);
 
         DSRequest request = new DSRequest();
         request.setStartRow(0);
@@ -410,13 +392,189 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                         },
                         {
                             id:2,
-                            name:"user2",
-                            calculated:"2_user2"
+                            name:"developer",
+                            calculated:"2_developer"
                         }
                     ]
                 }
             }""",
                 response);
 
+    }
+
+    @Regression("Fails to fetch SQL Calculated Field via foreignDisplayField for a PK ")
+    @Test
+    public void fetchWithSQLCalculatedAsDisplayFieldForForeignRelation() throws Exception {
+        final JDBCHandler h = withHandlers(Handler.EmployeeRole);
+        withExtraFields(ExtraField.SqlCalculated);
+
+        final DSRequest request = new DSRequest();
+        final DSResponse response = h.handleFetch(request);
+
+        JsonTestSupport.assertJsonEquals("""
+            {
+               response:{
+                  status:0,
+                  startRow:0,
+                  endRow:3,
+                  totalRows:3,
+                  data:[
+                     {
+                        role:'Admin',
+                        employee:1,
+                        employeeCalculated:'1_admin'
+                     },
+                     {
+                        role:'Developer',
+                        employee:1,
+                        employeeCalculated:'1_admin'
+                     },
+                     {
+                        role:'Developer',
+                        employee:2,
+                        employeeCalculated:'2_developer'
+                     }
+                  ]
+               }
+            }""", response);
+    }
+
+    /**
+     * Check case when a source Data Source does not have a correspondent FK field[s] and values
+     * are mapped by so called "mappedBy" JPA mechanism using the source PK to Join On the concrete records
+     * in foreign Data Source by  foreign Data Source FKs to the source Data Source (backward direction).
+     */
+    @Test
+    public void fetchOneToMany_EntireEntity() throws Exception {
+        withHandlers(Handler.EmployeeRole);
+        withExtraFields(ExtraField.OneToMany_FetchEntireEntities, ExtraField.SqlCalculated);
+
+        final DSRequest request = new DSRequest();
+        final DSResponse response = handler.handleFetch(request);
+        JsonTestSupport.assertJsonEquals("""
+            {
+               "response":{
+                  "status":0,
+                  "startRow":0,
+                  "endRow":5,
+                  "totalRows":5,
+                  "data":[
+                     {
+                        "id":1,
+                        "name":"admin",
+                        "calculated":"1_admin", 
+                        "roles":[
+                           {
+                              "role":"Admin",
+                              "employee":1,
+                              "employeeCalculated":"1_admin"
+                           },
+                           {
+                              "role":"Developer",
+                              "employee":1,
+                              "employeeCalculated":"1_admin"
+                           }
+                        ]
+                     },
+                     {
+                        "id":2,
+                        "name":"developer",
+                        "calculated":"2_developer", 
+                        "roles":[
+                           {
+                              "role":"Developer",
+                              "employee":2,
+                              "employeeCalculated":"2_developer"
+                           }
+                        ]
+                     },
+                     {
+                        "id":3,
+                        "name":"user3",
+                        "calculated":"3_user3", 
+                        "roles":[]
+                     },
+                     {
+                        "id":4,
+                        "name":"user4",
+                        "calculated":"4_user4", 
+                        "roles":[]
+                     },
+                     {
+                        "id":5,
+                        "name":"user5",
+                        "calculated":"5_user5", 
+                        "roles":[]
+                     }
+                  ]
+               }
+            }""", response);
+    }
+
+    @Test
+    public void fetchOneToMany_OnlyIds() throws Exception {
+        withHandlers(Handler.EmployeeRole);
+        withExtraFields(ExtraField.OneToMany_FetchOnlyIds, ExtraField.SqlCalculated);
+
+        final DSRequest request = new DSRequest();
+        request.setOutputs("id, name, roles");
+        final DSResponse response = handler.handleFetch(request);
+
+        JsonTestSupport.assertJsonEquals("""
+            {
+               "response":{
+                  "status":0,
+                  "startRow":0,
+                  "endRow":5,
+                  "totalRows":5,
+                  "data":[
+                     {
+                        "id":1,
+                        "name":"admin",
+                        "roles":[
+                           {
+                              "role":"Admin",
+                              "employee":1
+                           },
+                           {
+                              "role":"Developer",
+                              "employee":1
+                           }
+                        ]
+                     },
+                     {
+                        "id":2,
+                        "name":"developer",
+                        "roles":[
+                           {
+                              "role":"Developer",
+                              "employee":2
+                           }
+                        ]
+                     },
+                     {
+                        "id":3,
+                        "name":"user3",
+                        "roles":[
+            
+                        ]
+                     },
+                     {
+                        "id":4,
+                        "name":"user4",
+                        "roles":[
+            
+                        ]
+                     },
+                     {
+                        "id":5,
+                        "name":"user5",
+                        "roles":[
+            
+                        ]
+                     }
+                  ]
+               }
+            }""", response);
     }
 }

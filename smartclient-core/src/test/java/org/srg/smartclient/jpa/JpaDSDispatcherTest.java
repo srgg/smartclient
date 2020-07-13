@@ -162,6 +162,175 @@ public class JpaDSDispatcherTest {
     }
 
     @Test
+    public void checkThatJpaMappingsAreCorrectAndRelevant() {
+//        // -- Ensure that Employee is properly annotated and JPA can fetch it
+//        final List<Employee> employees;
+//        final EntityManager em = emf.createEntityManager();
+//        try {
+//            CriteriaBuilder cb = em.getCriteriaBuilder();
+//            CriteriaQuery<Employee> query = cb.createQuery(Employee.class);
+//            Root<Employee> root = query.from(Employee.class);
+//            root.fetch("roles", JoinType.LEFT);
+////            query.select(cb.construct(Employee.class, root.get("id"), root.get("name"), root.get("roles")));
+//            query.select(root)
+//            .distinct(true);
+//
+//            TypedQuery<Employee> typedQuery = em.createQuery(query);
+//            employees = typedQuery.getResultList();
+//        }finally {
+//            em.close();
+//        }
+
+//        final List<Object[]> employees;
+//        final EntityManager em = emf.createEntityManager();
+//        try {
+//            employees = em.createQuery("""
+//                    SELECT new Employee(e.id, e.name, e.roles)
+//                           FROM Employee e
+//                    """)
+//                    .getResultList();
+//        }finally {
+//            em.close();
+//        }
+
+
+        final List<Employee> employees;
+        final EntityManager em = emf.createEntityManager();
+        try {
+            employees = em.createQuery("""
+                    SELECT e FROM Employee e
+                    """)
+                    .getResultList();
+        }finally {
+            em.close();
+        }
+
+        JsonTestSupport.assertJsonEquals(
+                """
+                [
+                   {
+                      id:1,
+                      name:"admin",
+                      roles:[
+                        {
+                            role:'Developer'
+                        }, 
+                        {
+                            role:'Admin'
+                        }
+                      ],
+                      projects:[
+                         {
+                            client:{
+                               data:{
+                                  data:'Data1: client 1',
+                                  id:1
+                               },
+                               id:1,
+                               name:"client 1"
+                            },
+                            id:1,
+                            name:'Project 1 for client 1'
+                         }
+                      ]
+                   },
+                   {
+                      id:2,
+                      name:'developer',
+                      roles:[
+                        {
+                            role:'Developer'
+                        }
+                      ],
+                      projects:[
+                         {
+                            client:{
+                               data:{
+                                  data:'Data1: client 1',
+                                  id:1
+                               },
+                               id:1,
+                               name:'client 1'
+                            },
+                            id:2,
+                            name:'Project 2 for client 1'
+                         },
+                         {
+                            client:{
+                               data:{
+                                  data:'Data1: client 1',
+                                  id:1
+                               },
+                               id:1,
+                               name:'client 1'
+                            },
+                            id:1,
+                            name:'Project 1 for client 1'
+                         }
+                      ]
+                   },
+                   {
+                      id:3,
+                      name:'user3',
+                      roles:[],
+                      projects:[
+                         {
+                            client:{
+                               data:{
+                                  data:'Data1: client 1',
+                                  id:1
+                               },
+                               id:1,
+                               name:'client 1'
+                            },
+                            id:2,
+                            name:'Project 2 for client 1'
+                         }
+                      ]
+                   },
+                   {
+                      id:4,
+                      name:'user4',
+                      roles:[],
+                      projects:[
+                         {
+                            client:{
+                               data:{
+                                  data:'Data2: client 2',
+                                  id:2
+                               },
+                               id:2,
+                               name:'client 2'
+                            },
+                            id:3,
+                            name:'Project 1 for client 2'
+                         }
+                      ]
+                   },
+                   {
+                      id:5,
+                      name:'user5',
+                      roles:[],
+                      projects:[
+                         {
+                            client:{
+                               data:{
+                                  data:'Data2: client 2',
+                                  id:2
+                               },
+                               id:2,
+                               name:'client 2'
+                            },
+                            id:3,
+                            name:'Project 1 for client 2'
+                         }
+                      ]
+                   }
+                ]""", employees );
+    }
+
+
+    @Test
     public void oneToOneRelation() {
         dispatcher.registerJPAEntity(Client.class);
         final String clientDataDsId = dispatcher.registerJPAEntity(ClientData.class);
@@ -362,168 +531,6 @@ public class JpaDSDispatcherTest {
         final String employeeDsId = dispatcher.registerJPAEntity(Employee.class);
         dispatcher.registerJPAEntity(EmployeeRole.class);
 
-
-//        // -- Ensure that Employee is properly annotated and JPA can fetch it
-//        final List<Employee> employees;
-//        final EntityManager em = emf.createEntityManager();
-//        try {
-//            CriteriaBuilder cb = em.getCriteriaBuilder();
-//            CriteriaQuery<Employee> query = cb.createQuery(Employee.class);
-//            Root<Employee> root = query.from(Employee.class);
-//            root.fetch("roles", JoinType.LEFT);
-////            query.select(cb.construct(Employee.class, root.get("id"), root.get("name"), root.get("roles")));
-//            query.select(root)
-//            .distinct(true);
-//
-//            TypedQuery<Employee> typedQuery = em.createQuery(query);
-//            employees = typedQuery.getResultList();
-//        }finally {
-//            em.close();
-//        }
-
-//        final List<Object[]> employees;
-//        final EntityManager em = emf.createEntityManager();
-//        try {
-//            employees = em.createQuery("""
-//                    SELECT new Employee(e.id, e.name, e.roles)
-//                           FROM Employee e
-//                    """)
-//                    .getResultList();
-//        }finally {
-//            em.close();
-//        }
-
-
-        final List<Employee> employees;
-        final EntityManager em = emf.createEntityManager();
-        try {
-            employees = em.createQuery("""
-                    SELECT e FROM Employee e
-                    """)
-                    .getResultList();
-        }finally {
-            em.close();
-        }
-
-        JsonTestSupport.assertJsonEquals(
-                """
-                [
-                   {
-                      id:1,
-                      name:"admin",
-                      roles:[
-                        {
-                            role:'Developer'
-                        }, 
-                        {
-                            role:'Admin'
-                        }
-                      ],
-                      projects:[
-                         {
-                            client:{
-                               data:{
-                                  data:'Data1: client 1',
-                                  id:1
-                               },
-                               id:1,
-                               name:"client 1"
-                            },
-                            id:1,
-                            name:'Project 1 for client 1'
-                         }
-                      ]
-                   },
-                   {
-                      id:2,
-                      name:'user2',
-                      roles:[],
-                      projects:[
-                         {
-                            client:{
-                               data:{
-                                  data:'Data1: client 1',
-                                  id:1
-                               },
-                               id:1,
-                               name:'client 1'
-                            },
-                            id:2,
-                            name:'Project 2 for client 1'
-                         },
-                         {
-                            client:{
-                               data:{
-                                  data:'Data1: client 1',
-                                  id:1
-                               },
-                               id:1,
-                               name:'client 1'
-                            },
-                            id:1,
-                            name:'Project 1 for client 1'
-                         }
-                      ]
-                   },
-                   {
-                      id:3,
-                      name:'user3',
-                      roles:[],
-                      projects:[
-                         {
-                            client:{
-                               data:{
-                                  data:'Data1: client 1',
-                                  id:1
-                               },
-                               id:1,
-                               name:'client 1'
-                            },
-                            id:2,
-                            name:'Project 2 for client 1'
-                         }
-                      ]
-                   },
-                   {
-                      id:4,
-                      name:'user4',
-                      roles:[],
-                      projects:[
-                         {
-                            client:{
-                               data:{
-                                  data:'Data2: client 2',
-                                  id:2
-                               },
-                               id:2,
-                               name:'client 2'
-                            },
-                            id:3,
-                            name:'Project 1 for client 2'
-                         }
-                      ]
-                   },
-                   {
-                      id:5,
-                      name:'user5',
-                      roles:[],
-                      projects:[
-                         {
-                            client:{
-                               data:{
-                                  data:'Data2: client 2',
-                                  id:2
-                               },
-                               id:2,
-                               name:'client 2'
-                            },
-                            id:3,
-                            name:'Project 1 for client 2'
-                         }
-                      ]
-                   }
-                ]""", employees );
-
         // --
         final DSRequest request = new DSRequest();
         request.setStartRow(0);
@@ -556,7 +563,12 @@ public class JpaDSDispatcherTest {
                             },
                             {
                                id:2,
-                               roles:[]
+                               roles:[
+                                  {
+                                     role:'Developer',
+                                     employee:2
+                                  }
+                               ]
                             },
                             {
                                id:3,

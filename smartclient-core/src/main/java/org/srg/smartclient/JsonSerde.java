@@ -2,20 +2,19 @@ package org.srg.smartclient;
 
 import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.deser.BeanDeserializerFactory;
+import com.fasterxml.jackson.databind.deser.ResolvableDeserializer;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import netscape.javascript.JSObject;
-import org.apache.commons.collections.map.LinkedMap;
+import com.fasterxml.jackson.databind.node.TextNode;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.srg.smartclient.isomorphic.*;
 import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 
 public class JsonSerde {
@@ -55,6 +54,66 @@ public class JsonSerde {
         }
     }
 
+    /**
+     * This specific deserializer is required due to the requirement for the foreignDisplayField
+     * mechanism that is described here:
+     *   - https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/JpaHibernateRelations.html (One-to-Many Relations);
+     *   - https://www.smartclient.com/smartclient-release/isomorphic/system/reference/?id=attr..DataSourceField.foreignDisplayField.
+     *
+     * Issue solved by this deserializer: In some use cases (subsequent entity fetch) <code>type</code> represents
+     * a Data Source Id, whereas, usually, -- it represents a concrete field type,
+     * one of the values from the enumeration {@link DSField.FieldType}. Therefore in thisrare case Jackson fails
+     * to map <code>type</code>, since there are no correspondent enumeration value.
+     *
+     * https://stackoverflow.com/questions/18313323/how-do-i-call-the-default-deserializer-from-a-custom-deserializer-in-jackson
+     */
+    private static class DSFieldDeserializer extends StdDeserializer<DSField> {
+
+        protected DSFieldDeserializer(Class<?> vc) {
+            super(vc);
+        }
+
+        @Override
+        public DSField deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+            final ObjectNode node = p.readValueAsTree();
+
+            if (node.has("type")) {
+                final TextNode nodeV = (TextNode) node.get("type");
+                final String typeV = nodeV.asText(null);
+
+                try {
+                    final DSField.FieldType ft = DSField.FieldType.valueOf(typeV.toUpperCase());
+                    assert ft != null;
+                }  catch (Throwable e) {
+                    /**
+                     *  Since field type doe not represent particular DSField.FieldType: it must have been
+                     *  a Data Source ID, and the right field type for a suuch field is DSField.FieldType.Entity.
+                     */
+                    node.set("type", new TextNode("entity"));
+                }
+            }
+
+            final DeserializationConfig config = ctxt.getConfig();
+            JavaType type = TypeFactory.defaultInstance().constructType(DSField.class);
+            JsonDeserializer<Object> defaultDeserializer = BeanDeserializerFactory.instance.buildBeanDeserializer(ctxt, type, config.introspect(type));
+
+            if (defaultDeserializer instanceof ResolvableDeserializer) {
+                ((ResolvableDeserializer) defaultDeserializer).resolve(ctxt);
+            }
+
+            final ObjectCodec oc = p.getCodec();
+            JsonParser treeParser = oc.treeAsTokens(node);
+            config.initialize(treeParser);
+
+            if (treeParser.getCurrentToken() == null) {
+                treeParser.nextToken();
+            }
+
+            final DSField dsf = (DSField) defaultDeserializer.deserialize(treeParser, ctxt);
+            return dsf;
+        }
+    }
+
     private static class RawDataResponseSerializer extends JsonSerializer<DSResponseDataContainer.RawDataResponse> {
 
         @Override
@@ -75,6 +134,11 @@ public class JsonSerde {
         }
 
         private static void writeValue(JsonGenerator jsonGenerator, DSField field, Object value) throws IOException {
+            if (/*field.getIncludeFrom() != null && !field.getIncludeFrom().isBlank() &&*/ field.getType() ==  null) {
+                jsonGenerator.writeObject(value);
+                return;
+            }
+
             switch (field.getType()) {
                 case TEXT:
 //                    jsonGenerator.writeString((String) value);
@@ -149,6 +213,7 @@ public class JsonSerde {
         module.addSerializer(DSResponse.class, new DSResponseSerialize() );
         module.addSerializer(DSResponseDataContainer.RawDataResponse.class, new RawDataResponseSerializer());
         module.addDeserializer(IDSRequestData.class, new DSRequestDeserializer());
+        module.addDeserializer(DSField.class, new DSFieldDeserializer(DSField.class));
 
         mapper.registerModule(module);
         mapper

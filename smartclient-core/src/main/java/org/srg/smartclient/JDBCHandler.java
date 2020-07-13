@@ -26,28 +26,63 @@ public class JDBCHandler extends AbstractDSHandler {
         policy = jdbcPolicy;
     }
 
-    protected  String formatFieldName(DSField dsf) {
-        if (DSField.FieldType.ENTITY.equals(dsf.getType())) {
+    protected static boolean isSubEntityFetchRequired(DSField dsf){
+        return dsf.isMultiple()
+                || DSField.FieldType.ENTITY.equals(dsf.getType());
+        }
+
+    protected String processFieldName(DSField dsf) {
+        if ( isSubEntityFetchRequired(dsf) ) {
+            // Populate extra information for the sake of troubleshooting
+            final String extraInfo;
+            final ForeignKeyRelation foreignKeyRelation = describeForeignKey(dsf);
+            if (logger.isDebugEnabled()) {
+                extraInfo = "Sub-entity placeholder for '%s' (will be fetched as a subsequent request)"
+                        .formatted(
+                                foreignKeyRelation
+                        );
+            } else {
+                extraInfo = "Sub-entity placeholder for '%s' (will be fetched as a subsequent request)"
+                        .formatted(foreignKeyRelation.foreign().dataSourceId());
+            }
+
             /**
              * Correspondent entity will be fetched by the subsequent query,
              * therefore it is required to reserve space in the response
              */
-            return "NULL as \"%s.%s\"".formatted(
+            return "NULL as \"%s.%s\" /*  %s  */".formatted(
                     getDataSource().getTableName(),
-                    dsf.getDbName()
+                    dsf.getDbName(),
+                    extraInfo
             );
-        } else if (dsf.isIncludeField()){
-            final ImportFromRelation relation = describeImportFrom(dsf);
-            return "%s.%s"
-                    .formatted(
-                            relation.foreignDataSource().getTableName(),
-                            relation.foreignDisplay().getDbName()
-                    );
         } else {
+            final DataSource effectiveDS;
+            final DSField effectiveField;
+
+            if (dsf.isIncludeField()) {
+                final ImportFromRelation relation = describeImportFrom(dsf);
+                effectiveDS = relation.foreignDataSource();
+                effectiveField = relation.foreignDisplay();
+            } else {
+                effectiveDS = getDataSource();
+                effectiveField = dsf;
+            }
+
+            // If a custom SQL snippet is provided for column -- use it
+            if (effectiveField.isCustomSQL()
+                    && effectiveField.getCustomSelectExpression() != null
+                    && !effectiveField.getCustomSelectExpression().isBlank()) {
+                return "%s AS \"%s\""
+                        .formatted(
+                                effectiveField.getCustomSelectExpression(),
+                                effectiveField.getDbName()
+                        );
+            } else {
                 return "%s.%s".formatted(
-                        getDataSource().getTableName(),
-                        dsf.getDbName()
+                        effectiveDS.getTableName(),
+                        effectiveField.getDbName()
                 );
+            }
         }
     }
 
@@ -86,20 +121,7 @@ public class JDBCHandler extends AbstractDSHandler {
                 String.join(",\n  " ,
                     requestedFields
                         .stream()
-                            .map( dsf -> {
-                                // If a custom SQL snippet is provided for column -- use it
-                                if (dsf.isCustomSQL()
-                                        && dsf.getCustomSelectExpression() != null
-                                        && !dsf.getCustomSelectExpression().isBlank()) {
-                                    return "%s AS \"%s\""
-                                            .formatted(
-                                                    dsf.getCustomSelectExpression(),
-                                                    dsf.getDbName()
-                                            );
-                                } else {
-                                    return formatFieldName(dsf);
-                                }
-                            })
+                            .map( dsf -> processFieldName(dsf))
                             .collect(Collectors.toList())
                 )
         );
@@ -248,7 +270,17 @@ public class JDBCHandler extends AbstractDSHandler {
                         for(int j=0; j<requestedFields.size(); ++j) {
                             final DSField dsf = requestedFields.get(j);
 
-                            if (DSField.FieldType.ENTITY.equals(dsf.getType())) {
+                            /**
+                             * Fetch sub-entities, if any
+                             */
+                            if (isSubEntityFetchRequired(dsf)) {
+                                logger.debug("Processing multi-value and/or Entity relations for data source '%s', requested fields '%s'..."
+                                        .formatted(
+                                                getDataSource().getId(),
+                                                requestedFields
+                                        )
+                                    );
+
                                 final ForeignKeyRelation foreignKeyRelation = describeForeignKey(dsf);
 
                                 final DSResponse response;
@@ -309,16 +341,53 @@ public class JDBCHandler extends AbstractDSHandler {
     }
 
     protected DSResponse fetchForeignEntityById(ForeignKeyRelation foreignKeyRelation, Map<String, Object> filtersAndKeys) throws Exception {
-        logger.trace("Feet");
-//        if (filtersAndKeys.size() > 1) {
-//            throw new IllegalStateException("Fetch Entity does not supports composite keys");
-//        }
+        logger.debug("Performing foreign fetch for relation '%s' with criteria: %s"
+                .formatted(
+                        foreignKeyRelation,
+                        filtersAndKeys
+                )
+            );
+
+        if (filtersAndKeys.size() > 1) {
+            throw new IllegalStateException("Fetch Entity does not supports composite keys");
+        }
 
         final DSHandler dsHandler = this.getDataSourceHandlerById(foreignKeyRelation.foreign().dataSourceId());
+        if (dsHandler == null) {
+            throw new RuntimeException( "Foreign data source handler with id '%s' is not registered."
+                    .formatted(foreignKeyRelation.foreign().dataSourceId())
+            );
+        }
 
         final DSRequest fetchEntity = new DSRequest();
         fetchEntity.setDataSource(dsHandler.id());
         fetchEntity.setOperationType(DSRequest.OperationType.FETCH);
+
+        /**
+         * if type is not provided this indicates that the only PKs should be fetched.
+         *
+         * @see <a href="https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/JpaHibernateRelations.html">JPA & Hibernate Relations</a>
+         */
+        if (null == foreignKeyRelation.sourceField().getType()) {
+            logger.debug(("Field type is not provided for the source field '%s.%s', therefore the only primary key[s] " +
+                    "will be fetched by the foreign fetch.")
+                    .formatted(
+                            foreignKeyRelation.dataSource().getId(),
+                            foreignKeyRelation.sourceField().getName(),
+                            foreignKeyRelation
+                    )
+            );
+
+            final DataSource foreignDS = foreignKeyRelation.foreign().dataSource();
+
+            final String pkNames = foreignDS.getFields().stream()
+                    .filter(dsf -> dsf.isPrimaryKey())
+                    .map(dsf -> dsf.getName())
+                    .collect(Collectors.joining(", "));
+
+            fetchEntity.setOutputs(pkNames);
+        }
+
         fetchEntity.wrapAndSetData(Map.of(foreignKeyRelation.foreign().fieldName(), filtersAndKeys.values().iterator().next()));
 
         final DSResponse response = dsHandler.handle(fetchEntity);
@@ -358,7 +427,7 @@ public class JDBCHandler extends AbstractDSHandler {
                             default -> "%s = ?";
                         };
 
-                        filterStr = filterStr.formatted(formatFieldName(dsf));
+                        filterStr = filterStr.formatted(processFieldName(dsf));
 
                         return new FilterData(dsf, filterStr, value);
                     })
@@ -416,6 +485,15 @@ public class JDBCHandler extends AbstractDSHandler {
 
         public Iterable<Object> values() {
             return Collections.singletonList(value);
+        }
+
+        @Override
+        public String toString() {
+            return "FilterData{" +
+                    "field=" + field +
+                    ", sql='" + sql + '\'' +
+                    ", value=" + value +
+                    '}';
         }
     }
 }
