@@ -20,6 +20,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                 ,iNotContainsCriteria()
                 ,equalsCriteria()
                 ,notEqualFetch()
+                ,iEqualsCriteria()
         );
     }
 
@@ -273,6 +274,41 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                         id:3,
                                         name:'user3',
                                         firedAt: null
+                                    }
+                                ],
+                                endRow:1,
+                                startRow:0,
+                                status:0,
+                                totalRows:1
+                            }
+                        }"""
+        );
+    }
+
+    private static Arguments iEqualsCriteria() {
+        return Arguments.of(
+                "Equals condition",
+                """
+                        {
+                            "operator" : "and",
+                            "_constructor" : "AdvancedCriteria",
+                            "criteria" : [
+                                {
+                                    "fieldName":"name",
+                                    "operator":"iEquals",
+                                    "value":"UseR3",
+                                    "_constructor":null
+                                }
+                            ]
+                        }""",
+                """
+                        {
+                            response:{
+                                data:[
+                                    {
+                                        id:3,
+                                        name:'user3',
+                                        firedAt:null
                                     }
                                 ],
                                 endRow:1,

@@ -93,17 +93,29 @@ public class AdvancedJDBCHandler extends JDBCHandler {
                     }
                     break;
 
+                case INOT_EQUAL:
                 case NOT_EQUAL:
                     isNot = true;
 
+                case IEQUALS:
                 case EQUALS:
 
                     values = ac.getValue();
 
-                    if (isNot) {
-                        filterStr = "%s <> ?";
+                    if (ac.getOperator().name().charAt(0) == 'I') {
+                        // Case Insensitive
+                        if (isNot) {
+                            filterStr = "LOWER(%s) <> LOWER(?)";
+                        } else {
+                            filterStr = "LOWER(%s) = LOWER(?)";
+                        }
                     } else {
-                        filterStr = "%s = ?";
+                        // Case Sensitive
+                        if (isNot) {
+                            filterStr = "%s <> ?";
+                        } else {
+                            filterStr = "%s = ?";
+                        }
                     }
                     break;
 
