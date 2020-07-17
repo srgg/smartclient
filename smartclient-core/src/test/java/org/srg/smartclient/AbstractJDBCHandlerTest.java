@@ -20,6 +20,18 @@ import java.util.List;
 
 public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
     protected enum ExtraField {
+        ManyToMany("""
+            [
+                {
+                    name:"teamMembers"
+                    ,tableName:"project_team"
+                    ,type:"integer"
+                    ,foreignKey:"EmployeeDS.id"
+                    ,multiple:true
+                }
+            ]
+        """),
+
         OneToMany_FetchEntireEntities("""
             [
                 {

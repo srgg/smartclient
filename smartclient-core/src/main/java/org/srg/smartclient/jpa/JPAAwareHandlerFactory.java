@@ -1,9 +1,10 @@
-package org.srg.smartclient;
+package org.srg.smartclient.jpa;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.srg.smartclient.*;
 import org.srg.smartclient.annotations.SmartClientField;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
@@ -11,7 +12,6 @@ import org.srg.smartclient.isomorphic.DataSource;
 import javax.persistence.*;
 import javax.persistence.metamodel.*;
 import java.lang.reflect.Field;
-import java.lang.reflect.Member;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -250,11 +250,14 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
             }
         }
 
-        final JpaRelation jpaRelation = describeRelation(mm, attr);
+        final JpaRelation jpaRelation = JPARelationSupport.describeRelation(mm, attr);
+
 
         if (jpaRelation != null
-                && jpaRelation.joinColumns.size() == 1) {
-            final JoinColumn joinColumnAnnotation = jpaRelation.joinColumns.get(0);
+                && jpaRelation.joinColumns().size() == 1) {
+            // Workaround, this is how it was done before and, probably, thic will be changed in the future
+
+            final JoinColumn joinColumnAnnotation = jpaRelation.joinColumns().get(0);
             if (!joinColumnAnnotation.name().isBlank()) {
                 f.setDbName(joinColumnAnnotation.name());
             }
@@ -299,9 +302,9 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                             // -- foreign key
                             final String foreignDataSourceId = getDsId(type.getJavaType());
                             final String foreignFieldName;
-                            if (!jpaRelation.joinColumns.isEmpty()){
-                                if (jpaRelation.joinColumns.size() >1) {
-                                    throw new IllegalStateException("Should be implemeted soon");
+                            if (!jpaRelation.joinColumns().isEmpty()){
+                                if (jpaRelation.joinColumns().size() >1) {
+                                    throw new IllegalStateException("Should be implemented soon");
                                 } else {
                                     foreignFieldName = fff.getName();
                                 }
@@ -310,7 +313,7 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                                  * As soon as entity does not declare any mapping for the attribute,
                                  * by default
                                  */
-                                foreignFieldName = jpaRelation.mappedByFieldName;
+                                foreignFieldName = jpaRelation.mappedByFieldName();
                             }
 
                             if ( foreignFieldName == null
@@ -329,11 +332,11 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                             // -- field type
 
                             if ((f.getForeignDisplayField() == null
-                                    || f.getForeignDisplayField().isBlank()) && jpaRelation.joinColumns.isEmpty() ) {
+                                    || f.getForeignDisplayField().isBlank()) && jpaRelation.joinColumns().isEmpty() ) {
 
                                 /**
-                                 * As soon as entity does not declare any mapping for the attribute,
-                                 * by default entire foreign entity  will be fetched
+                                 * As soon as this entity does not declare any mapping for the attribute,
+                                 * by default, the entire foreign entity  will be fetched
                                  */
                                 f.setType(DSField.FieldType.ENTITY);
                             } else {
@@ -351,7 +354,6 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                 default:
                     Utils.throw_it("Unsupported Persistence Type %s.", type.getPersistenceType());
                     break;
-
             }
         } else if (attr instanceof PluralAttribute pa){
             final Type<T> type = pa.getElementType();
@@ -359,51 +361,134 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
 
             switch (type.getPersistenceType()) {
                 case ENTITY:
+
+                    // Fields with Entity type should be hidden by default
+                    if (f.isHidden() == null) {
+                        f.setHidden(true);
+                    }
+
+                    f.setMultiple(true);
+
+                    // -- Determine a foreign relation
+                    final Class<?> javaType = type.getJavaType();
+                    final Set<DSField> dsIdFields =  getDSIDField(mm, javaType);
+
+                    DSField fkField = null;
+                    if (dsIdFields.size() == 1) {
+                        fkField = dsIdFields.iterator().next();
+
+                    } else if (jpaRelation.mappedByFieldName() != null
+                            && !jpaRelation.mappedByFieldName().isBlank()) {
+
+                        for (DSField dsf: dsIdFields) {
+                            if (dsf.getName().equals(jpaRelation.mappedByFieldName())) {
+                                fkField = dsf;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (fkField == null) {
+                        throw new IllegalStateException(
+                                "Datasource '%s', field '%s': Can't determine a foreignKey field  for '%s.%s'"
+                                        .formatted( dsId,
+                                                f.getName(),
+                                                f.getForeignDisplayField(),
+                                                attr.getDeclaringType(),
+                                                attr.getName()
+                                        )
+                        );
+                    }
+
+                    final String foreignDsId = getDsId(javaType);
+
+//                    SmartClientRelationSupport.describeForeignKey(dsId -> get);
+//
+//                    final SmartClientRelationSupport.ForeignKeyRelation fkRelation = new SmartClientRelationSupport.ForeignKeyRelation(
+//                            foreignDsId,
+//                            null,
+//                            fkField.getName(),
+//                            fkField
+//                    );
+
+                    final SmartClientRelationSupport.ForeignRelation fkRelation = new SmartClientRelationSupport.ForeignRelation(
+                            foreignDsId,
+                            null,
+                            fkField.getName(),
+                            fkField
+                    );
+
+                    // --
+
                     switch (pat) {
-                        case ONE_TO_MANY:
-                            final String s = getDsId(type.getJavaType());
-                            final Class<?> javaType = type.getJavaType();
-                            f.setMultiple(true);
-
-                            // should be hidden by default
-                            if (f.isHidden() == null) {
-                                f.setHidden(true);
-                            }
-
-                            final Set<DSField> dsIdFields =  getDSIDField(mm, javaType);
-
-                            DSField fff = null;
-                            if (dsIdFields.size() == 1) {
-                                fff = dsIdFields.iterator().next();
-
-                            } else if (jpaRelation.mappedByFieldName != null
-                                    && !jpaRelation.mappedByFieldName.isBlank()) {
-
-                                for (DSField dsf: dsIdFields) {
-                                    if (dsf.getName().equals(jpaRelation.mappedByFieldName)) {
-                                        fff = dsf;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if (fff == null) {
-                                throw new IllegalStateException(
-                                        "Datasource '%s', field '%s': Can't determine a foreignKey field  for '%s.%s'"
-                                                .formatted( dsId,
-                                                        f.getName(),
-                                                        f.getForeignDisplayField(),
-                                                        attr.getDeclaringType(),
-                                                        attr.getName()
-                                                )
+                        case MANY_TO_MANY:
+                            /**
+                             * Many-To-Many Relations
+                             *
+                             * An example of Many-To-Many relation is that Students have multiple Courses and each Course has multiple Students. In Java each Student bean has a list of Courses and each Course bean has a list of Students. In database tables are linked using additional table holding references to both students and courses.
+                             * To set up Many-To-Many relation between data sources you need to set up One-To-Many relation on both sides.
+                             *
+                             * For example students DataSourceField for CourseDS data source:
+                             *
+                             *       <field name="students" type="integer" foreignKey="StudentDS.id" multiple="true" />
+                             *
+                             * and courses DataSourceField for StudentDS data source:
+                             *       <field name="courses" type="integer" foreignKey="CourseDS.id" multiple="true" />
+                             *
+                             * Note that type attribute can be safely omitted here.
+                             * Note that alternative type declaration to be ID of related data source (as in regular One-To-Many relation case) would work as expected, but is not recommended to use, cause it would result in getting lots of copies of same data. Smartclient server will prevent infinite loops, but still lots of unnecessary data will be sent to client.
+                             *
+                             * @see <a href="https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/JpaHibernateRelations.html">JPA & Hibernate Relations</a>
+                             * @see <a href="https://forums.smartclient.com/forum/smart-gwt-technical-q-a/19147-many-to-many-relationship-in-sql-datasource">many-to-many relationship in SQL datasource?</a>
+                             * @see <a href="https://www.smartclient.com/smartgwtee/showcase/#large_valuemap_sql"> example shows the simple use of custom SQL clauses to provide a DataSource that joins multiple tables</a>
+                             */
+                            if (jpaRelation.joinTable() == null) {
+                                throw new RuntimeException(
+                                    "Datasource '%s', field '%s': Can't determine a join table name  for relation '%s'."
+                                            .formatted( dsId,
+                                                    f.getName(),
+                                                    jpaRelation
+                                            )
                                 );
                             }
 
+                            final String joinTableName;
+
+                            if (jpaRelation.joinTable().name() != null
+                                || jpaRelation.joinTable().name().isBlank()) {
+
+
+
+                                joinTableName = "%s_%s"
+                                        .formatted(
+                                                fkRelation.dataSourceId(),
+                                                fkRelation.fieldName()
+                                        );
+
+                                logger.debug(
+                                        "Data source '%s': join table name is not provided for a relation %s, auto generated name '%s' will be used"
+                                            .formatted(dsId,
+                                                    jpaRelation,
+                                                    joinTableName
+                                                )
+                                );
+
+                            } else {
+                                joinTableName = jpaRelation.joinTable().name();
+                            }
+
+                            f.setTableName(joinTableName);
+
+
+
+//                            break;
+
+                        case ONE_TO_MANY:
                             f.setForeignKey(
                                     "%s.%s"
                                             .formatted(
-                                                    getDsId(javaType),
-                                                    fff.getName()
+                                                    fkRelation.dataSourceId(),
+                                                    fkRelation.fieldName()
                                             )
                             );
 
@@ -519,194 +604,4 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
             );
         }
     }
-
-
-    // https://www.smartclient.com/smartclient-release/isomorphic/system/reference/?id=group..jpaHibernateRelations
-    private static <T> JpaRelation describeRelation(Metamodel mm, Attribute<? super T, ?> attribute) {
-        if (!attribute.isAssociation()) {
-            return null;
-        }
-        final Attribute.PersistentAttributeType pat = attribute.getPersistentAttributeType();
-        final JpaRelationType relationType = JpaRelationType.from(pat);
-
-        final EntityType<T> entityType = (EntityType<T>) attribute.getDeclaringType();
-        final Field javaField = (Field) attribute.getJavaMember();
-
-        // -- Mapped by
-        final EntityType<T> mappedByEntity;
-        final Attribute<? super T,?> mappedByAttribute;
-        final Field mappedByField;
-        final String mappedByFieldName = determineMappedBy(mm, relationType, javaField);
-        if (mappedByFieldName != null && !mappedByFieldName.isBlank()) {
-            if (attribute instanceof SingularAttribute sa) {
-                mappedByEntity = (EntityType<T>) sa.getType();
-            } else if (attribute instanceof PluralAttribute pa) {
-                mappedByEntity = (EntityType<T>) pa.getElementType();
-            } else  {
-                throw new IllegalStateException("Attribute '%s.%s' has unsupported attribute implementation class '%s'."
-                        .formatted(
-                                attribute.getDeclaringType(),
-                                attribute.getName(),
-                                attribute.getClass()
-                        )
-                );
-            }
-
-            mappedByAttribute = mappedByEntity.getAttribute( mappedByFieldName );
-
-            final Object o = mappedByAttribute.getJavaMember();
-            if (o instanceof Field ) {
-                mappedByField = (Field) o;
-            } else {
-                throw new IllegalStateException("");
-            }
-        } else {
-            mappedByEntity = null;
-            mappedByField = null;
-            mappedByAttribute = null;
-        }
-
-        // -- Join columns
-        List<JoinColumn> joinColumns = determineJoinColumns(javaField);
-
-        if (joinColumns.isEmpty()) {
-            joinColumns = determineJoinColumns(entityType);
-        }
-
-        List<JoinColumn> mappedByJoinColumns = mappedByField == null ? Collections.EMPTY_LIST : determineJoinColumns(mappedByField);
-
-        if (mappedByJoinColumns.isEmpty()
-                && mappedByFieldName != null
-                && !mappedByFieldName.isBlank()) {
-            mappedByJoinColumns = determineJoinColumns(mappedByEntity);
-
-        }
-
-        if (joinColumns.isEmpty() && mappedByJoinColumns.isEmpty()) {
-            throw new IllegalStateException("Cant't build JpaRelation for '%s.%s': join column is not found."
-                .formatted(attribute.getDeclaringType(), attribute.getName()));
-        }
-
-        return new JpaRelation(relationType, null, joinColumns, mappedByFieldName, mappedByJoinColumns);
-    }
-
-    private static String determineMappedBy(Metamodel mm, JpaRelationType type, Field field) {
-        final String mappedBy = switch (type) {
-            case ONE_TO_MANY -> field.getAnnotation(OneToMany.class).mappedBy();
-            case ONE_TO_ONE -> field.getAnnotation(OneToOne.class).mappedBy();
-            case MANY_TO_MANY -> field.getAnnotation(ManyToMany.class).mappedBy();
-
-            // manyToOne does not support mappedBy
-            case MANY_TO_ONE -> null;
-            default -> null;
-        };
-
-        return mappedBy;
-    }
-
-    private static <T> List<JoinColumn> determineJoinColumns(EntityType<T> entityType) {
-        final List<JoinColumn> joinColumns;
-
-        if (!entityType.hasSingleIdAttribute()) {
-            /**
-             * Entity has a composite key, therefore it is also require to look for @JoinColumn annotations
-             * at the MappedBy entity, if any
-             */
-            final Set<SingularAttribute<? super T, ?>> idAttr = entityType.getIdClassAttributes();
-
-            joinColumns = idAttr.stream()
-                    .filter(a -> a.isAssociation())
-                    .map(a -> {
-                        final Member jm = a.getJavaMember();
-                        List<JoinColumn> jc = determineJoinColumns((Field) jm);
-
-                        if (jc.isEmpty()) {
-                            /**
-                             * it seems that  Entity IdClass is not annotated, and it is highly possible that
-                             * all the annotations were put at the correspondent entity fields.
-                             *
-                             * I can't find any JPA MetaModel API that returns attributes for the Entity,
-                             * all of them returns attributes for the IdClass. Unfortunately, as a result, -
-                             * the only way to get correspondent entity fields is to use a Java Reflection API.
-                             */
-                            final Class entityJavaType = entityType.getJavaType();
-
-                            Field entityField = null;
-                            try {
-                                entityField = entityJavaType.getDeclaredField(a.getName());
-                            } catch (NoSuchFieldException e) {
-                            }
-
-                            if (entityField != null) {
-                                assert !jm.equals(entityField);
-                                jc = determineJoinColumns(entityField);
-                            }
-                        }
-                        assert jc != null;
-                        return jc;
-                    })
-                    .flatMap(Collection::stream)
-                    .collect(Collectors.toList());
-        } else {
-            joinColumns = Collections.EMPTY_LIST;
-        }
-
-        return joinColumns;
-    }
-
-    private static final List<JoinColumn> determineJoinColumns(Field field) {
-        final List<JoinColumn> joinColumns;
-
-        final JoinColumn joinColumnAnnotation = field.getAnnotation(JoinColumn.class);
-        if (joinColumnAnnotation != null) {
-            joinColumns = Collections.singletonList(joinColumnAnnotation);
-        } else {
-            final JoinColumns joinColumnsAnnotation = field.getAnnotation(JoinColumns.class);
-            if (joinColumnsAnnotation != null){
-                joinColumns = Arrays.asList(joinColumnsAnnotation.value());
-            } else {
-                final JoinTable joinTableAnnotation = field.getAnnotation(JoinTable.class);
-                if (joinTableAnnotation != null) {
-                    joinColumns = Arrays.asList(joinTableAnnotation.joinColumns());
-                } else {
-                    joinColumns = Collections.EMPTY_LIST;
-                }
-            }
-        }
-
-        return joinColumns;
-    }
-
-    protected enum JpaRelationType {
-        BASIC,
-        ONE_TO_MANY,
-        ONE_TO_ONE,
-        MANY_TO_ONE,
-        MANY_TO_MANY;
-
-        public static JpaRelationType from(Attribute.PersistentAttributeType pat) {
-            return switch (pat) {
-                case BASIC -> JpaRelationType.BASIC;
-
-                case MANY_TO_ONE -> JpaRelationType.MANY_TO_ONE;
-                case ONE_TO_MANY -> JpaRelationType.ONE_TO_MANY;
-                case ONE_TO_ONE -> JpaRelationType.ONE_TO_ONE;
-                case MANY_TO_MANY ->  JpaRelationType.MANY_TO_MANY;
-
-                default -> throw new IllegalStateException();
-            };
-        }
-    }
-
-    protected static record JpaRelation(
-            JpaRelationType type,
-
-            //
-            String idClassName,
-
-            List<JoinColumn> joinColumns,
-
-            String mappedByFieldName,
-            List<JoinColumn> mappedByJoinColumn
-    ){ }
 }

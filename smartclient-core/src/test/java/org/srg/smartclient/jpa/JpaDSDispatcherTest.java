@@ -426,6 +426,7 @@ public class JpaDSDispatcherTest {
         final String projectDsId = dispatcher.registerJPAEntity(Project.class);
 
         final DSRequest request = new DSRequest();
+        request.setOutputs("id, name, client, clientName");
         request.setStartRow(0);
         request.setDataSource( projectDsId);
 
@@ -483,6 +484,8 @@ public class JpaDSDispatcherTest {
         final DSRequest request = new DSRequest();
         request.setStartRow(0);
         request.setOutputs("id, projects");
+        request.setAdditionalOutputs("projects!ProjectDS.name, projects!ProjectDS.client, projects!ProjectDS.clientName, projects!ProjectDS.id");
+
         request.setDataSource( clientDsId);
 
         final Collection<DSResponse> responses = dispatcher.dispatch(request);
@@ -590,6 +593,27 @@ public class JpaDSDispatcherTest {
         );
     }
 
+    @Test
+    public void manyToManyRelation() {
+        dispatcher.registerJPAEntity(Employee.class);
+        dispatcher.registerJPAEntity(Client.class);
+        dispatcher.registerJPAEntity(ClientData.class);
+
+        final String projectDs = dispatcher.registerJPAEntity(Project.class);
+
+        // --
+        final DSRequest request = new DSRequest();
+        request.setStartRow(0);
+        request.setOutputs("id, name, teamMembers");
+        request.setAdditionalOutputs("teamMembers!EmployeeDS.id, teamMembers!EmployeeDS.name");
+        request.setDataSource( projectDs);
+
+        final Collection<DSResponse> responses = dispatcher.dispatch(request);
+        JsonTestSupport.assertJsonEquals(
+            """
+            [
+            ]""", responses);
+    }
 
     @Test
     public void loadSqlDataSourceFromResource() {

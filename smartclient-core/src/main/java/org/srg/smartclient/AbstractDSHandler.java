@@ -9,7 +9,7 @@ import org.srg.smartclient.isomorphic.DataSource;
 
 import java.util.*;
 
-public abstract class AbstractDSHandler extends RelationSupport implements DSHandler {
+public abstract class AbstractDSHandler extends SmartClientRelationSupport implements DSHandler {
     private static Logger logger = LoggerFactory.getLogger(AbstractDSHandler.class);
 
     private final IDSRegistry dsRegistry;
@@ -101,11 +101,15 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
     }
 
     protected ImportFromRelation describeImportFrom(DSField importFromField) {
-        return RelationSupport.describeImportFrom(dsId -> this.getDataSourceHandlerById(dsId), this.getDataSource(), importFromField);
+        return SmartClientRelationSupport.describeImportFrom(dsId -> this.getDataSourceHandlerById(dsId), this.getDataSource(), importFromField);
     }
 
     protected ForeignKeyRelation describeForeignKey(DSField foreignKeyField) {
-        return RelationSupport.describeForeignKey(dsId -> this.getDataSourceHandlerById(dsId), this.getDataSource(), foreignKeyField);
+        return SmartClientRelationSupport.describeForeignKey(dsId -> this.getDataSourceHandlerById(dsId), this.getDataSource(), foreignKeyField);
+    }
+
+    protected ForeignRelation describeForeignRelation(String relation) {
+        return SmartClientRelationSupport.describeForeignRelation( dsId -> this.getDataSourceHandlerById(dsId), relation);
     }
 
     protected ForeignRelation determineEffectiveField(DSField dsf) {

@@ -65,6 +65,17 @@ public class DSRequest implements IDSRequest {
      * Note that you cannot use this property to request a superset of the fields that would normally be returned, because that would be a security hole. It is possible to configure individual OperationBindings to return extra fields, but this must be done in the server's DataSource descriptor; it cannot be altered on the fly from the client side.
      */
     private String outputs;
+
+    /**
+     * https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/data/DSRequest.html#getAdditionalOutputs--
+     *
+     * For fetch, add or update operation, an optional comma separated list of fields to fetch from another, related DataSource.
+     * Fields should be specified in the format "localFieldName!relatedDataSourceID.relatedDataSourceFieldName". where relatedDataSourceID is the ID of the related dataSource, and relatedDataSourceFieldName is the field for which you want to fetch related values. The returned field values will be stored on the data returned to the client under the specified localFieldName. Note that this will be applied in addition to any specified outputs.
+     *
+     * Note that as with DataSourceField.includeFrom, the related dataSource must be linked to the primary datasource via a foreignKey relationship.
+     */
+    private String additionalOutputs;
+
     private TextMatchStyle textMatchStyle;
     private List<String> sortBy;
 //    private Map<String,Object> data;
@@ -173,6 +184,14 @@ public class DSRequest implements IDSRequest {
 
     public void setOutputs(String outputs) {
         this.outputs = outputs;
+    }
+
+    public String getAdditionalOutputs() {
+        return additionalOutputs;
+    }
+
+    public void setAdditionalOutputs(String additionalOutputs) {
+        this.additionalOutputs = additionalOutputs;
     }
 
     public static class MapData extends LinkedMap implements IDSRequestData {

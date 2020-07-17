@@ -13,13 +13,13 @@ import java.util.stream.Collectors;
  *
  * @author srg
  */
-abstract class DSDeclarationBuilder {
+public abstract class DSDeclarationBuilder {
 
     private DSDeclarationBuilder() {}
 
     private static final Logger logger = LoggerFactory.getLogger(DSDeclarationBuilder.class);
 
-    private static class BuilderContext extends RelationSupport {
+    private static class BuilderContext extends SmartClientRelationSupport {
         private String dsName;
         private int qntGeneratedFields;
         private StringBuilder builder;
@@ -64,7 +64,7 @@ abstract class DSDeclarationBuilder {
 //        }
 
         public ForeignKeyRelation describeForeignKey(DSField foreignKeyField) {
-            return RelationSupport.describeForeignKey(this.dsRegistry, this.dataSource, foreignKeyField);
+            return SmartClientRelationSupport.describeForeignKey(this.dsRegistry, this.dataSource, foreignKeyField);
         }
     }
 
@@ -214,7 +214,7 @@ abstract class DSDeclarationBuilder {
                 // https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/JpaHibernateRelations.html
 
 
-                final RelationSupport.ForeignKeyRelation foreignKeyRelation = ctx.describeForeignKey(f);
+                final SmartClientRelationSupport.ForeignKeyRelation foreignKeyRelation = ctx.describeForeignKey(f);
                 ctx.write("\t\t\t,type:\"%s\"\n",
                         foreignKeyRelation.foreign().dataSourceId());
 

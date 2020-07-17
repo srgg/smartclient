@@ -3,7 +3,6 @@ package org.srg.smartclient.jpa;
 import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.Test;
 import org.srg.smartclient.JDBCHandler;
-import org.srg.smartclient.JPAAwareHandlerFactory;
 import org.srg.smartclient.JsonTestSupport;
 
 import javax.persistence.EntityManagerFactory;

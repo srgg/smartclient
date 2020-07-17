@@ -6,7 +6,7 @@ import org.srg.smartclient.isomorphic.DataSource;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class RelationSupport {
+public class SmartClientRelationSupport {
     public static record ForeignKeyRelation(
             DataSource dataSource,
             DSField sourceField,
@@ -46,7 +46,7 @@ public class RelationSupport {
         }
     }
 
-    protected static record ForeignRelation(
+    public static record ForeignRelation(
         String dataSourceId,
         DataSource dataSource,
 
