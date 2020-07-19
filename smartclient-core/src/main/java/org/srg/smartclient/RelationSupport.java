@@ -55,6 +55,14 @@ public class RelationSupport {
 
 
     ){
+        public String formatAsSQL() {
+            return "%s.%s".formatted(
+                    dataSource().getTableName(),
+                    field().getDbName()
+            );
+
+        }
+
         @Override
         public String toString() {
             return "ForeignRelation{" +

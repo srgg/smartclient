@@ -128,12 +128,8 @@ public class AdvancedJDBCHandler extends JDBCHandler {
                     );
             }
 
-            filterStr = filterStr.formatted(
-                    processFieldName(dsf)
-            );
-
-
-            return ValueFilterData.create(dsf, filterStr, values);
+            final ForeignRelation effectiveField = determineEffectiveField(dsf);
+            return ValueFilterData.create(effectiveField, filterStr, values);
         } else {
             switch (ac.getOperator()) {
                 case OR:
@@ -171,24 +167,26 @@ public class AdvancedJDBCHandler extends JDBCHandler {
     protected static class ValueFilterData extends FilterData {
         private final List<Object> values;
 
-        public ValueFilterData(DSField field, String sql) {
-            super(field, sql, (Object) null);
+
+        public ValueFilterData(ForeignRelation dsFieldPair, String sql) {
+            super(dsFieldPair, sql, (Object) null);
+
             //noinspection unchecked
             this.values = Collections.EMPTY_LIST;
         }
 
-        public ValueFilterData(DSField field, String sql, Collection<?> values) {
-            super(field, sql, (Object) null);
+        public ValueFilterData(ForeignRelation dsFieldPair, String sql, Collection<?> values) {
+            super(dsFieldPair, sql, (Object) null);
             this.values = new ArrayList<>(values);
         }
 
-        public ValueFilterData(DSField field, String sql, Object value) {
-            super(field, sql, (Object) null);
+        public ValueFilterData(ForeignRelation dsFieldPair, String sql, Object value) {
+            super(dsFieldPair, sql, (Object) null);
             this.values = Collections.singletonList(value);
         }
 
-        public ValueFilterData(DSField field, String sql, Object... values) {
-            super(field, sql, (Object) null);
+        public ValueFilterData(ForeignRelation dsFieldPair, String sql, Object... values) {
+            super(dsFieldPair, sql, (Object) null);
             this.values = Arrays.asList(values);
         }
 
@@ -197,13 +195,13 @@ public class AdvancedJDBCHandler extends JDBCHandler {
             return values;
         }
 
-        public static ValueFilterData create(DSField field, String sql, Object value) {
+        public static ValueFilterData create(ForeignRelation dsFieldPair, String sql, Object value) {
             if (value == null) {
-                return new ValueFilterData(field, sql);
+                return new ValueFilterData(dsFieldPair, sql);
             } else if (value instanceof Collection) {
-                return new ValueFilterData(field, sql, (Collection<?>)value);
+                return new ValueFilterData(dsFieldPair, sql, (Collection<?>)value);
             } else {
-                return new ValueFilterData(field, sql, value);
+                return new ValueFilterData(dsFieldPair, sql, value);
             }
         }
     }
@@ -211,6 +209,7 @@ public class AdvancedJDBCHandler extends JDBCHandler {
     protected class CompositeFilterData implements IFilterData, Iterable<Object> {
         private final String operator;
         private final List<IFilterData> filterDataList;
+        private transient String formattedSql;
 
         public CompositeFilterData(String operator, List<IFilterData> filterDataList) {
             this.operator = operator;
@@ -220,16 +219,29 @@ public class AdvancedJDBCHandler extends JDBCHandler {
 
         @Override
         public String sql() {
-            final String sql = "( %s )"
+            if (formattedSql == null) {
+                formattedSql = "( %s )"
                     .formatted(
-                            filterDataList.stream()
-                                .map(IFilterData::sql)
-                                .collect(Collectors.joining(" " + operator + " ")
+                        filterDataList.stream()
+                            .map(IFilterData::sql)
+                            .collect(Collectors.joining(" " + operator + " ")
                             )
                     );
-            final StringBuilder sbld = new StringBuilder("(");
+            }
 
-            return sql;
+            return formattedSql;
+        }
+
+        @Override
+        public String sql(String aliasOrTable) {
+            final String effectiveSql = "( %s )"
+                .formatted(
+                    filterDataList.stream()
+                        .map( fd -> fd.sql(aliasOrTable))
+                        .collect(Collectors.joining(" " + operator + " "))
+                );
+
+            return effectiveSql;
         }
 
         @Override

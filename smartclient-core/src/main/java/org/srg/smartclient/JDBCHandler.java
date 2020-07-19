@@ -29,10 +29,23 @@ public class JDBCHandler extends AbstractDSHandler {
     protected static boolean isSubEntityFetchRequired(DSField dsf){
         return dsf.isMultiple()
                 || DSField.FieldType.ENTITY.equals(dsf.getType());
-        }
+    }
 
-    protected String processFieldName(DSField dsf) {
+    protected static String formatColumnNameToAvoidAnyPotentionalDuplication(DataSource ds, DSField field) {
+        return "%s_%s"
+                .formatted(
+                        field.getDbName(),
+                        ds.getTableName()
+                );
+
+    }
+
+    protected String formatFieldNameForSqlSelectClause(DSField dsf) {
+        final ForeignRelation effectiveRelation;
+        final String effectiveColumn;
+
         if ( isSubEntityFetchRequired(dsf) ) {
+
             // Populate extra information for the sake of troubleshooting
             final String extraInfo;
             final ForeignKeyRelation foreignKeyRelation = describeForeignKey(dsf);
@@ -50,40 +63,35 @@ public class JDBCHandler extends AbstractDSHandler {
              * Correspondent entity will be fetched by the subsequent query,
              * therefore it is required to reserve space in the response
              */
-            return "NULL as \"%s.%s\" /*  %s  */".formatted(
-                    getDataSource().getTableName(),
-                    dsf.getDbName(),
-                    extraInfo
-            );
-        } else {
-            final DataSource effectiveDS;
-            final DSField effectiveField;
+            effectiveRelation = new ForeignRelation(foreignKeyRelation.dataSource().getId(), foreignKeyRelation.dataSource(),
+                    dsf.getName(), dsf );
 
-            if (dsf.isIncludeField()) {
-                final ImportFromRelation relation = describeImportFrom(dsf);
-                effectiveDS = relation.foreignDataSource();
-                effectiveField = relation.foreignDisplay();
-            } else {
-                effectiveDS = getDataSource();
-                effectiveField = dsf;
-            }
+            effectiveColumn = "NULL  /*  %s  */"
+                    .formatted(extraInfo);
+        } else {
+            effectiveRelation = determineEffectiveField(dsf);
 
             // If a custom SQL snippet is provided for column -- use it
-            if (effectiveField.isCustomSQL()
-                    && effectiveField.getCustomSelectExpression() != null
-                    && !effectiveField.getCustomSelectExpression().isBlank()) {
-                return "%s AS \"%s\""
-                        .formatted(
-                                effectiveField.getCustomSelectExpression(),
-                                effectiveField.getDbName()
-                        );
+            if (effectiveRelation.field().isCustomSQL()
+                    && effectiveRelation.field().getCustomSelectExpression() != null
+                    && !effectiveRelation.field().getCustomSelectExpression().isBlank()) {
+                effectiveColumn = effectiveRelation.field().getCustomSelectExpression();
             } else {
-                return "%s.%s".formatted(
-                        effectiveDS.getTableName(),
-                        effectiveField.getDbName()
-                );
+                effectiveColumn = effectiveRelation.formatAsSQL();
             }
         }
+
+        /**
+         * It is required to introduce a column alias, to avoid column name dublica
+         */
+        return "%s AS %s"
+                .formatted(
+                        effectiveColumn,
+                        formatColumnNameToAvoidAnyPotentionalDuplication(
+                                effectiveRelation.dataSource(),
+                                effectiveRelation.field()
+                        )
+                );
     }
 
     protected DSResponse handleFetch(DSRequest request) throws Exception {
@@ -121,7 +129,7 @@ public class JDBCHandler extends AbstractDSHandler {
                 String.join(",\n  " ,
                     requestedFields
                         .stream()
-                            .map( dsf -> processFieldName(dsf))
+                            .map( dsf -> formatFieldNameForSqlSelectClause(dsf))
                             .collect(Collectors.toList())
                 )
         );
@@ -173,13 +181,6 @@ public class JDBCHandler extends AbstractDSHandler {
         // -- WHERE
         final List<IFilterData> filterData  = generateFilterData(request.getTextMatchStyle(), request.getData());
 
-        final String whereClause = filterData.isEmpty() ?  "" : " \n\tWHERE \n\t\t" +
-                String.join("\n\t\t AND ",
-                        filterData.stream()
-                                .map(fd -> fd.sql())
-                                .collect(Collectors.toList())
-                );
-
         final List<Object[]> data;
         if (pageSize > 0) {
             data = new ArrayList<>(pageSize);
@@ -190,8 +191,27 @@ public class JDBCHandler extends AbstractDSHandler {
         final int totalRows[] = new int[] {-1};
 
         policy.withConnectionDo(this.getDataSource().getDbName(), conn-> {
+
+            final String genericQuery = String.join("\n ", Arrays.asList(selectClause, fromClause, joinClause /*, whereClause*/, orderClause/*, paginationClause*/ ));
+
+            final String whereClause = filterData.isEmpty() ?  "" : " \n\tWHERE \n\t\t" +
+                    String.join("\n\t\t AND ",
+                            filterData.stream()
+                                    .map(fd -> fd.sql("opaque"))
+                                    .collect(Collectors.toList())
+                    );
+
             // -- calculate total
-            final String countQuery = String.join("\n ", "SELECT count(*)", fromClause, joinClause, whereClause);
+            /**
+             * Opaque query is required for a proper filtering by calculated fields
+             */
+            final String countQuery = """
+                SELECT count(*) FROM (
+                    %s
+                ) opaque
+                %s
+            """.formatted( genericQuery, whereClause );
+
 
             if (logger.isDebugEnabled()) {
                 logger.debug("DataSource %s fetch count(*) query:\n%s\n\nparams:\n%s"
@@ -220,13 +240,22 @@ public class JDBCHandler extends AbstractDSHandler {
             }
 
             // -- fetch data
-            final String query = String.join("\n ", Arrays.asList(selectClause, fromClause, joinClause, whereClause, orderClause, paginationClause ));
+            /**
+             * Opaque query is required for a proper filtering by calculated fields
+             */
+            final String opaqueFetchQuery = """
+                SELECT * FROM (
+                    %s
+                ) opaque
+                %s
+                %s
+            """.formatted(genericQuery, whereClause, paginationClause);
 
             if (logger.isDebugEnabled()) {
                 logger.debug("DataSource %s fetch query:\n%s\n\nparams:\n%s"
                     .formatted(
                         getDataSource().getId(),
-                        query,
+                            opaqueFetchQuery,
                             filterData.stream()
                                 .flatMap(fd -> StreamSupport.stream(filterData.spliterator(), false))
                                 .map(d-> "%s".formatted(d))
@@ -235,7 +264,7 @@ public class JDBCHandler extends AbstractDSHandler {
                 );
             }
 
-            try(PreparedStatement st = conn.prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)){
+            try(PreparedStatement st = conn.prepareStatement(opaqueFetchQuery, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)){
                 st.setFetchSize(pageSize);
                 st.setMaxRows(pageSize);
                 st.setFetchDirection(ResultSet.FETCH_FORWARD);
@@ -427,9 +456,8 @@ public class JDBCHandler extends AbstractDSHandler {
                             default -> "%s = ?";
                         };
 
-                        filterStr = filterStr.formatted(processFieldName(dsf));
-
-                        return new FilterData(dsf, filterStr, value);
+                        final ForeignRelation effectiveField = determineEffectiveField(dsf);
+                        return new FilterData(effectiveField, filterStr, value);
                     })
                     .collect(Collectors.toList());
         } else if (data == null){
@@ -446,6 +474,8 @@ public class JDBCHandler extends AbstractDSHandler {
 
     protected interface IFilterData {
         String sql();
+        String sql(String aliasOrTable);
+
         Iterable<Object> values();
 
         default int setStatementParameters(int idx, PreparedStatement preparedStatement) throws SQLException {
@@ -458,29 +488,52 @@ public class JDBCHandler extends AbstractDSHandler {
     }
 
     protected static class FilterData implements IFilterData{
-        private final DSField field;
-        private final String sql;
+        private final ForeignRelation dsFieldPair;
+        private final String sqlTemplate;
+        private transient String formattedSql;
         private final Object value;
 
-        public FilterData(DSField field, String sql, Object value) {
-            this.field = field;
-            this.sql = sql;
+        public FilterData(ForeignRelation dsFieldPair, String sqlTemplate, Object value) {
+            this.dsFieldPair = dsFieldPair;
+            this.sqlTemplate = sqlTemplate;
             this.value = value;
         }
 
-        public FilterData(DSField field, String sql, Object... values) {
-            this.field = field;
-            this.sql = sql;
+        public FilterData(ForeignRelation dsFieldPair, String sqlTemplate, Object... values) {
+            this.dsFieldPair = dsFieldPair;
+            this.sqlTemplate = sqlTemplate;
             this.value = values;
         }
 
         @Override
         public String sql() {
-            return sql;
+            if (formattedSql == null) {
+                formattedSql = this.sql(dsFieldPair.dataSource().getTableName());
+            }
+            return formattedSql;
+        }
+
+        @Override
+        public String sql(String aliasOrTable) {
+            assert sqlTemplate != null;
+
+            return sqlTemplate.formatted(
+                    "%s.%s".formatted(
+                            aliasOrTable,
+                            formatColumnNameToAvoidAnyPotentionalDuplication(
+                                    getDsFieldPair().dataSource(),
+                                    getDsFieldPair().field()
+                            )
+                    )
+            );
         }
 
         public DSField field() {
-            return field;
+            return dsFieldPair.field();
+        }
+
+        protected ForeignRelation getDsFieldPair() {
+            return dsFieldPair;
         }
 
         public Iterable<Object> values() {
@@ -490,8 +543,8 @@ public class JDBCHandler extends AbstractDSHandler {
         @Override
         public String toString() {
             return "FilterData{" +
-                    "field=" + field +
-                    ", sql='" + sql + '\'' +
+                    "field=" + dsFieldPair +
+                    ", sqlTemplate='" + sqlTemplate + '\'' +
                     ", value=" + value +
                     '}';
         }

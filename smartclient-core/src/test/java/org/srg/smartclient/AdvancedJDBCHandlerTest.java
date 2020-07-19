@@ -21,6 +21,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                 ,equalsCriteria()
                 ,notEqualFetch()
                 ,iEqualsCriteria()
+                ,iContains_by_SQLCalculatedField_Criteria()
         );
     }
 
@@ -287,7 +288,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
 
     private static Arguments iEqualsCriteria() {
         return Arguments.of(
-                "Equals condition",
+                "iEquals condition",
                 """
                         {
                             "operator" : "and",
@@ -367,6 +368,43 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                     totalRows:4
                 }
             }"""
+        );
+    }
+
+    private static Arguments iContains_by_SQLCalculatedField_Criteria() {
+        return Arguments.of(
+                "iContains by sql calculated field",
+                """
+                        {
+                            "operator" : "and",
+                            "_constructor" : "AdvancedCriteria",
+                            "criteria" : [
+                                {
+                                    "fieldName":"calculated",
+                                    "operator":"iContains",
+                                    "value":"seR3",
+                                    "_constructor":null
+                                }
+                            ]
+                        }""",
+                """
+                        {
+                            response:{
+                                data:[
+                                    {
+                                        calculated:'3_user3',
+                                        firedAt:null,
+                                        id:3,
+                                        name:'user3'
+                                    }
+                                ],
+                                endRow:1,
+                                startRow:0,
+                                status:0,
+                                totalRows:1
+                            }
+                        }""",
+                ExtraField.SqlCalculated
         );
     }
 

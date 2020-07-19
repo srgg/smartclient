@@ -206,7 +206,7 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
 
     @BeforeEach
     public void setupDataSources() throws Exception {
-        jdbcDataSource.setURL("jdbc:h2:mem:test:˜/test");
+        jdbcDataSource.setURL("jdbc:h2:mem:test:˜/test;database_to_lower=true");
         jdbcDataSource.setUser("sa");
         jdbcDataSource.setPassword("sa");
 

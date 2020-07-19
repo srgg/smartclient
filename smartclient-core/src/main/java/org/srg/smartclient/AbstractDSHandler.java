@@ -53,15 +53,13 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
         return getDataSource().getId();
     }
 
-    protected DSResponse handleFetch(DSRequest request) throws Exception {
-        return failureDueToUnsupportedOperation(request);
+    @Override
+    public DataSource dataSource() {
+        return this.datasource;
     }
 
-    private DSResponse failureDueToUnsupportedOperation(DSRequest request) {
-        return DSResponse.failure("Can't handle request: operation '%s' is not supported by '%s' data source.",
-                request.getOperationType(),
-                request.getDataSource()
-        );
+    protected DSResponse handleFetch(DSRequest request) throws Exception {
+        return failureDueToUnsupportedOperation(request);
     }
 
     @Override
@@ -85,6 +83,13 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
         }
     }
 
+    private DSResponse failureDueToUnsupportedOperation(DSRequest request) {
+        return DSResponse.failure("Can't handle request: operation '%s' is not supported by '%s' data source.",
+                request.getOperationType(),
+                request.getDataSource()
+        );
+    }
+
     protected DSHandler getDataSourceHandlerById(String id) {
         final DSHandler dsHandler = dsRegistry.getHandlerByName(id);
         return dsHandler;
@@ -103,8 +108,19 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
         return RelationSupport.describeForeignKey(dsId -> this.getDataSourceHandlerById(dsId), this.getDataSource(), foreignKeyField);
     }
 
-    @Override
-    public DataSource dataSource() {
-        return this.datasource;
+    protected ForeignRelation determineEffectiveField(DSField dsf) {
+        final DataSource effectiveDS;
+        final DSField effectiveField;
+
+        if (dsf.isIncludeField()) {
+            final ImportFromRelation relation = describeImportFrom(dsf);
+            effectiveDS = relation.foreignDataSource();
+            effectiveField = relation.foreignDisplay();
+        } else {
+            effectiveDS = getDataSource();
+            effectiveField = dsf;
+        }
+
+        return new ForeignRelation(effectiveDS.getId(), effectiveDS, effectiveField.getName(), effectiveField);
     }
 }
