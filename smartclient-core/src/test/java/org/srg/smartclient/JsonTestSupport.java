@@ -58,6 +58,10 @@ public class JsonTestSupport {
         assertEqualsUsingJSONImpl(expected, actual, Configuration.empty().withOptions(Option.IGNORING_ARRAY_ORDER));
     }
 
+    public static void assertJsonEquals_WithOrder(Object expected, Object actual) {
+        assertEqualsUsingJSONImpl(expected, actual, Configuration.empty());
+    }
+
     protected static void assertEqualsUsingJSONImpl(Object expected, Object actual, Configuration configuration) {
         String strExpected = null;
         String strActual = null;

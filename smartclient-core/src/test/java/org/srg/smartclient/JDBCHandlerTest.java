@@ -5,6 +5,7 @@ import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
@@ -453,58 +454,58 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         final DSResponse response = handler.handleFetch(request);
         JsonTestSupport.assertJsonEquals("""
             {
-               "response":{
-                  "status":0,
-                  "startRow":0,
-                  "endRow":5,
-                  "totalRows":5,
-                  "data":[
+               response:{
+                  status:0,
+                  startRow:0,
+                  endRow:5,
+                  totalRows:5,
+                  data:[
                      {
-                        "id":1,
-                        "name":"admin",
-                        "calculated":"1_admin", 
-                        "roles":[
+                        id:1,
+                        name:'admin',
+                        calculated:'1_admin', 
+                        roles:[
                            {
-                              "role":"Admin",
-                              "employee":1,
-                              "employeeCalculated":"1_admin"
+                              role:'Admin',
+                              employee:1,
+                              employeeCalculated:'1_admin'
                            },
                            {
-                              "role":"Developer",
-                              "employee":1,
-                              "employeeCalculated":"1_admin"
+                              role:'Developer',
+                              employee:1,
+                              employeeCalculated:'1_admin'
                            }
                         ]
                      },
                      {
-                        "id":2,
-                        "name":"developer",
-                        "calculated":"2_developer", 
-                        "roles":[
+                        id:2,
+                        name:'developer',
+                        calculated:'2_developer', 
+                        roles:[
                            {
-                              "role":"Developer",
-                              "employee":2,
-                              "employeeCalculated":"2_developer"
+                              role:'Developer',
+                              employee:2,
+                              employeeCalculated:'2_developer'
                            }
                         ]
                      },
                      {
-                        "id":3,
-                        "name":"UseR3",
-                        "calculated":"3_UseR3", 
-                        "roles":[]
+                        id:3,
+                        name:'UseR3',
+                        calculated:'3_UseR3', 
+                        roles:[]
                      },
                      {
-                        "id":4,
-                        "name":"user4",
-                        "calculated":"4_user4", 
-                        "roles":[]
+                        id:4,
+                        name:'user4',
+                        calculated:'4_user4', 
+                        roles:[]
                      },
                      {
-                        "id":5,
-                        "name":"user5",
-                        "calculated":"5_user5", 
-                        "roles":[]
+                        id:5,
+                        name:'user5',
+                        calculated:'5_user5', 
+                        roles:[]
                      }
                   ]
                }
@@ -577,4 +578,48 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                }
             }""", response);
     }
+
+    @Regression("Fails to fetch with order by SQL Calculated Field")
+    @Test
+    public void fetchWithOrderBySQLCalculatedField() throws Exception {
+        withExtraFields(ExtraField.SqlCalculated);
+
+        final DSRequest request = new DSRequest();
+        request.setOutputs("id, calculated");
+        request.setSortBy(List.of("calculated"));
+
+        final DSResponse response = handler.handleFetch(request);
+        JsonTestSupport.assertJsonEquals_WithOrder("""
+            {
+               response:{
+                  status:0,
+                  startRow:0,
+                  endRow:5,
+                  totalRows:5,
+                  data:[
+                     {
+                        id:1,
+                        calculated:'1_admin' 
+                     },
+                     {
+                        id:2,
+                        calculated:'2_developer' 
+                     },
+                     {
+                        id:3,
+                        calculated:'3_UseR3' 
+                     },
+                     {
+                        id:4,
+                        calculated:'4_user4' 
+                     },
+                     {
+                        id:5,
+                        calculated:'5_user5' 
+                     }                  
+                  ]
+               }
+            }""", response);
+    }
+
 }

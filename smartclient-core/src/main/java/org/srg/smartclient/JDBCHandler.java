@@ -40,11 +40,15 @@ public class JDBCHandler extends AbstractDSHandler {
 
     }
 
-    protected String formatFieldNameForSqlSelectClause(DSField dsf) {
+    private String formatFieldNameFor(boolean formatForSelect, DSField dsf) {
         final ForeignRelation effectiveRelation;
         final String effectiveColumn;
 
         if ( isSubEntityFetchRequired(dsf) ) {
+
+            if (!formatForSelect) {
+                throw new IllegalStateException("MNot supported yet.");
+            }
 
             // Populate extra information for the sake of troubleshooting
             final String extraInfo;
@@ -81,17 +85,83 @@ public class JDBCHandler extends AbstractDSHandler {
             }
         }
 
+        final String formattedFieldName = formatColumnNameToAvoidAnyPotentionalDuplication(
+                effectiveRelation.dataSource(),
+                effectiveRelation.field()
+            );
+
+        if (!formatForSelect) {
+            return formattedFieldName;
+        }
+
+
         /**
-         * It is required to introduce a column alias, to avoid column name dublica
+         * It is required to introduce a column alias, to avoid column name duplication
          */
         return "%s AS %s"
                 .formatted(
-                        effectiveColumn,
-                        formatColumnNameToAvoidAnyPotentionalDuplication(
-                                effectiveRelation.dataSource(),
-                                effectiveRelation.field()
-                        )
+                    effectiveColumn,
+                    formattedFieldName
                 );
+    }
+
+    protected String formatFieldNameForSqlOrderClause(DSField dsf) {
+        return formatFieldNameFor(false, dsf);
+    }
+
+    protected String formatFieldNameForSqlSelectClause(DSField dsf) {
+        return formatFieldNameFor(true, dsf);
+//        final ForeignRelation effectiveRelation;
+//        final String effectiveColumn;
+//
+//        if ( isSubEntityFetchRequired(dsf) ) {
+//
+//            // Populate extra information for the sake of troubleshooting
+//            final String extraInfo;
+//            final ForeignKeyRelation foreignKeyRelation = describeForeignKey(dsf);
+//            if (logger.isDebugEnabled()) {
+//                extraInfo = "Sub-entity placeholder for '%s' (will be fetched as a subsequent request)"
+//                        .formatted(
+//                                foreignKeyRelation
+//                        );
+//            } else {
+//                extraInfo = "Sub-entity placeholder for '%s' (will be fetched as a subsequent request)"
+//                        .formatted(foreignKeyRelation.foreign().dataSourceId());
+//            }
+//
+//            /**
+//             * Correspondent entity will be fetched by the subsequent query,
+//             * therefore it is required to reserve space in the response
+//             */
+//            effectiveRelation = new ForeignRelation(foreignKeyRelation.dataSource().getId(), foreignKeyRelation.dataSource(),
+//                    dsf.getName(), dsf );
+//
+//            effectiveColumn = "NULL  /*  %s  */"
+//                    .formatted(extraInfo);
+//        } else {
+//            effectiveRelation = determineEffectiveField(dsf);
+//
+//            // If a custom SQL snippet is provided for column -- use it
+//            if (effectiveRelation.field().isCustomSQL()
+//                    && effectiveRelation.field().getCustomSelectExpression() != null
+//                    && !effectiveRelation.field().getCustomSelectExpression().isBlank()) {
+//                effectiveColumn = effectiveRelation.field().getCustomSelectExpression();
+//            } else {
+//                effectiveColumn = effectiveRelation.formatAsSQL();
+//            }
+//        }
+//
+//        /**
+//         * It is required to introduce a column alias, to avoid column name dublica
+//         */
+//        return "%s AS %s"
+//                .formatted(
+//                        effectiveColumn,
+//                        formatColumnNameToAvoidAnyPotentionalDuplication(
+//                                effectiveRelation.dataSource(),
+//                                effectiveRelation.field()
+//                        )
+//                );
     }
 
     protected DSResponse handleFetch(DSRequest request) throws Exception {
@@ -116,7 +186,7 @@ public class JDBCHandler extends AbstractDSHandler {
                         final DSField dsf = getField( fn);
 
                         if (dsf == null) {
-                            throw new RuntimeException("%s: nothing known about requested field '%s', data soure: %s."
+                            throw new RuntimeException("%s: nothing known about requested field '%s', data source: %s."
                                     .formatted(getClass().getSimpleName(), fn, getDataSource().getId()));
                         }
 
@@ -157,26 +227,26 @@ public class JDBCHandler extends AbstractDSHandler {
         );
 
 
-        // -- ORDER BY
-        final String orderClause = request.getSortBy() == null ? "" : "ORDER BY \n" +
-                request.getSortBy().stream()
-                .map(s -> {
-                    String order = "";
-                    switch (s.charAt(0)) {
-                        case '-':
-                            order = " DESC";
-                        case '+':
-                            s = s.substring(1);
-                        default:
-                            return "%s.%s%s"
-                                    .formatted(
-                                        getDataSource().getTableName(),
-                                        getField(s).getDbName(),
-                                        order
-                                    );
-                    }
-                })
-                .collect(Collectors.joining(", "));
+//        // -- ORDER BY
+//        final String orderClause = request.getSortBy() == null ? "" : "ORDER BY \n" +
+//                request.getSortBy().stream()
+//                .map(s -> {
+//                    String order = "";
+//                    switch (s.charAt(0)) {
+//                        case '-':
+//                            order = " DESC";
+//                        case '+':
+//                            s = s.substring(1);
+//                        default:
+//                            return "%s.%s%s"
+//                                    .formatted(
+//                                        getDataSource().getTableName(),
+//                                        getField(s).getDbName(),
+//                                        order
+//                                    );
+//                    }
+//                })
+//                .collect(Collectors.joining(", "));
 
         // -- WHERE
         final List<IFilterData> filterData  = generateFilterData(request.getTextMatchStyle(), request.getData());
@@ -192,7 +262,7 @@ public class JDBCHandler extends AbstractDSHandler {
 
         policy.withConnectionDo(this.getDataSource().getDbName(), conn-> {
 
-            final String genericQuery = String.join("\n ", Arrays.asList(selectClause, fromClause, joinClause /*, whereClause*/, orderClause/*, paginationClause*/ ));
+            final String genericQuery = String.join("\n ", Arrays.asList(selectClause, fromClause, joinClause /*, whereClause*//*, orderClause*//*, paginationClause*/ ));
 
             final String whereClause = filterData.isEmpty() ?  "" : " \n\tWHERE \n\t\t" +
                     String.join("\n\t\t AND ",
@@ -240,6 +310,34 @@ public class JDBCHandler extends AbstractDSHandler {
             }
 
             // -- fetch data
+
+            final String orderClause = request.getSortBy() == null ? "" : "ORDER BY \n" +
+                    request.getSortBy().stream()
+                            .map(s -> {
+                                String order = "";
+                                switch (s.charAt(0)) {
+                                    case '-':
+                                        order = " DESC";
+                                    case '+':
+                                        s = s.substring(1);
+                                    default:
+                                        final DSField dsf = getField(s);
+
+                                        if (dsf == null) {
+                                            throw new RuntimeException("Data source '%s': nothing known about field '%s' listed in order by clause."
+                                                    .formatted(getDataSource().getId(), s));
+                                        }
+
+                                        return "%s.%s%s"
+                                                .formatted(
+                                                        "opaque",
+                                                        formatFieldNameForSqlOrderClause(dsf),
+                                                        order
+                                                );
+                                }
+                            })
+                            .collect(Collectors.joining(", "));
+
             /**
              * Opaque query is required for a proper filtering by calculated fields
              */
@@ -249,7 +347,8 @@ public class JDBCHandler extends AbstractDSHandler {
                 ) opaque
                 %s
                 %s
-            """.formatted(genericQuery, whereClause, paginationClause);
+                %s
+            """.formatted(genericQuery, whereClause, orderClause, paginationClause);
 
             if (logger.isDebugEnabled()) {
                 logger.debug("DataSource %s fetch query:\n%s\n\nparams:\n%s"
