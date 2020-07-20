@@ -2,10 +2,7 @@ package org.srg.smartclient;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.srg.smartclient.isomorphic.DSField;
-import org.srg.smartclient.isomorphic.DSRequest;
-import org.srg.smartclient.isomorphic.DSResponse;
-import org.srg.smartclient.isomorphic.DataSource;
+import org.srg.smartclient.isomorphic.*;
 
 import java.util.*;
 
@@ -15,6 +12,7 @@ public abstract class AbstractDSHandler extends SmartClientRelationSupport imple
     private final IDSRegistry dsRegistry;
     private final DataSource datasource;
     private transient Map<String, DSField> fieldMap;
+    private transient Map<DSRequest.OperationType, List<OperationBinding>> bindingsMap;
 
     public AbstractDSHandler(IDSRegistry dsRegistry, DataSource datasource) {
         this.dsRegistry = dsRegistry;
@@ -33,6 +31,31 @@ public abstract class AbstractDSHandler extends SmartClientRelationSupport imple
         }
 
         return fieldMap;
+    }
+
+    protected Map<DSRequest.OperationType, List<OperationBinding>> getBindingsMap() {
+        if (bindingsMap == null) {
+
+            if (dataSource().getOperationBindings() == null) {
+                bindingsMap = Map.of();
+            } else {
+                final Map<DSRequest.OperationType, List<OperationBinding>> m = new LinkedHashMap<>();
+
+                for (OperationBinding b : dataSource().getOperationBindings()) {
+                    List<OperationBinding> bindings = m.get(b.getOperationType());
+                    if (bindings == null) {
+                        bindings = new LinkedList<>();
+                        m.put(b.getOperationType(), bindings);
+                    }
+
+                    bindings.add(b);
+                }
+
+                bindingsMap = Collections.unmodifiableMap(m);
+            }
+        }
+
+        return bindingsMap;
     }
 
     protected DSField getField(String fieldName) {
@@ -126,5 +149,33 @@ public abstract class AbstractDSHandler extends SmartClientRelationSupport imple
         }
 
         return new ForeignRelation(effectiveDS.getId(), effectiveDS, effectiveField.getName(), effectiveField);
+    }
+
+    public OperationBinding getEffectiveOperationBinding(DSRequest.OperationType operationType) {
+        final Map<DSRequest.OperationType, List<OperationBinding>> bm = getBindingsMap();
+
+        if (bm == null) {
+            return null;
+        }
+
+        final List<OperationBinding> bindings = bm.get(operationType);
+
+        if (bindings == null || bindings.isEmpty()) {
+            return null;
+        }
+
+        final OperationBinding b;
+        if (bindings.size() >1) {
+            throw new IllegalStateException("Data source '%s': multiple bindings have not been supported yet, operation type '%s'."
+                    .formatted(
+                            dataSource().getId(),
+                            operationType
+                    )
+            );
+        } else {
+            b = bindings.get(0);
+        }
+
+        return b;
     }
 }

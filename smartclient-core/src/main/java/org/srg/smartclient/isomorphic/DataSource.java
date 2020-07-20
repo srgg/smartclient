@@ -1,9 +1,6 @@
 package org.srg.smartclient.isomorphic;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 // https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/serverds/DataSource.html
 //https://www.smartclient.com/isomorphic/system/reference/?id=class..DataSource
@@ -46,6 +43,8 @@ public class DataSource {
 //     */
 //    private boolean autoDeriveSchema;
 
+    private List<OperationBinding> operationBindings;
+
     public void setId(String id) {
         this.id = id;
     }
@@ -83,7 +82,7 @@ public class DataSource {
     }
 
     public void setFields(List<DSField> fields) {
-        /**
+        /*
          * It is highly imported:
          *      PKs fields MUST BE teh first ones in the field list
          */
@@ -134,11 +133,19 @@ public class DataSource {
 //        this.autoDeriveSchema = autoDeriveSchema;
 //    }
 
+    public List<OperationBinding> getOperationBindings() {
+        return operationBindings;
+    }
+
+    public void setOperationBindings(List<OperationBinding> operationBindings) {
+        final List<OperationBinding> b = new ArrayList<>(operationBindings.size());
+        this.operationBindings = Collections.unmodifiableList(b);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof DataSource)) return false;
-        DataSource that = (DataSource) o;
+        if (!(o instanceof DataSource that)) return false;
         return getId().equals(that.getId());
     }
 

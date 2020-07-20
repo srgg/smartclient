@@ -18,6 +18,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
     @Test
     public void fetchAll() throws Exception {
         DSRequest request = new DSRequest();
+        request.setOperationType(DSRequest.OperationType.FETCH);
         final DSResponse response = handler.handleFetch(request);
 
         JsonTestSupport.assertJsonEquals("""
@@ -58,7 +59,9 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         withExtraFields(ExtraField.Email);
 
         DSRequest request = new DSRequest();
+        request.setOperationType(DSRequest.OperationType.FETCH);
         request.setOutputs("id, email");
+
         final DSResponse response = handler.handleFetch(request);
 
         JsonTestSupport.assertJsonEquals("""
@@ -100,6 +103,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
     public void fetchPaginated() throws Exception {
         // -- the 1'st page
         DSRequest request = new DSRequest();
+        request.setOperationType(DSRequest.OperationType.FETCH);
         request.setStartRow(0);
         request.setEndRow(2);
 
@@ -176,6 +180,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         withHandlers(Handler.Location);
 
         final DSRequest request = new DSRequest();
+        request.setOperationType(DSRequest.OperationType.FETCH);
 
 
         final DSResponse response = handler.handleFetch(request);
@@ -227,6 +232,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
     public void fetchPaginatedWithSort() throws Exception {
 
         DSRequest request = new DSRequest();
+        request.setOperationType(DSRequest.OperationType.FETCH);
         request.setStartRow(0);
         request.setEndRow(2);
 
@@ -306,6 +312,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         withExtraFields(ExtraField.Email);
 
         DSRequest request = new DSRequest();
+        request.setOperationType(DSRequest.OperationType.FETCH);
         request.setStartRow(0);
         request.setEndRow(2);
         request.setTextMatchStyle(DSRequest.TextMatchStyle.SUBSTRING);
@@ -337,6 +344,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         withHandlers(Handler.Location);
 
         DSRequest request = new DSRequest();
+        request.setOperationType(DSRequest.OperationType.FETCH);
         request.setStartRow(0);
         request.setEndRow(2);
         request.setTextMatchStyle(DSRequest.TextMatchStyle.SUBSTRING);
@@ -374,6 +382,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         withExtraFields(ExtraField.SqlCalculated);
 
         DSRequest request = new DSRequest();
+        request.setOperationType(DSRequest.OperationType.FETCH);
         request.setStartRow(0);
         request.setEndRow(2);
 
@@ -410,6 +419,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         withExtraFields(ExtraField.SqlCalculated);
 
         final DSRequest request = new DSRequest();
+        request.setOperationType(DSRequest.OperationType.FETCH);
         final DSResponse response = h.handleFetch(request);
 
         JsonTestSupport.assertJsonEquals("""
@@ -451,6 +461,8 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         withExtraFields(ExtraField.OneToMany_FetchEntireEntities, ExtraField.SqlCalculated);
 
         final DSRequest request = new DSRequest();
+        request.setOperationType(DSRequest.OperationType.FETCH);
+
         final DSResponse response = handler.handleFetch(request);
         JsonTestSupport.assertJsonEquals("""
             {
@@ -518,7 +530,9 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         withExtraFields(ExtraField.OneToMany_FetchOnlyIds, ExtraField.SqlCalculated);
 
         final DSRequest request = new DSRequest();
+        request.setOperationType(DSRequest.OperationType.FETCH);
         request.setOutputs("id, name, roles");
+
         final DSResponse response = handler.handleFetch(request);
 
         JsonTestSupport.assertJsonEquals("""

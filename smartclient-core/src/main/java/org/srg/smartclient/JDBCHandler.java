@@ -3,6 +3,7 @@ package org.srg.smartclient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.*;
+import org.srg.smartclient.sql.SQLTemplateEngine;
 
 import java.sql.*;
 import java.util.*;
@@ -165,7 +166,19 @@ public class JDBCHandler extends AbstractDSHandler {
     }
 
     protected DSResponse handleFetch(DSRequest request) throws Exception {
+        assert request != null && DSRequest.OperationType.FETCH.equals(request.getOperationType());
+
         final int pageSize = request.getEndRow() == -1  ? -1 : request.getEndRow() - request.getStartRow();
+
+        final OperationBinding operationBinding = getEffectiveOperationBinding(request.getOperationType());
+
+        final boolean isTemplateEngineRequired = SQLTemplateEngine.isTemplateEngineRequired(this, request);
+//        final boolean potentiallyRequiresTemplateEngine = operationBinding != null && !(
+//                operationBinding.getAnsiJoinClause().isBlank()
+//                || operationBinding.getTableClause().isBlank()
+//                || operationBinding.getWhereClause().isBlank()
+//        );
+
 
         // -- LIMIT
         final String paginationClause =  pageSize <= 0 ? "" : String.format("LIMIT %d OFFSET %d",
@@ -198,7 +211,7 @@ public class JDBCHandler extends AbstractDSHandler {
         final Map<DSField, List<ForeignRelation>> additionalOutputs;
 
         if (request.getAdditionalOutputs() == null || request.getAdditionalOutputs().isBlank()){
-            additionalOutputs = Collections.EMPTY_MAP;
+            additionalOutputs = Map.of();
         } else {
             additionalOutputs = Stream.of(request.getAdditionalOutputs().split(","))
                     .map(String::trim)
@@ -352,6 +365,7 @@ public class JDBCHandler extends AbstractDSHandler {
             /*
              * Opaque query is required for a proper filtering by calculated fields
              */
+            @SuppressWarnings("SqlNoDataSourceInspection")
             final String countQuery = """
                 SELECT count(*) FROM (
                     %s
@@ -417,6 +431,7 @@ public class JDBCHandler extends AbstractDSHandler {
             /**
              * Opaque query is required for a proper filtering by calculated fields
              */
+            @SuppressWarnings("SqlNoDataSourceInspection")
             final String opaqueFetchQuery = """
                 SELECT * FROM (
                     %s
@@ -619,6 +634,7 @@ public class JDBCHandler extends AbstractDSHandler {
                             );
                         }
 
+                        @SuppressWarnings("SwitchStatementWithTooFewBranches")
                         final Object value = switch (dsf.getType()) {
                             case TEXT -> switch (textMatchStyle) {
                                 case EXACT -> e.getValue();
@@ -631,6 +647,7 @@ public class JDBCHandler extends AbstractDSHandler {
                         };
 
 
+                        @SuppressWarnings("SwitchStatementWithTooFewBranches")
                         String filterStr = switch (dsf.getType()) {
                             case TEXT -> "%s like ?";
                             default -> "%s = ?";
@@ -641,7 +658,7 @@ public class JDBCHandler extends AbstractDSHandler {
                     })
                     .collect(Collectors.toList());
         } else if (data == null){
-            return Collections.EMPTY_LIST;
+            return List.of();
         } else {
             throw new IllegalStateException("DataSource '%s': data has unsupported format '%s'."
                     .formatted(

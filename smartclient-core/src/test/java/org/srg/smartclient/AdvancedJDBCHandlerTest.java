@@ -65,6 +65,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
         }
 
         final DSRequest request = new DSRequest();
+        request.setOperationType(DSRequest.OperationType.FETCH);
         request.setStartRow(0);
 //        request.setEndRow(2);
 
