@@ -19,9 +19,11 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                 ,compositeOrCaseSensitiveCriteria()
                 ,iNotContainsCriteria()
                 ,equalsCriteria()
-                ,notEqualFetch()
+                ,notEqualCriteria()
                 ,iEqualsCriteria()
                 ,iContains_by_SQLCalculatedField_Criteria()
+                ,iStartsWithCriteria()
+                ,startsWithCriteria()
         );
     }
 
@@ -236,7 +238,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 data:[
                                     {
                                         id:3,
-                                        name:'user3',
+                                        name:'UseR3',
                                         firedAt: null,
                                         email:"u3@emca.org"
                                     }
@@ -262,7 +264,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 {
                                     "fieldName":"name",
                                     "operator":"equals",
-                                    "value":"user3",
+                                    "value":"developer",
                                     "_constructor":"AdvancedCriteria"
                                 }
                             ]
@@ -272,8 +274,8 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             response:{
                                 data:[
                                     {
-                                        id:3,
-                                        name:'user3',
+                                        id:2,
+                                        name:'developer',
                                         firedAt: null
                                     }
                                 ],
@@ -297,7 +299,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 {
                                     "fieldName":"name",
                                     "operator":"iEquals",
-                                    "value":"UseR3",
+                                    "value":"uSEr3",
                                     "_constructor":null
                                 }
                             ]
@@ -308,7 +310,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 data:[
                                     {
                                         id:3,
-                                        name:'user3',
+                                        name:'UseR3',
                                         firedAt:null
                                     }
                                 ],
@@ -321,7 +323,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
         );
     }
 
-    private static Arguments notEqualFetch() {
+    private static Arguments notEqualCriteria() {
         return Arguments.of(
                 "notEqual condition",
                 """
@@ -352,6 +354,11 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             firedAt: null
                         },
                         {
+                            id:3,
+                            name:'UseR3',
+                            firedAt: null
+                        },                        
+                        {
                             id:4,
                             name:'user4',
                             firedAt: null
@@ -362,10 +369,10 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             firedAt: '2000-05-04T00:02:01.000+00:00'
                         }
                     ],
-                    endRow:4,
+                    endRow:5,
                     startRow:0,
                     status:0,
-                    totalRows:4
+                    totalRows:5
                 }
             }"""
         );
@@ -392,10 +399,10 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             response:{
                                 data:[
                                     {
-                                        calculated:'3_user3',
+                                        calculated:'3_UseR3',
                                         firedAt:null,
                                         id:3,
-                                        name:'user3'
+                                        name:'UseR3'
                                     }
                                 ],
                                 endRow:1,
@@ -405,6 +412,87 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             }
                         }""",
                 ExtraField.SqlCalculated
+        );
+    }
+
+    private static Arguments startsWithCriteria() {
+        return Arguments.of(
+                "startsWith condition",
+                """
+                        {
+                            "operator" : "and",
+                            "_constructor" : "AdvancedCriteria",
+                            "criteria" : [
+                                {
+                                    "fieldName":"name",
+                                    "operator":"startsWith",
+                                    "value":"Use",
+                                    "_constructor":null
+                                }
+                            ]
+                        }""",
+                """
+                        {
+                            response:{
+                                data:[
+                                    {
+                                        id:3,
+                                        name:'UseR3',
+                                        firedAt:null
+                                    }
+                                ],
+                                endRow:1,
+                                startRow:0,
+                                status:0,
+                                totalRows:1
+                            }
+                        }"""
+        );
+    }
+
+
+    private static Arguments iStartsWithCriteria() {
+        return Arguments.of(
+                "iStartsWith condition",
+                """
+                        {
+                            "operator" : "and",
+                            "_constructor" : "AdvancedCriteria",
+                            "criteria" : [
+                                {
+                                    "fieldName":"name",
+                                    "operator":"iStartsWith",
+                                    "value":"Use",
+                                    "_constructor":null
+                                }
+                            ]
+                        }""",
+                """
+                        {
+                            response:{
+                                data:[
+                                    {
+                                        id:3,
+                                        name:'UseR3',
+                                        firedAt:null
+                                    },
+                                    {
+                                        id:4,
+                                        name:'user4',
+                                        firedAt:null
+                                    },
+                                    {
+                                        id:5,
+                                        name:'user5',
+                                        firedAt:'2000-05-04T00:02:01.000+00:00'
+                                    }
+                                ],
+                                endRow:3,
+                                startRow:0,
+                                status:0,
+                                totalRows:3
+                            }
+                        }"""
         );
     }
 

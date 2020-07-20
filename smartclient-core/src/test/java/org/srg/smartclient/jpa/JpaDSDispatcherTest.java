@@ -271,7 +271,7 @@ public class JpaDSDispatcherTest {
                    },
                    {
                       id:3,
-                      name:'user3',
+                      name:'UseR3',
                       roles:[],
                       projects:[
                          {

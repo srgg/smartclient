@@ -60,17 +60,29 @@ public class AdvancedJDBCHandler extends JDBCHandler {
                     filterStr = "%s IS NULL";
                     break;
 
+                case NOT_STARTS_WITH:
+                case INOT_STARTS_WITH:
+
+                case NOT_ENDS_WITH:
+                case INOT_ENDS_WITH:
+
+                case NOT_CONTAINS:
                 case INOT_CONTAINS:
                     isNot = true;
 
                 case ENDS_WITH:
                 case IENDS_WITH:
+
                 case CONTAINS:
                 case ICONTAINS:
 
+                case STARTS_WITH:
+                case ISTARTS_WITH:
+
                     final String pattern = switch (ac.getOperator()) {
-                        case ENDS_WITH, IENDS_WITH -> "%%%s";
-                        case CONTAINS, ICONTAINS,INOT_CONTAINS -> "%%%s%%";
+                        case ENDS_WITH, IENDS_WITH, NOT_ENDS_WITH, INOT_ENDS_WITH-> "%%%s";
+                        case CONTAINS, ICONTAINS, NOT_CONTAINS, INOT_CONTAINS -> "%%%s%%";
+                        case STARTS_WITH, ISTARTS_WITH, NOT_STARTS_WITH, INOT_STARTS_WITH -> "%s%%";
                         default -> throw new IllegalStateException();
                     };
 

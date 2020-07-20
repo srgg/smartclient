@@ -50,9 +50,20 @@ public enum OperatorId {
     ENDS_WITH("endsWith"),
 
     /**
+     * Does not end with (match case)
+     */
+    NOT_ENDS_WITH("notEndsWith"),
+
+
+    /**
      *  Ends with (case insensitive)
      */
     IENDS_WITH("iEndsWith"),
+
+    /**
+     * Does not end with (case insensitive)
+     */
+    INOT_ENDS_WITH("iNotEndsWith"),
 
 //
 //    /**
@@ -107,6 +118,12 @@ public enum OperatorId {
 //     */
 //    IBETWEEN_INCLUSIVE,
 //
+
+    /**
+     * Does not contain as sub-string (match case)
+     */
+    NOT_CONTAINS("notContains"),
+
     /**
      * Contains as sub-string (case insensitive)
      */
@@ -145,10 +162,6 @@ public enum OperatorId {
 //     */
 //    INOT_CONTAINS_FIELD,
 //
-//    /**
-//     * Does not end with (case insensitive)
-//     */
-//    INOT_ENDS_WITH,
 //
 //    /**
 //     * Does not end with (case insensitive) another field value (specify fieldName as criterion.value)
@@ -160,11 +173,6 @@ public enum OperatorId {
 //     * does not match another field (case insensitive, specify fieldName as criterion.value)
 //     */
 //    INOT_EQUAL_FIELD,
-//
-//    /**
-//     * Does not start with (case insensitive)
-//     */
-//    INOT_STARTS_WITH,
 //
 //    /**
 //     * Does not start with (case insensitive) another field value (specify fieldName as criterion.value)
@@ -181,11 +189,6 @@ public enum OperatorId {
      */
     IS_NULL("isNull"),
 
-//    /**
-//     * Starts with (case insensitive)
-//     */
-//    ISTARTS_WITH,
-//
 //    /**
 //     * Starts with (case insensitive) another field value (specify fieldName as criterion.value)
 //     */
@@ -211,21 +214,13 @@ public enum OperatorId {
 //     */
 //    LESS_THAN_FIELD,
 //
-//    /**
-//     * Does not contain as sub-string (match case)
-//     */
-//    NOT_CONTAINS,
 //
 //    /**
 //     * Does not contain as sub-string (match case) another field value (specify fieldName as criterion.value)
 //     */
 //    NOT_CONTAINS_FIELD,
 //
-//    /**
-//     * Does not end with (match case)
-//     */
-//    NOT_ENDS_WITH,
-//
+
 //    /**
 //     * Does not end with (match case) another field value (specify fieldName as criterion.value)
 //     */
@@ -250,11 +245,7 @@ public enum OperatorId {
      * value is non-null.
      */
     NOT_NULL("notNull"),
-//
-//    /**
-//     * Does not start with (match case)
-//     */
-//    NOT_STARTS_WITH,
+
 //
 //    /**
 //     * Does not start with (match case) another field value (specify fieldName as criterion.value)
@@ -266,11 +257,26 @@ public enum OperatorId {
 //     */
 //    REGEXP,
 //
-//    /**
-//     * Starts with (match case)
-//     */
-//    STARTS_WITH,
-//
+    /**
+     * Starts with (case insensitive)
+     */
+    ISTARTS_WITH("iStartsWith"),
+
+    /**
+     * Does not start with (case insensitive)
+     */
+    INOT_STARTS_WITH("iNotStartWith"),
+
+    /**
+     * Starts with (match case)
+     */
+    STARTS_WITH("startsWith"),
+
+    /**
+     * Does not start with (match case)
+     */
+    NOT_STARTS_WITH("notStartsWith"),
+
 //
 //    /**
 //     * Starts with (match case) another field value (specify fieldName as criterion.value)

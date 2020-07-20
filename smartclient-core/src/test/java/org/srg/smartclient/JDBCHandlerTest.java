@@ -37,7 +37,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                              },
                              {
                                  id:3,
-                                 name: 'user3'
+                                 name: 'UseR3'
                              },
                              {
                                  id:4,
@@ -137,7 +137,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                         data:[
                             {
                                 id:3,
-                                name: 'user3'
+                                name: 'UseR3'
                             },
                             {
                                 id:4,
@@ -201,7 +201,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                              },
                              {
                                  id:3,
-                                 name: 'user3',
+                                 name: 'UseR3',
                                  location: 3,
                                  locationCity: 'USA'
                              },
@@ -241,12 +241,12 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                     totalRows: 5,
                     data:[
                         {
-                            id:1,
-                            name: 'admin'
+                            id:3,
+                            name: 'UseR3'
                         },
                         {
-                            id:2,
-                            name: 'developer'
+                            id:1,
+                            name: 'admin'
                         }
                     ]    
                 }
@@ -288,12 +288,12 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                     totalRows: 5,
                     data:[
                         {
-                            id:1,
-                            name: 'admin'
+                            id:3,
+                            name: 'UseR3'
                         },
                         {
-                            id:2,
-                            name: 'developer'
+                            id:1,
+                            name: 'admin'
                         }
                     ]    
                 }
@@ -490,8 +490,8 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                      },
                      {
                         "id":3,
-                        "name":"user3",
-                        "calculated":"3_user3", 
+                        "name":"UseR3",
+                        "calculated":"3_UseR3", 
                         "roles":[]
                      },
                      {
@@ -554,7 +554,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                      },
                      {
                         "id":3,
-                        "name":"user3",
+                        "name":"UseR3",
                         "roles":[
             
                         ]
