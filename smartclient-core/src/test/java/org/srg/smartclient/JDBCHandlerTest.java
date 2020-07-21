@@ -599,6 +599,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         withExtraFields(ExtraField.SqlCalculated);
 
         final DSRequest request = new DSRequest();
+        request.setOperationType(DSRequest.OperationType.FETCH);
         request.setOutputs("id, calculated");
         request.setSortBy(List.of("calculated"));
 
