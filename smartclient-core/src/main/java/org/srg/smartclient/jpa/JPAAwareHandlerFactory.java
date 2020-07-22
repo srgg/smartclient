@@ -8,6 +8,7 @@ import org.srg.smartclient.*;
 import org.srg.smartclient.annotations.SmartClientField;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
+import org.srg.smartclient.isomorphic.OperationBinding;
 
 import javax.persistence.*;
 import javax.persistence.metamodel.*;
@@ -205,11 +206,12 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
         return ds;
     }
 
-    protected <T> DSField describeField( Metamodel mm, String dsId, EntityType<? super T> entityType, Attribute<? super T, ?> attr) {
+    protected <T> JpaDSField describeField( Metamodel mm, String dsId, EntityType<? super T> entityType, Attribute<? super T, ?> attr) {
         final Field field = (Field) attr.getJavaMember();
 
         // -- Generic
-        final DSField f = describeField(dsId, field);
+        final JpaDSField f = new JpaDSField();
+        describeField(f, dsId, field);
 
         // -- JPA
         final boolean attributeBelongsToCompositeId = !entityType.hasSingleIdAttribute()
@@ -454,25 +456,25 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
 
                             final String joinTableName;
 
-                            if (jpaRelation.joinTable().name() != null
+                            if (jpaRelation.joinTable().name() == null
                                 || jpaRelation.joinTable().name().isBlank()) {
+//
+//
+//                                joinTableName = "%s_%s"
+//                                        .formatted(
+//                                                dsId,
+//                                                fkRelation.dataSource().getTableName()
+//                                        );
+//
+//                                logger.debug(
+//                                        "Data source '%s': join table name is not provided for a relation %s, auto generated name '%s' will be used"
+//                                            .formatted(dsId,
+//                                                    jpaRelation,
+//                                                    joinTableName
+//                                                )
+//                                );
 
-
-
-                                joinTableName = "%s_%s"
-                                        .formatted(
-                                                fkRelation.dataSourceId(),
-                                                fkRelation.fieldName()
-                                        );
-
-                                logger.debug(
-                                        "Data source '%s': join table name is not provided for a relation %s, auto generated name '%s' will be used"
-                                            .formatted(dsId,
-                                                    jpaRelation,
-                                                    joinTableName
-                                                )
-                                );
-
+                                throw new IllegalStateException("Not implemented yet");
                             } else {
                                 joinTableName = jpaRelation.joinTable().name();
                             }
@@ -480,6 +482,20 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                             f.setTableName(joinTableName);
 
 
+                            final OperationBinding b = new OperationBinding();
+
+                            b.setTableClause("""
+                                        ${defaultTableClause},
+                                        %s 
+                                    """
+                                    .formatted(
+                                        joinTableName
+                                    )
+                            );
+
+                            b.setAnsiJoinClause("""
+                                ${defaultAnsiJoinClause} \n
+                             """);
 
 //                            break;
 

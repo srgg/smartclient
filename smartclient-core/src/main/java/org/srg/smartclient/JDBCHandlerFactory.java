@@ -41,6 +41,10 @@ public class JDBCHandlerFactory {
 
     protected <T> DSField describeField(String dsId, Field field) {
         final DSField f = new DSField();
+        return describeField(f, dsId, field);
+    }
+
+    protected <F extends DSField> F describeField( F f, String dsId, Field field) {
 
         f.setName( field.getName() );
 
