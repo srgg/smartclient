@@ -89,6 +89,22 @@ CREATE TABLE project_team
         foreign key (employee_id) references employee (id)
 );
 
+create table employee_status
+(
+    id int auto_increment primary key,
+    employee_id int not null,
+    status varchar(255) null,
+
+    start_date date not null,
+    end_date date null,
+
+    constraint unqEmployeeStatus
+        unique (employee_id, start_date),
+    constraint fkEmployeeStatus_Employee
+        foreign key (employee_id) references employee (id)
+);
+
+
 INSERT INTO locations VALUES (1, 'Ukraine', 'Kharkiv');
 INSERT INTO locations VALUES (2, 'Ukraine', 'Lviv');
 INSERT INTO locations VALUES (3, 'USA', 'USA');
@@ -125,3 +141,7 @@ INSERT INTO project_team VALUES (2, 3);
 
 INSERT INTO project_team VALUES (3, 4);
 INSERT INTO project_team VALUES (3, 5);
+
+INSERT INTO employee_status VALUES (1, 1, 'status 1', '2000-05-04', '2000-06-04');
+INSERT INTO employee_status VALUES (2, 1, 'status 2', '2000-06-05', '2000-07-05');
+INSERT INTO employee_status VALUES (3, 1, 'status 3', '2000-07-06', null);

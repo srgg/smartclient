@@ -361,6 +361,24 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                 case ENTITY:
                     switch (pat) {
                         case ONE_TO_MANY:
+                            /*
+                             * One-to-Many Relations
+                             *
+                             * An example of One-To-Many relation is that One "Country" has Many "City"'s.
+                             * Each "Country" has a list of cities within it, which may be declared
+                             * as a Java bean property of Collection type (or List, Set, etc).
+                             *
+                             * To specify a one-to-many relation, declare a DataSourceField that:
+                             *
+                             * is named after the Java field that declares the OneToMany relation
+                             * (whose type is a Collection of the related entities) declares its "type"
+                             * to be the ID of the related DataSource declares a foreignKey pointing
+                             * to the related DataSource's primaryKey field sets multiple="true"
+                             *
+                             * For example, for a Country bean that has a Collection of City beans:
+                             *       <field name="cities" type="city" multiple="true" foreignKey="city.cityId"/>
+                             */
+
                             final String s = getDsId(type.getJavaType());
                             final Class<?> javaType = type.getJavaType();
                             f.setMultiple(true);
@@ -529,7 +547,7 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
         final Attribute.PersistentAttributeType pat = attribute.getPersistentAttributeType();
         final JpaRelationType relationType = JpaRelationType.from(pat);
 
-        final EntityType<T> entityType = (EntityType<T>) attribute.getDeclaringType();
+        final IdentifiableType<T> entityType = (IdentifiableType<T>) attribute.getDeclaringType();
         final Field javaField = (Field) attribute.getJavaMember();
 
         // -- Mapped by
@@ -604,7 +622,7 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
         return mappedBy;
     }
 
-    private static <T> List<JoinColumn> determineJoinColumns(EntityType<T> entityType) {
+    private static <T> List<JoinColumn> determineJoinColumns(IdentifiableType<T> entityType) {
         final List<JoinColumn> joinColumns;
 
         if (!entityType.hasSingleIdAttribute()) {

@@ -108,6 +108,7 @@ public class JpaDSDispatcherTest {
                 "testPU",
                 SimpleEntity.class,
                 Employee.class,
+                EmployeeStatus.class,
                 EmployeeRole.class,
                 ClientData.class,
                 Client.class,
@@ -232,6 +233,26 @@ public class JpaDSDispatcherTest {
                             id:1,
                             name:'Project 1 for client 1'
                          }
+                      ],
+                      statuses:[
+                          {
+                            endDate:null,
+                            id:3,
+                            startDate: '2000-07-06',
+                            status:'status 3'
+                          },
+                          {
+                            endDate:'2000-07-05',
+                            id:2,
+                            startDate:'2000-06-05',
+                            status:'status 2'
+                          },
+                          {
+                            endDate:'2000-06-04',
+                            id:1,
+                            startDate:'2000-05-04',
+                            status:'status 1'
+                          }                      
                       ]
                    },
                    {
@@ -267,7 +288,8 @@ public class JpaDSDispatcherTest {
                             id:1,
                             name:'Project 1 for client 1'
                          }
-                      ]
+                      ],
+                      statuses:[]                      
                    },
                    {
                       id:3,
@@ -286,7 +308,8 @@ public class JpaDSDispatcherTest {
                             id:2,
                             name:'Project 2 for client 1'
                          }
-                      ]
+                      ],
+                      statuses:[]
                    },
                    {
                       id:4,
@@ -305,7 +328,8 @@ public class JpaDSDispatcherTest {
                             id:3,
                             name:'Project 1 for client 2'
                          }
-                      ]
+                      ],
+                      statuses:[]
                    },
                    {
                       id:5,
@@ -324,7 +348,8 @@ public class JpaDSDispatcherTest {
                             id:3,
                             name:'Project 1 for client 2'
                          }
-                      ]
+                      ],
+                      statuses:[]
                    }
                 ]""", employees );
     }
@@ -652,4 +677,34 @@ public class JpaDSDispatcherTest {
                }                
             ]""", responses);
     }
+
+    @Test
+    public void fetchStatuses() {
+        final String employeeDsId = dispatcher.registerJPAEntity(Employee.class);
+        dispatcher.registerJPAEntity(EmployeeStatus.class);
+
+        // --
+        final DSRequest request = new DSRequest();
+        request.setStartRow(0);
+        request.setOutputs("id, statuses");
+        request.setDataSource(employeeDsId);
+
+        final Collection<DSResponse> responses = dispatcher.dispatch(request);
+        JsonTestSupport.assertJsonEquals(
+    """
+            [
+               {
+                  response:{
+                     status:0,
+                     startRow:0,
+                     endRow:5,
+                     totalRows:5,
+                     data:[
+                     ]
+                  }
+               }
+            ]
+            """, responses);
+    }
+
 }
