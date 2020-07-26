@@ -53,7 +53,7 @@ public class DSField {
 
     /**
      * Indicates this field should be fetched from another, related DataSource.
-     * The incluedFrom attribute should be of the form "dataSourceId.fieldName", for example:
+     * The includeFrom attribute should be of the form "dataSourceId.fieldName", for example:
      *
      *      <field includeFrom="supplyItem.itemName"/>
      *
