@@ -1,5 +1,6 @@
 package org.srg.smartclient.jpa;
 
+import org.srg.smartclient.annotations.SmartClientField;
 import org.srg.smartclient.annotations.SmartClientHandler;
 
 import javax.persistence.*;
@@ -14,6 +15,12 @@ import javax.persistence.*;
 )
 public class EmployeeStatus extends HistoricalEntity<Employee> {
     private String status;
+
+    @SmartClientField(foreignDisplayField = "name")
+    @Override
+    public Employee getOwner() {
+        return super.getOwner();
+    }
 
     public String getStatus() {
         return status;

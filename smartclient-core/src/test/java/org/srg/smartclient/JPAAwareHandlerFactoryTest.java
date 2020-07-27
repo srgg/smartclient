@@ -208,4 +208,30 @@ public class JPAAwareHandlerFactoryTest {
 				multiple:false      		
 			}""", dsf, Option.IGNORING_EXTRA_FIELDS);
 	}
+
+	@Test
+	public void smartClientFieldAnnotation_onMethod() {
+		final Metamodel mm = emf.getMetamodel();
+		final String dsId = "TestDS";
+
+		{
+			final EntityType<EmployeeStatus> employeeStatusEntityType = mm.entity(EmployeeStatus.class);
+			final Attribute<?, ?> employeeStatusOwnerAttribute = employeeStatusEntityType.getAttribute("owner");
+
+			final DSField dsf = jpaAwareHandlerFactory.describeField(mm, dsId, employeeStatusEntityType, employeeStatusOwnerAttribute);
+
+			JsonTestSupport.assertJsonEquals("""
+      		{
+   				name:'owner',
+			   	required:true,
+   				primaryKey:false,
+   				hidden:false,
+   				type:'INTEGER',
+   				foreignKey:'EmployeeDS.id',
+   				foreignDisplayField:'name',
+			    dbName:'employee_id'
+      		}""", dsf, Option.IGNORING_EXTRA_FIELDS);
+
+		}
+	}
 }

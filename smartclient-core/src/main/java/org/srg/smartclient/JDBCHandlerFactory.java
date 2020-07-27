@@ -7,7 +7,9 @@ import org.srg.smartclient.annotations.SmartClientField;
 import org.srg.smartclient.annotations.SmartClientHandler;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
+import org.srg.smartclient.utils.AnnotationUtils;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
@@ -32,14 +34,14 @@ public class JDBCHandlerFactory {
         final List<Field> fields = FieldUtils.getAllFieldsList(entityClass);
 
         final List<DSField> dsFields = fields.stream()
-                .map( f -> describeField(ds.getId(), f))
+                .map( f -> describeField(ds.getId(), entityClass, f))
                 .collect(Collectors.toList());
 
         ds.setFields(dsFields);
         return ds;
     }
 
-    protected <T> DSField describeField(String dsId, Field field) {
+    protected <T> DSField describeField(String dsId, Class<?> entityClass, Field field) {
         final DSField f = new DSField();
 
         f.setName( field.getName() );
@@ -77,7 +79,7 @@ public class JDBCHandlerFactory {
         }
 
 
-        final SmartClientField sfa = field.getAnnotation(SmartClientField.class);
+        final SmartClientField sfa = getAnnotation(entityClass, field.getName(), SmartClientField.class); //field.getAnnotation(SmartClientField.class);
         applySmartClientFieldAnnotation(sfa, f);
 
         // -- set DB field name
@@ -90,6 +92,10 @@ public class JDBCHandlerFactory {
         );
 
         return f;
+    }
+
+    protected static <A extends Annotation> A getAnnotation(Class<?> clazz, String name, Class<A> annotationClass) {
+        return AnnotationUtils.getAnnotation(clazz, name, annotationClass);
     }
 
     protected static void applySmartClientFieldAnnotation(SmartClientField sfa, DSField dsf) {

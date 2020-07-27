@@ -2,7 +2,6 @@ package org.srg.smartclient;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.javers.core.Javers;
 import org.javers.core.JaversBuilder;
 import org.javers.core.changelog.AbstractTextChangeLog;
@@ -73,7 +72,7 @@ public record JpaRelation<S, T>(
     }
 
     // https://www.smartclient.com/smartclient-release/isomorphic/system/reference/?id=group..jpaHibernateRelations
-    public static <T, Tt> JpaRelation<T, Tt> describeRelation(Metamodel mm, EntityType<? super T> sourceEntityType, Attribute<? super T, ?> sourceAttribute) {
+    public static <T, Tt> JpaRelation<T, Tt> describeRelation(Metamodel mm, EntityType<? super T> sourceEntityType, Attribute<?, ?> sourceAttribute) {
 
         if (!sourceAttribute.isAssociation()) {
             return null;
@@ -201,7 +200,7 @@ public record JpaRelation<S, T>(
         );
     }
 
-    private static <T> List<AssociationOverride> determineAssociationOverrides(EntityType<? super T> sourceEntityType, Attribute<? super T, ?> sourceAttribute) {
+    private static <T> List<AssociationOverride> determineAssociationOverrides(EntityType<? super T> sourceEntityType, Attribute<?, ?> sourceAttribute) {
         final AssociationOverrides overrides = sourceEntityType.getJavaType().getAnnotation(AssociationOverrides.class);
         if (overrides != null) {
             for (AssociationOverride ao : overrides.value()) {
@@ -219,7 +218,7 @@ public record JpaRelation<S, T>(
         return Collections.EMPTY_LIST;
     }
 
-    private static <T> List<JoinColumn> determineJoinColumns(EntityType<? super T> sourceEntityType, Attribute<? super T, ?> sourceAttribute) {
+    private static <T> List<JoinColumn> determineJoinColumns(EntityType<? super T> sourceEntityType, Attribute<?, ?> sourceAttribute) {
         List<JoinColumn> joinColumns = determineJoinColumns((Field) sourceAttribute.getJavaMember());
 
         if (joinColumns.isEmpty()) {
@@ -350,13 +349,10 @@ public record JpaRelation<S, T>(
 //                    }
 //                })
                 .build();
-        final ObjectMapper mapper = new ObjectMapper();
 
         final Map<String, Object> res = new HashMap<>();
 
         for (JoinColumn jc : joinColumns) {
-//            final String str = mapper.writeValueAsString(jc);
-
             final Diff diff = javers.compare(DEFAULT_JOIN_COLUMN, jc);
 
             if (diff.hasChanges()) {

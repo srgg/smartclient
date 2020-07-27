@@ -775,6 +775,7 @@ public class JpaDSDispatcherTest {
                                     {
                                        id:1,
                                        owner:1,
+                                       employeeName: 'admin',
                                        status:'status 1',
                                        startDate:'2000-05-04',
                                        endDate:'2000-06-04'
@@ -782,6 +783,7 @@ public class JpaDSDispatcherTest {
                                     {
                                        id:2,
                                        owner:1,
+                                       employeeName: 'admin',
                                        status:'status 2',
                                        startDate:'2000-06-05',
                                        endDate:'2000-07-05'
@@ -789,6 +791,7 @@ public class JpaDSDispatcherTest {
                                     {
                                        id:3,
                                        owner:1,
+                                       employeeName: 'admin',
                                        status:'status 3',
                                        startDate:'2000-07-06',
                                        endDate:'null'

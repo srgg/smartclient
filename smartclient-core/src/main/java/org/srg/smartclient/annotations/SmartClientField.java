@@ -5,7 +5,7 @@ import org.srg.smartclient.isomorphic.DSField;
 import java.lang.annotation.*;
 import java.util.Optional;
 
-@Target({ ElementType.FIELD })
+@Target({ ElementType.FIELD, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface SmartClientField {

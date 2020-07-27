@@ -145,7 +145,7 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                     }
 
                     if (javaTargetField.isAnnotationPresent(Transient.class)) {
-                        tf = describeField(ds.getId(), javaTargetField);
+                        tf = describeField(ds.getId(), targetClass, javaTargetField);
                     } else {
                         final Attribute<? super T, ?> targetDisplayFieldAttr = targetEntity.getAttribute(f.getForeignDisplayField());
                         assert targetDisplayFieldAttr != null;
@@ -205,11 +205,11 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
         return ds;
     }
 
-    protected <T> DSField describeField( Metamodel mm, String dsId, EntityType<? super T> entityType, Attribute<? super T, ?> attr) {
+    protected <T> DSField describeField( Metamodel mm, String dsId, EntityType<? super T> entityType, Attribute<?, ?> attr) {
         final Field field = (Field) attr.getJavaMember();
 
         // -- Generic
-        final DSField f = describeField(dsId, field);
+        final DSField f = describeField(dsId, entityType.getJavaType(), field);
 
         // -- JPA
         final boolean attributeBelongsToCompositeId = !entityType.hasSingleIdAttribute()
@@ -224,7 +224,7 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
              *
              * Therefore, it is required to check the entity field for @SmartClientField and apply it if it exists
              */
-            SmartClientField sfa = field.getAnnotation(SmartClientField.class);
+            SmartClientField sfa = getAnnotation(entityType.getJavaType(), attr.getName(), SmartClientField.class);
 
             if (sfa == null) {
                 /*
