@@ -163,37 +163,86 @@ public class JpaDSDispatcherTest {
     }
 
     @Test
-    public void checkThatJpaMappingsAreCorrectAndRelevant() {
-//        // -- Ensure that Employee is properly annotated and JPA can fetch it
-//        final List<Employee> employees;
-//        final EntityManager em = emf.createEntityManager();
-//        try {
-//            CriteriaBuilder cb = em.getCriteriaBuilder();
-//            CriteriaQuery<Employee> query = cb.createQuery(Employee.class);
-//            Root<Employee> root = query.from(Employee.class);
-//            root.fetch("roles", JoinType.LEFT);
-////            query.select(cb.construct(Employee.class, root.get("id"), root.get("name"), root.get("roles")));
-//            query.select(root)
-//            .distinct(true);
-//
-//            TypedQuery<Employee> typedQuery = em.createQuery(query);
-//            employees = typedQuery.getResultList();
-//        }finally {
-//            em.close();
-//        }
+    public void checkThatJpaMappingsAreCorrectAndRelevant_Projects() {
+        final List<Project> projects;
+        final EntityManager em = emf.createEntityManager();
+        try {
+            projects = em.createQuery("""
+                    SELECT p FROM Project p
+                    """)
+                    .getResultList();
+        }finally {
+            em.close();
+        }
 
-//        final List<Object[]> employees;
-//        final EntityManager em = emf.createEntityManager();
-//        try {
-//            employees = em.createQuery("""
-//                    SELECT new Employee(e.id, e.name, e.roles)
-//                           FROM Employee e
-//                    """)
-//                    .getResultList();
-//        }finally {
-//            em.close();
-//        }
+        JsonTestSupport.assertJsonEquals(
+                """
+                [
+                   {
+                      id:1,
+                      name:'Project 1 for client 1',
+                      client:{
+                         id:1,
+                         name:'client 1',
+                         data:{
+                            id:1,
+                            data:'Data1: client 1'
+                         }
+                      }
+                   },
+                   {
+                      id:2,
+                      name:'Project 2 for client 1',
+                      client:{
+                         id:1,
+                         name:'client 1',
+                         data:{
+                            id:1,
+                            data:'Data1: client 1'
+                         }
+                      }
+                   },
+                   {
+                      id:3,
+                      name:'Project 1 for client 2',
+                      client:{
+                         id:2,
+                         name:'client 2',
+                         data:{
+                            id:2,
+                            data:'Data2: client 2'
+                         }
+                      }
+                   },
+                   {
+                      id:4,
+                      name:'Project 2 for client 2',
+                      client:{
+                         id:2,
+                         name:'client 2',
+                         data:{
+                            id:2,
+                            data:'Data2: client 2'
+                         }
+                      }
+                   },
+                   {
+                      id:5,
+                      name:'Project 3 for client 2',
+                      client:{
+                         id:2,
+                         name:'client 2',
+                         data:{
+                            id:2,
+                            data:'Data2: client 2'
+                         }
+                      }
+                   }
+                ]""", projects);
+    }
 
+    @Test
+    public void checkThatJpaMappingsAreCorrectAndRelevant_Employees() {
 
         final List<Employee> employees;
         final EntityManager em = emf.createEntityManager();
@@ -352,6 +401,8 @@ public class JpaDSDispatcherTest {
                       statuses:[]
                    }
                 ]""", employees );
+
+
     }
 
 
@@ -525,10 +576,16 @@ public class JpaDSDispatcherTest {
                                 id:1,
                                 projects:[
                                     {
-                                        name:'Project 1 for client 1',
+                                        id:1,
                                         client:1,
                                         clientName:'client 1',
-                                        id:1
+                                        name:'Project 1 for client 1'
+                                    },
+                                    {
+                                        id:2,
+                                        client:1,
+                                        clientName:'client 1',
+                                        name:'Project 2 for client 1'
                                     }
                                 ]
                             },
@@ -536,10 +593,22 @@ public class JpaDSDispatcherTest {
                                 id:2,
                                 projects:[
                                     {
-                                        name:'Project 2 for client 1',
-                                        client:1,
-                                        clientName:'client 1',
-                                        id:2
+                                        id:3,
+                                        client:2,
+                                        clientName:'client 2',
+                                        name:'Project 1 for client 2'
+                                    },
+                                    {
+                                        id:4,
+                                        client:2,
+                                        clientName:'client 2',
+                                        name:'Project 2 for client 2'
+                                    },
+                                    {
+                                        id:5,
+                                        client:2,
+                                        clientName:'client 2',
+                                        name:'Project 3 for client 2'
                                     }
                                 ]
                             }
@@ -679,7 +748,7 @@ public class JpaDSDispatcherTest {
     }
 
     @Test
-    public void fetchStatuses() {
+    public void oneToMany_WithAssociationOverride() {
         final String employeeDsId = dispatcher.registerJPAEntity(Employee.class);
         dispatcher.registerJPAEntity(EmployeeStatus.class);
 
@@ -692,68 +761,62 @@ public class JpaDSDispatcherTest {
         final Collection<DSResponse> responses = dispatcher.dispatch(request);
         JsonTestSupport.assertJsonEquals(
     """
-        [
-               {
-                  response:{
-                     status:0,
-                     startRow:0,
-                     endRow:5,
-                     totalRows:5,
-                     data:[
-                         {
-                             id:1,
-                             statuses:[
-                                {
-                                   id:1,
-                                   owner:1,
-                                   status:'status 1',
-                                   startDate:'2000-05-04',
-                                   endDate:'2000-06-04'
-                                }
+            [
+                   {
+                      response:{
+                         status:0,
+                         startRow:0,
+                         endRow:5,
+                         totalRows:5,
+                         data:[
+                             {
+                                 id:1,
+                                 statuses:[
+                                    {
+                                       id:1,
+                                       owner:1,
+                                       status:'status 1',
+                                       startDate:'2000-05-04',
+                                       endDate:'2000-06-04'
+                                    },
+                                    {
+                                       id:2,
+                                       owner:1,
+                                       status:'status 2',
+                                       startDate:'2000-06-05',
+                                       endDate:'2000-07-05'
+                                    },
+                                    {
+                                       id:3,
+                                       owner:1,
+                                       status:'status 3',
+                                       startDate:'2000-07-06',
+                                       endDate:'null'
+                                    }
+                                 ]
+                              },
+                              {
+                                 "id":2,
+                                 "statuses":[]
+                              },
+                              {
+                                 "id":3,
+                                 "statuses":[]
+                              },
+                              {
+                                 "id":4,
+                                 "statuses":[]
+                              },
+                              {
+                                 "id":5,
+                                 "statuses":[]
+                              }                     
                              ]
-                          },
-                          {
-                             "id":2,
-                             "statuses":[
-                                {
-                                   "endDate":"2000-07-05",
-                                   "id":2,
-                                   "owner":1,
-                                   "startDate":"2000-06-05",
-                                   "status":"status 2"
-                                }
-                             ]
-                          },
-                          {
-                             "id":3,
-                             "statuses":[
-                                {
-                                   "endDate":"null",
-                                   "id":3,
-                                   "owner":1,
-                                   "startDate":"2000-07-06",
-                                   "status":"status 3"
-                                }
-                             ]
-                          },
-                          {
-                             "id":4,
-                             "statuses":[
-                    
-                             ]
-                          },
-                          {
-                             "id":5,
-                             "statuses":[
-                    
-                             ]
-                          }                     
-                         ]
-                      }
-                   }
-               ]
-            }
-        ]""", responses);
+                          }
+                       }
+                   ]
+                }
+            ]""", responses);
     }
 
 }

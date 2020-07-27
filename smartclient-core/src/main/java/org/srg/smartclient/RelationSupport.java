@@ -44,6 +44,43 @@ public class RelationSupport {
                     ", foreignDisplay=" + foreignDisplay.getName() +
                     '}';
         }
+
+        /**
+         * Converts {@code ImportFromRelation} to {@code ForeignKeyRelation} as is.
+         */
+        public ForeignKeyRelation toForeignKeyRelation() {
+            return new ForeignKeyRelation(
+                    this.dataSource,
+                    this.sourceField,
+                    false, // no chance to determine this at this point/level
+                    new ForeignRelation(
+                            this.foreignDataSource.getId(),
+                            this.foreignDataSource,
+                            this.foreignKey.getName(),
+                            this.foreignKey
+                    )
+            );
+        }
+
+        /**
+         * Converts {@code ImportFromRelation} to {@code ForeignKeyRelation} but replacing
+         * {@code #foreignKey} by the {@foreignDisplay}.
+         */
+        public ForeignKeyRelation toForeignDisplayKeyRelation() {
+            assert foreignDisplay != null;
+
+            return new ForeignKeyRelation(
+                    this.dataSource,
+                    this.sourceField,
+                    false, // no chance to determine this at this point/level
+                    new ForeignRelation(
+                            this.foreignDataSource.getId(),
+                            this.foreignDataSource,
+                            this.foreignDisplay.getName(),
+                            this.foreignDisplay
+                    )
+            );
+        }
     }
 
     protected static record ForeignRelation(
@@ -93,18 +130,22 @@ public class RelationSupport {
                             )
                     );
                 })
-                .orElseThrow( () -> {
-                    throw new IllegalStateException(("Can't determine a sourceField for importFromField '%s.%s': " +
-                            "datasource '%s' has no field.displayField == '%s'.")
-                            .formatted(
-                                    foreignRelation.dataSourceId,
-                                    importFromField.getName(),
-                                    dataSource.getId(),
-                                    importFromField
-
-                            )
-                    );
-                });
+                /*
+                 * It is possible that 'includeFrom' will be used w/o a related 'displayField'
+                 */
+//                .orElseThrow( () -> {
+//                    throw new IllegalStateException(("Can't determine a sourceField for importFromField '%s.%s': " +
+//                            "datasource '%s' has no field.displayField == '%s'.")
+//                            .formatted(
+//                                    foreignRelation.dataSourceId,
+//                                    importFromField.getName(),
+//                                    dataSource.getId(),
+//                                    importFromField
+//
+//                            )
+//                    );
+//                });
+                .orElse(importFromField);
 
 //        // by srg: this part must be re-written after ManyToMany will be implemented
 //        final boolean isReverse;

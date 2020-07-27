@@ -1,7 +1,5 @@
 package org.srg.smartclient.isomorphic;
 
-import org.apache.commons.collections.map.LinkedMap;
-
 import java.util.*;
 
 /**
@@ -175,7 +173,7 @@ public class DSRequest implements IDSRequest {
         this.outputs = outputs;
     }
 
-    public static class MapData extends LinkedMap implements IDSRequestData {
+    public static class MapData extends HashMap implements IDSRequestData {
 
     }
 }

@@ -17,6 +17,7 @@
 		<dependency>
 			<groupId>commons-beanutils</groupId>
 			<artifactId>commons-beanutils</artifactId>
+			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -41,7 +42,6 @@
 			<groupId>org.javers</groupId>
 			<artifactId>javers-core</artifactId>
 			<version>5.10.5</version>
-			<scope>compile</scope>
 		</dependency>
 
 		<!-- Test deps -->

@@ -415,11 +415,22 @@ public class JDBCHandler extends AbstractDSHandler {
                                         )
                                     );
 
-                                final ForeignKeyRelation foreignKeyRelation = describeForeignKey(dsf);
+                                final ForeignKeyRelation foreignKeyRelation;
+
+                                if (dsf.getIncludeFrom() != null
+                                        && !dsf.getIncludeFrom().isBlank()) {
+                                    /*
+                                     * Use 'includeFrom' if it is provided
+                                     */
+                                    final ImportFromRelation importFromRelation = describeImportFrom(dsf);
+                                    foreignKeyRelation = importFromRelation.toForeignDisplayKeyRelation();
+                                } else {
+                                    foreignKeyRelation = describeForeignKey(dsf);
+                                }
 
                                 final DSResponse response;
                                 try {
-                                    response = fetchForeignEntityById(foreignKeyRelation, pkValues);
+                                    response = fetchForeignEntity(foreignKeyRelation, pkValues);
                                     assert response != null;
                                 } catch ( Throwable t) {
                                     throw new RuntimeException("Subsequent entity fetch failed: %s, filters: %s"
@@ -474,7 +485,7 @@ public class JDBCHandler extends AbstractDSHandler {
                 data);
     }
 
-    protected DSResponse fetchForeignEntityById(ForeignKeyRelation foreignKeyRelation, Map<String, Object> filtersAndKeys) throws Exception {
+    protected DSResponse fetchForeignEntity(ForeignKeyRelation foreignKeyRelation, Map<String, Object> filtersAndKeys) throws Exception {
         logger.debug("Performing foreign fetch for relation '%s' with criteria: %s"
                 .formatted(
                         foreignKeyRelation,
