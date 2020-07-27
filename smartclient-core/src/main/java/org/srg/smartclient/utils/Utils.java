@@ -1,4 +1,4 @@
-package org.srg.smartclient;
+package org.srg.smartclient.utils;
 
 import java.net.URL;
 import java.nio.file.Path;

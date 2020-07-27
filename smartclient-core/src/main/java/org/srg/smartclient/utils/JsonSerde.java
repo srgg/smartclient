@@ -1,4 +1,4 @@
-package org.srg.smartclient;
+package org.srg.smartclient.utils;
 
 import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.databind.*;
@@ -9,13 +9,15 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import org.srg.smartclient.JpaRelation;
 import org.srg.smartclient.isomorphic.*;
 import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
 
+import javax.persistence.JoinColumn;
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.annotation.IncompleteAnnotationException;
 import java.util.Collection;
-
 
 public class JsonSerde {
 
@@ -207,11 +209,109 @@ public class JsonSerde {
         }
     }
 
+    private static class JpaRelationSerializer extends JsonSerializer<JpaRelation> {
+
+        @Override
+        public void serialize(JpaRelation value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            gen.writeStartObject();
+
+            gen.writeStringField("type", value.type().name());
+            gen.writeStringField("sourceType", value.sourceType().getJavaType().getSimpleName());
+            gen.writeStringField("sourceAttribute", value.sourceAttribute().getName());
+
+            gen.writeStringField("targetType", value.targetType().getJavaType().getSimpleName());
+
+            if (value.targetAttribute() != null) {
+                gen.writeStringField("targetAttribute", value.targetAttribute().getName());
+            } else {
+                gen.writeNullField("targetAttribute");
+            }
+
+            gen.writeBooleanField("isInverse", value.isInverse());
+
+            gen.writeObjectField("joinColumns", value.joinColumns());
+
+            gen.writeEndObject();
+        }
+    }
+
+    private static class JoinColumnSerializer extends JsonSerializer<JoinColumn> {
+        @Override
+        public void serialize(JoinColumn value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            gen.writeStartObject();
+
+            String name;
+            try {
+                name = value.name();
+            } catch (IncompleteAnnotationException e) {
+                name = "";
+            }
+            gen.writeStringField("name", name);
+
+            boolean nullable;
+            try {
+                nullable = value.nullable();
+            } catch (IncompleteAnnotationException e){
+                nullable = true;
+            }
+            gen.writeBooleanField("nullable", nullable);
+
+            boolean insertable;
+            try {
+                insertable = value.insertable();
+            } catch (IncompleteAnnotationException e){
+                insertable = true;
+            }
+            gen.writeBooleanField("insertable", insertable);
+
+            boolean unique;
+            try {
+                unique = value.unique();
+            } catch (IncompleteAnnotationException e){
+                unique = false;
+            }
+            gen.writeBooleanField("unique", unique);
+
+            boolean updatable;
+            try {
+                updatable = value.updatable();
+            } catch (IncompleteAnnotationException e){
+                updatable = true;
+            }
+            gen.writeBooleanField("updatable", updatable);
+
+//            gen.writeObjectField("foreignKey", value.foreignKey());
+//            gen.writeStringField("columnDefinition", value.columnDefinition());
+
+            String referencedColumnName;
+            try {
+                referencedColumnName = value.referencedColumnName();
+            } catch (IncompleteAnnotationException e){
+                referencedColumnName = "";
+            }
+            gen.writeStringField("referencedColumnName", referencedColumnName);
+
+            String table;
+            try {
+                table = value.table();
+            } catch (IncompleteAnnotationException e){
+                table = "";
+            }
+            gen.writeStringField("table", table);
+
+
+            gen.writeEndObject();
+        }
+    }
+
     public static ObjectMapper createMapper() {
         final ObjectMapper mapper = new ObjectMapper();
         final SimpleModule module = new SimpleModule("DSResponse-Serialization", Version.unknownVersion());
         module.addSerializer(DSResponse.class, new DSResponseSerialize() );
         module.addSerializer(DSResponseDataContainer.RawDataResponse.class, new RawDataResponseSerializer());
+        module.addSerializer(JpaRelation.class, new JpaRelationSerializer());
+        module.addSerializer(JoinColumn.class, new JoinColumnSerializer());
+
         module.addDeserializer(IDSRequestData.class, new DSRequestDeserializer());
         module.addDeserializer(DSField.class, new DSFieldDeserializer(DSField.class));
 

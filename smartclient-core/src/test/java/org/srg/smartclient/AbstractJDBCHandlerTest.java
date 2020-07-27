@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
+import org.srg.smartclient.utils.JsonSerde;
 
 import java.lang.reflect.Constructor;
 import java.sql.Connection;

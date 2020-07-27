@@ -1,7 +1,7 @@
 package org.srg.smartclient.spring.autoconfiguration;
 
 import org.srg.smartclient.JDBCHandler;
-import org.srg.smartclient.Utils;
+import org.srg.smartclient.utils.Utils;
 
 import javax.sql.DataSource;
 import java.sql.Connection;

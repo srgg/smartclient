@@ -9,7 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.srg.smartclient.JDBCHandler;
 import org.srg.smartclient.JpaDSDispatcher;
-import org.srg.smartclient.JsonSerde;
+import org.srg.smartclient.utils.JsonSerde;
 import org.srg.smartclient.JsonTestSupport;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
@@ -692,7 +692,7 @@ public class JpaDSDispatcherTest {
         final Collection<DSResponse> responses = dispatcher.dispatch(request);
         JsonTestSupport.assertJsonEquals(
     """
-            [
+        [
                {
                   response:{
                      status:0,
@@ -700,11 +700,60 @@ public class JpaDSDispatcherTest {
                      endRow:5,
                      totalRows:5,
                      data:[
-                     ]
-                  }
-               }
-            ]
-            """, responses);
+                         {
+                             id:1,
+                             statuses:[
+                                {
+                                   id:1,
+                                   owner:1,
+                                   status:'status 1',
+                                   startDate:'2000-05-04',
+                                   endDate:'2000-06-04'
+                                }
+                             ]
+                          },
+                          {
+                             "id":2,
+                             "statuses":[
+                                {
+                                   "endDate":"2000-07-05",
+                                   "id":2,
+                                   "owner":1,
+                                   "startDate":"2000-06-05",
+                                   "status":"status 2"
+                                }
+                             ]
+                          },
+                          {
+                             "id":3,
+                             "statuses":[
+                                {
+                                   "endDate":"null",
+                                   "id":3,
+                                   "owner":1,
+                                   "startDate":"2000-07-06",
+                                   "status":"status 3"
+                                }
+                             ]
+                          },
+                          {
+                             "id":4,
+                             "statuses":[
+                    
+                             ]
+                          },
+                          {
+                             "id":5,
+                             "statuses":[
+                    
+                             ]
+                          }                     
+                         ]
+                      }
+                   }
+               ]
+            }
+        ]""", responses);
     }
 
 }

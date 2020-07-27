@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DSResponse;
 import org.srg.smartclient.isomorphic.DSResponseDataContainer;
+import org.srg.smartclient.utils.JsonSerde;
 
 import java.util.Arrays;
 import java.util.Collections;

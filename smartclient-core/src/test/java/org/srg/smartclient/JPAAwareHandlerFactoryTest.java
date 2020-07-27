@@ -4,13 +4,10 @@ import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.srg.smartclient.JDBCHandler;
-import org.srg.smartclient.JPAAwareHandlerFactory;
-import org.srg.smartclient.JsonTestSupport;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.jpa.*;
+import org.srg.smartclient.utils.JsonSerde;
 
-import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.metamodel.Attribute;
 import javax.persistence.metamodel.EntityType;
@@ -45,17 +42,6 @@ public class JPAAwareHandlerFactoryTest {
 
     @Test
     public void hiddenPropertySetFromAnnotationShouldOverrideDefaultsForPrimaryKey() {
-//        final EntityManagerFactory emf = JpaTestSupport.createEntityManagerFactory(
-//                "testPU_hidden",
-//				EmployeeStatus.class,
-//                Employee.class,
-//                EmployeeRole.class,
-//                ClientData.class,
-//                Client.class,
-//                Project.class
-//            );
-
-//        final JPAAwareHandlerFactory hf = new JPAAwareHandlerFactory();
         final JDBCHandler jdbcHandler = jpaAwareHandlerFactory.createHandler(emf, (database, callback) -> {}, null, EmployeeRole.class);
         assert jdbcHandler != null;
 
@@ -86,6 +72,21 @@ public class JPAAwareHandlerFactoryTest {
 
 		final EntityType<Client> et = mm.entity(Client.class);
 		final Attribute<Client, ?> attr = (Attribute<Client, ?>) et.getAttribute("projects");
+
+		final JpaRelation relation = JpaRelation.describeRelation(mm, et, attr);
+
+		JsonTestSupport.assertJsonEquals("""
+      		{
+      			type:'ONE_TO_MANY',
+      			sourceType:'Client',
+      			sourceAttribute:'projects',
+      			
+      			targetType:'Project',
+      			targetAttribute:'client',
+      			isInverse:true,
+      			
+      			joinColumns: []
+    		}""", relation);
 
 		final DSField dsf = jpaAwareHandlerFactory.describeField(mm, dsId, et, attr);
 
@@ -128,14 +129,71 @@ public class JPAAwareHandlerFactoryTest {
 	}
 
 	@Test
-	public void associationOverrideShouldOverrideDBName() {
+	public void manyToOneWithAssociationOverride_ShouldOverrideDBName() {
 		final Metamodel mm = emf.getMetamodel();
 		final String dsId = "TestDS";
 
-		final EntityType<EmployeeStatus> et = mm.entity(EmployeeStatus.class);
-		final Attribute<EmployeeStatus, ?> attr = (Attribute<EmployeeStatus, ?>) et.getAttribute("owner");
+		{
+			final EntityType<Employee> employeeEntityType = mm.entity(Employee.class);
+			final Attribute<Employee, ?> employeeStatusesAttribute = employeeEntityType.getDeclaredAttribute("statuses");
 
-		final DSField dsf = jpaAwareHandlerFactory.describeField(mm, dsId, et, attr);
+			final JpaRelation jpaRelation = JpaRelation.describeRelation(mm, employeeEntityType, employeeStatusesAttribute);
+			JsonTestSupport.assertJsonEquals("""
+				{
+					type:'ONE_TO_MANY',
+					sourceType:'Employee',
+					sourceAttribute:'statuses',
+
+					targetType:'EmployeeStatus',
+					targetAttribute: 'owner',
+					isInverse: true,
+					joinColumns: []
+				}""", jpaRelation);
+
+			final DSField dsf = jpaAwareHandlerFactory.describeField(mm, dsId, employeeEntityType, employeeStatusesAttribute);
+
+			JsonTestSupport.assertJsonEquals("""
+      		{
+				name:'statuses',
+				required:false,
+				primaryKey:false,
+				hidden:true,
+				type:'ENTITY',
+				foreignKey:'EmployeeStatusDS.id',
+				includeFrom: 'EmployeeStatusDS.owner',
+				dbName:'statuses',
+				multiple:true      		
+			}""", dsf, Option.IGNORING_EXTRA_FIELDS);
+		}
+
+		final EntityType<EmployeeStatus> employeeStatusEntityType = mm.entity(EmployeeStatus.class);
+		final Attribute<EmployeeStatus, ?> employeeStatusAttribute = (Attribute<EmployeeStatus, ?>) employeeStatusEntityType.getAttribute("owner");
+
+		final JpaRelation relation = JpaRelation.describeRelation(mm, employeeStatusEntityType, employeeStatusAttribute);
+
+		JsonTestSupport.assertJsonEquals("""
+      		{
+      			type:'MANY_TO_ONE',
+      			sourceType:'EmployeeStatus',
+      			sourceAttribute:'owner',
+      			
+      			targetType:'Employee',
+      			targetAttribute: null,
+      			isInverse: false,
+      			joinColumns: [
+					{
+						insertable:true,
+						name:'employee_id',
+						nullable:false,
+						referencedColumnName:'',
+						table:'',
+						unique:false,
+						updatable:true
+					}
+				]      			
+    		}""", relation);
+
+		final DSField dsf = jpaAwareHandlerFactory.describeField(mm, dsId, employeeStatusEntityType, employeeStatusAttribute);
 
 		JsonTestSupport.assertJsonEquals("""
       		{
@@ -145,6 +203,7 @@ public class JPAAwareHandlerFactoryTest {
 				hidden:false,
 				type:'INTEGER',
 				foreignKey:'EmployeeDS.id',
+				includeFrom: null,
 				dbName:'employee_id',
 				multiple:false      		
 			}""", dsf, Option.IGNORING_EXTRA_FIELDS);

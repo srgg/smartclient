@@ -7,6 +7,7 @@ import org.srg.smartclient.isomorphic.IDSRequest;
 import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
 import org.srg.smartclient.isomorphic.criteria.Criteria;
 import org.srg.smartclient.isomorphic.criteria.OperatorId;
+import org.srg.smartclient.utils.JsonSerde;
 
 import java.io.IOException;
 import java.util.Map;

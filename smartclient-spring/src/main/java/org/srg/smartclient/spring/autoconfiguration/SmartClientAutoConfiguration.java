@@ -20,7 +20,7 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.srg.smartclient.IDSDispatcher;
-import org.srg.smartclient.JsonSerde;
+import org.srg.smartclient.utils.JsonSerde;
 import org.srg.smartclient.isomorphic.DSResponse;
 import org.srg.smartclient.isomorphic.IDSRequest;
 import org.srg.smartclient.spring.SmartClientProperties;

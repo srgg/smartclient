@@ -3,6 +3,7 @@ package org.srg.smartclient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.*;
+import org.srg.smartclient.utils.Utils;
 
 import java.sql.*;
 import java.util.*;
@@ -211,7 +212,12 @@ public class JDBCHandler extends AbstractDSHandler {
         final String joinClause = String.join(" \n ",
                 getFields()
                     .stream()
-                    .filter( dsf -> dsf.isIncludeField())
+                    .filter( dsf -> dsf.isIncludeField()
+                            /*
+                            * Entities will be fetched separately via sub-entity fetch request,
+                            * therefore exclude this field from the sql join.
+                            */
+                            && !DSField.FieldType.ENTITY.equals(dsf.getType()))
                     .map( dsf -> {
 
                         final ImportFromRelation relation = describeImportFrom(dsf);

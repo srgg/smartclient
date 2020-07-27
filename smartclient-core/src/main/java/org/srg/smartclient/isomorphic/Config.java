@@ -1,8 +1,7 @@
 package org.srg.smartclient.isomorphic;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.srg.smartclient.JsonSerde;
-import org.srg.smartclient.Utils;
+import org.srg.smartclient.utils.JsonSerde;
+import org.srg.smartclient.utils.Utils;
 
 import java.io.FileInputStream;
 import java.io.IOException;

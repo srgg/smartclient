@@ -37,6 +37,13 @@
 			<artifactId>commons-lang3</artifactId>
 		</dependency>
 
+		<dependency>
+			<groupId>org.javers</groupId>
+			<artifactId>javers-core</artifactId>
+			<version>5.10.5</version>
+			<scope>compile</scope>
+		</dependency>
+
 		<!-- Test deps -->
 		<dependency>
 			<groupId>org.flywaydb</groupId>

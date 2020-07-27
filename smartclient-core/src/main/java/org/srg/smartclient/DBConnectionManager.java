@@ -2,6 +2,7 @@ package org.srg.smartclient;
 
 import org.apache.commons.beanutils.BeanUtils;
 import org.srg.smartclient.isomorphic.Config;
+import org.srg.smartclient.utils.Utils;
 
 import javax.sql.DataSource;
 import java.io.IOException;
