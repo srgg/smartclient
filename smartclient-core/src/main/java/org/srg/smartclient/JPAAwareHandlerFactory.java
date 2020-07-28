@@ -493,7 +493,11 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                              * threfore iot will be re-worked later
                              */
                             f.setTableName(effectiveJoinTable);
-//                            break;
+
+                            /*
+                             * SKIP MANY-TO-MANY SINCE IT IS NOT WORKING PROPERLY
+                             */
+                            return null;
 
                         case ONE_TO_MANY:
                             /*

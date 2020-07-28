@@ -3,6 +3,7 @@ package org.srg.smartclient;
 import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.jpa.*;
@@ -247,6 +248,7 @@ public class JPAAwareHandlerFactoryTest {
 		}
 	}
 
+	@Disabled("Disabled until @ManyToMany will be supported")
 	@Test
 	public void manyToMany() {
 		final Metamodel mm = emf.getMetamodel();
