@@ -85,6 +85,11 @@ public class DSField {
     private String dbName;
 
     /**
+     * The table name to use when qualifying the column name for this field during server-side SQL query generation.
+     */
+    private String tableName;
+
+    /**
      * Indicates that this field should always be Array-valued.  If the value derived from
      *  {@link com.smartgwt.client.data.DataSource#getDataFormat XML or JSON data} is singular, it will be wrapped in an Array.
      *  <p>
@@ -369,6 +374,14 @@ public class DSField {
 
     public void setMultiple(boolean multiple) {
         this.multiple = multiple;
+    }
+
+    public String getTableName() {
+        return tableName;
+    }
+
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
     }
 
     @Override

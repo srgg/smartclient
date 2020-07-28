@@ -3,10 +3,7 @@ package org.srg.smartclient.jpa;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.configuration.FluentConfiguration;
 import org.hibernate.internal.SessionFactoryImpl;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.srg.smartclient.JDBCHandler;
 import org.srg.smartclient.JpaDSDispatcher;
 import org.srg.smartclient.utils.JsonSerde;
@@ -504,6 +501,7 @@ public class JpaDSDispatcherTest {
         final DSRequest request = new DSRequest();
         request.setStartRow(0);
         request.setDataSource( projectDsId);
+        request.setOutputs("id, name, client, clientName");
 
         final Collection<DSResponse> responses = dispatcher.dispatch(request);
         JsonTestSupport.assertJsonEquals(
@@ -559,6 +557,7 @@ public class JpaDSDispatcherTest {
         final DSRequest request = new DSRequest();
         request.setStartRow(0);
         request.setOutputs("id, projects");
+        request.setAdditionalOutputs("projects!ProjectDS.name, projects!ProjectDS.client, projects!ProjectDS.clientName, projects!ProjectDS.id");
         request.setDataSource( clientDsId);
 
         final Collection<DSResponse> responses = dispatcher.dispatch(request);
@@ -822,4 +821,26 @@ public class JpaDSDispatcherTest {
             ]""", responses);
     }
 
+    @Disabled("Disabled until @ManyToMany will be supported")
+    @Test
+    public void manyToManyRelation() {
+        dispatcher.registerJPAEntity(Employee.class);
+        dispatcher.registerJPAEntity(Client.class);
+        dispatcher.registerJPAEntity(ClientData.class);
+
+        final String projectDs = dispatcher.registerJPAEntity(Project.class);
+
+        // --
+        final DSRequest request = new DSRequest();
+        request.setStartRow(0);
+        request.setOutputs("id, name, teamMembers");
+        request.setAdditionalOutputs("teamMembers!EmployeeDS.id, teamMembers!EmployeeDS.name");
+        request.setDataSource( projectDs);
+
+        final Collection<DSResponse> responses = dispatcher.dispatch(request);
+        JsonTestSupport.assertJsonEquals(
+                """
+                [
+                ]""", responses);
+    }
 }

@@ -363,7 +363,138 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
 
             switch (type.getPersistenceType()) {
                 case ENTITY:
+
+                    final Class<?> foreignJavaType = type.getJavaType();
+                    final String foreignDsId = getDsId(foreignJavaType);
+                    f.setMultiple(true);
+
+                    // should be hidden by default
+                    if (f.isHidden() == null) {
+                        f.setHidden(true);
+                    }
+
+                    final Set<DSField> dsIdFields =  getDSIDField(mm, foreignJavaType);
+
+                    // --
+                    if (jpaRelation.targetAttribute() == null) {
+                        throw new IllegalStateException();
+                    }
+
+                    final String targetAttributeName = jpaRelation.targetAttribute().getName();
+
+                    final boolean isTargetAttrIsPK = dsIdFields.stream()
+                            .anyMatch(dsf -> dsf.getName().equals(targetAttributeName));
+
+
+                    if ( !isTargetAttrIsPK ) {
+                        /*
+                         * Target attribute is not a part of target entity ID,
+                         * therefore it is required to provide/preserver an additional information
+                         * about this relation, therefore 'includeFrom' field must be set.
+                         */
+                        f.setIncludeFrom(
+                                "%s.%s".formatted(
+                                        foreignDsId,
+                                        targetAttributeName
+                                )
+                        );
+                    }
+
+                    DSField fkField = null;
+                    if (dsIdFields.size() == 1) {
+                        fkField = dsIdFields.iterator().next();
+                    } else if (jpaRelation.getTargetAttributeName_or_null() != null) {
+//                                final String targetAttributeName = jpaRelation.getTargetAttributeName_or_null();
+                        for (DSField dsf: dsIdFields) {
+                            if (dsf.getName().equals(targetAttributeName)) {
+                                fkField = dsf;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (fkField == null) {
+                        throw new IllegalStateException(
+                                "Datasource '%s', field '%s': Can't determine a foreignKey field  for '%s.%s'"
+                                        .formatted( dsId,
+                                                f.getName(),
+                                                f.getForeignDisplayField(),
+                                                attr.getDeclaringType(),
+                                                attr.getName()
+                                        )
+                        );
+                    }
+
+                    final RelationSupport.ForeignRelation fkRelation = new RelationSupport.ForeignRelation(
+                            foreignDsId,
+                            null,
+                            fkField.getName(),
+                            fkField
+                    );
+
+                    f.setType(DSField.FieldType.ENTITY);
+
                     switch (jpaRelation.type()) {
+                        case MANY_TO_MANY:
+                            /**
+                             * Many-To-Many Relations
+                             *
+                             * An example of Many-To-Many relation is that Students have multiple Courses and each Course has multiple Students. In Java each Student bean has a list of Courses and each Course bean has a list of Students. In database tables are linked using additional table holding references to both students and courses.
+                             * To set up Many-To-Many relation between data sources you need to set up One-To-Many relation on both sides.
+                             *
+                             * For example students DataSourceField for CourseDS data source:
+                             *
+                             *       <field name="students" type="integer" foreignKey="StudentDS.id" multiple="true" />
+                             *
+                             * and courses DataSourceField for StudentDS data source:
+                             *       <field name="courses" type="integer" foreignKey="CourseDS.id" multiple="true" />
+                             *
+                             * Note that type attribute can be safely omitted here.
+                             * Note that alternative type declaration to be ID of related data source (as in regular One-To-Many relation case) would work as expected, but is not recommended to use, cause it would result in getting lots of copies of same data. Smartclient server will prevent infinite loops, but still lots of unnecessary data will be sent to client.
+                             *
+                             * @see <a href="https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/JpaHibernateRelations.html">JPA & Hibernate Relations</a>
+                             * @see <a href="https://forums.smartclient.com/forum/smart-gwt-technical-q-a/19147-many-to-many-relationship-in-sql-datasource">many-to-many relationship in SQL datasource?</a>
+                             * @see <a href="https://www.smartclient.com/smartgwtee/showcase/#large_valuemap_sql"> example shows the simple use of custom SQL clauses to provide a DataSource that joins multiple tables</a>
+                             */
+                            if (jpaRelation.joinTable() == null
+                                || jpaRelation.joinTable().isBlank()) {
+                                throw new RuntimeException(
+                                        "Datasource '%s', field '%s': Can't determine a join table name  for relation '%s'."
+                                                .formatted( dsId,
+                                                        f.getName(),
+                                                        jpaRelation
+                                                )
+                                );
+                            }
+
+                            final String effectiveJoinTable;
+
+                            if (jpaRelation.joinTable().isBlank()) {
+                                effectiveJoinTable = "%s_%s"
+                                        .formatted(
+                                                fkRelation.dataSourceId(),
+                                                fkRelation.fieldName()
+                                        );
+
+                                logger.debug(
+                                        "Data source '%s': join table name is not provided for a relation %s, auto generated name '%s' will be used"
+                                                .formatted(dsId,
+                                                        jpaRelation,
+                                                        effectiveJoinTable
+                                                )
+                                );
+
+                            } else {
+                                effectiveJoinTable = jpaRelation.joinTable();
+                            }
+
+                            /*
+                             * It is completly wrong to store join table in dsf.tableName
+                             * threfore iot will be re-worked later
+                             */
+                            f.setTableName(effectiveJoinTable);
+//                            break;
+
                         case ONE_TO_MANY:
                             /*
                              * One-to-Many Relations
@@ -382,72 +513,14 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                              * For example, for a Country bean that has a Collection of City beans:
                              *       <field name="cities" type="city" multiple="true" foreignKey="city.cityId"/>
                              */
-                            final Class<?> foreignJavaType = type.getJavaType();
-                            final String foreignDsId = getDsId(foreignJavaType);
-                            f.setMultiple(true);
-
-                            // should be hidden by default
-                            if (f.isHidden() == null) {
-                                f.setHidden(true);
-                            }
-
-                            final Set<DSField> dsIdFields =  getDSIDField(mm, foreignJavaType);
-
-                            // --
-                            final String targetAttributeName = jpaRelation.targetAttribute().getName();
-
-                            final boolean isTargetAttrIsPK = dsIdFields.stream()
-                                    .anyMatch(dsf -> dsf.getName().equals(targetAttributeName));
-
-
-                            if ( !isTargetAttrIsPK ) {
-                                /*
-                                 * Target attribute is not a part of target entity ID,
-                                 * therefore it is required to provide/preserver an additional information
-                                 * about this relation, therefore 'includeFrom' field must be set.
-                                 */
-                                f.setIncludeFrom(
-                                        "%s.%s".formatted(
-                                                foreignDsId,
-                                                targetAttributeName
-                                            )
-                                    );
-                            }
-
-                            DSField fff = null;
-                            if (dsIdFields.size() == 1) {
-                                fff = dsIdFields.iterator().next();
-                            } else if (jpaRelation.getTargetAttributeName_or_null() != null) {
-//                                final String targetAttributeName = jpaRelation.getTargetAttributeName_or_null();
-                                for (DSField dsf: dsIdFields) {
-                                    if (dsf.getName().equals(targetAttributeName)) {
-                                        fff = dsf;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if (fff == null) {
-                                throw new IllegalStateException(
-                                        "Datasource '%s', field '%s': Can't determine a foreignKey field  for '%s.%s'"
-                                                .formatted( dsId,
-                                                        f.getName(),
-                                                        f.getForeignDisplayField(),
-                                                        attr.getDeclaringType(),
-                                                        attr.getName()
-                                                )
-                                );
-                            }
 
                             f.setForeignKey(
                                     "%s.%s"
                                             .formatted(
-                                                    foreignDsId,
-                                                    fff.getName()
+                                                    fkRelation.dataSourceId(),
+                                                    fkRelation.fieldName()
                                             )
                             );
-
-                            f.setType(DSField.FieldType.ENTITY);
                             break;
 
                         default:
@@ -511,50 +584,17 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
 
     protected  <E> Set<DSField> getDSIDField( Metamodel mm, Class<E> clazz) {
         final EntityType<E> et = mm.entity(clazz);
-        final ManagedType<E> mt = mm.managedType(clazz);
 
-        if ( et.hasSingleIdAttribute() ) {
-            final Attribute<? super E, ?> idAttribute = et.getId(et.getIdType().getJavaType());
+        final Set<SingularAttribute<? super E, ?>> idAttributes = JpaRelation.getIdAttributes(et);
 
-            if (idAttribute == null) {
-                // No sure is it possible or not
-                throw new IllegalStateException("It seems there is no any @Id field, JPA entity '%s'."
-                        .formatted(clazz.getCanonicalName())
-                );
-            }
-
-
-            switch (idAttribute.getPersistentAttributeType()) {
-                case BASIC:
-                    return Collections.singleton(
-                            describeField(mm, "<>", et, idAttribute)
-                    );
-
-                default:
-                    throw new IllegalStateException("Unsupported @Id type '%s', JPA entity '%s'."
-                            .formatted(
-                                    idAttribute.getPersistentAttributeType(),
-                                    clazz.getCanonicalName())
-                    );
-            }
-        } else {
-            final Set<SingularAttribute<? super E, ?>> idAttributes = et.getIdClassAttributes();
-
-            if (idAttributes != null && !idAttributes.isEmpty()) {
-                assert idAttributes != null;
-
-                final Set<DSField> ids = idAttributes.stream()
-                        .map(sa -> describeField(mm, "<>", et, sa))
-                        .collect(Collectors.toSet());
-
-                return ids;
-            }
-
-            throw new IllegalStateException("Can't determine id attributes for JPA entity '%s'."
-                    .formatted(
-                            clazz.getCanonicalName()
-                    )
+        if (idAttributes.isEmpty()) {
+            throw new IllegalStateException("It seems there is no any @Id field, JPA entity '%s'."
+                    .formatted(et.getJavaType().getCanonicalName())
             );
         }
+
+        return idAttributes.stream()
+                .map(sa -> describeField(mm, "<>", et, sa))
+                .collect(Collectors.toSet());
     }
 }

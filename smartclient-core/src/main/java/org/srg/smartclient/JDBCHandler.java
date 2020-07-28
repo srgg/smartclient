@@ -180,8 +180,8 @@ public class JDBCHandler extends AbstractDSHandler {
         if (request.getOutputs() == null || request.getOutputs().isBlank()) {
             requestedFields = getDataSource().getFields();
         } else {
-            requestedFields = request.getOutputs() == null ? null : Stream.of(request.getOutputs().split(","))
-                    .map(str -> str.trim().toLowerCase())
+            requestedFields = Stream.of(request.getOutputs().split(","))
+                    .map(String::trim)
                     .filter(s -> !s.isEmpty() && !s.isBlank())
                     .map( fn -> {
                         final DSField dsf = getField( fn);
@@ -194,6 +194,89 @@ public class JDBCHandler extends AbstractDSHandler {
                         return dsf;
                     } )
                     .collect(Collectors.toList());
+        }
+
+        final Map<DSField, List<ForeignRelation>> additionalOutputs;
+
+        if (request.getAdditionalOutputs() == null || request.getAdditionalOutputs().isBlank()){
+            additionalOutputs = Collections.EMPTY_MAP;
+        } else {
+            additionalOutputs = (Map)Stream.of(request.getAdditionalOutputs().split(","))
+                    .map(str -> str.trim())
+                    .filter(s -> !s.isEmpty() && !s.isBlank())
+                    .map( descr -> {
+                        final String parsed[] = descr.split("!");
+
+                        if (parsed.length != 2) {
+                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', valid format is 'localFieldName!relatedDataSourceID.relatedDataSourceFieldName'."
+                                    .formatted(
+                                            dataSource().getId(),
+                                            descr
+                                    )
+                            );
+                        }
+
+                        final String sourceFieldName = parsed[0].trim();
+
+                        final DSField sourceField = JDBCHandler.this.getField(sourceFieldName);
+                        if (sourceField == null) {
+                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', nothing known about field '%s'."
+                                    .formatted(
+                                            dataSource().getId(),
+                                            descr,
+                                            sourceFieldName
+                                    )
+                            );
+                        }
+
+                        final ForeignKeyRelation fkRelation;
+
+                        try {
+                            fkRelation = describeForeignKey(sourceField);
+                        } catch (Throwable t) {
+                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
+                                    .formatted(
+                                            dataSource().getId(),
+                                            descr
+                                    ),
+                                    t
+                            );
+                        }
+
+                        final ForeignRelation fRelation;
+
+                        try {
+                            fRelation = describeForeignRelation(parsed[1].trim());
+                        } catch (Throwable t) {
+                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
+                                    .formatted(
+                                            dataSource().getId(),
+                                            descr
+                                    ),
+                                    t
+                            );
+                        }
+
+                        if (!fkRelation.foreign().dataSourceId().equals(fRelation.dataSourceId())) {
+                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
+                                    .formatted(
+                                            dataSource().getId(),
+                                            descr
+                                    )
+                            );
+                        }
+
+                        return new AbstractMap.SimpleImmutableEntry(sourceField, fRelation);
+                    })
+                    .collect(
+                            Collectors.groupingBy(
+                                    e -> e.getKey(),
+                                    Collectors.mapping(
+                                            e -> e.getValue(),
+                                            Collectors.toList()
+                                    )
+                            )
+                    );
         }
 
         final String selectClause = String.format("SELECT %s",
@@ -428,9 +511,14 @@ public class JDBCHandler extends AbstractDSHandler {
                                     foreignKeyRelation = describeForeignKey(dsf);
                                 }
 
+                                final List<ForeignRelation> ffs = additionalOutputs.get(dsf);
+                                final String entityOutputs = ffs == null ? null : ffs.stream()
+                                        .map(fk -> fk.fieldName())
+                                        .collect(Collectors.joining(", "));
+
                                 final DSResponse response;
                                 try {
-                                    response = fetchForeignEntity(foreignKeyRelation, pkValues);
+                                    response = fetchForeignEntity(foreignKeyRelation, entityOutputs, pkValues);
                                     assert response != null;
                                 } catch ( Throwable t) {
                                     throw new RuntimeException("Subsequent entity fetch failed: %s, filters: %s"
@@ -485,7 +573,7 @@ public class JDBCHandler extends AbstractDSHandler {
                 data);
     }
 
-    protected DSResponse fetchForeignEntity(ForeignKeyRelation foreignKeyRelation, Map<String, Object> filtersAndKeys) throws Exception {
+    protected DSResponse fetchForeignEntity(ForeignKeyRelation foreignKeyRelation, String outputs, Map<String, Object> filtersAndKeys) throws Exception {
         logger.debug("Performing foreign fetch for relation '%s' with criteria: %s"
                 .formatted(
                         foreignKeyRelation,
@@ -507,6 +595,7 @@ public class JDBCHandler extends AbstractDSHandler {
         final DSRequest fetchEntity = new DSRequest();
         fetchEntity.setDataSource(dsHandler.id());
         fetchEntity.setOperationType(DSRequest.OperationType.FETCH);
+        fetchEntity.setOutputs(outputs);
 
         /**
          * if type is not provided this indicates that the only PKs should be fetched.

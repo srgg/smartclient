@@ -40,7 +40,9 @@ public record JpaRelation<S, T>(
          */
         boolean isInverse,
 
-        List<JoinColumn> joinColumns
+        List<JoinColumn> joinColumns,
+
+        String joinTable
 ) {
 
     public String getTargetAttributeName_or_null() {
@@ -107,7 +109,7 @@ public record JpaRelation<S, T>(
 
         final String mappedByFieldName = determineMappedBy(mm, relationType, sourceJavaField);
 
-        final boolean isInverseRelation = mappedByFieldName != null;
+        final boolean isInverseRelation = mappedByFieldName != null && !mappedByFieldName.isBlank();
 
         // -- Mapped by
         final EntityType<T> mappedByEntity;
@@ -187,14 +189,38 @@ public record JpaRelation<S, T>(
 //                    .formatted(sourceEntityType.getName(), sourceAttribute.getName()));
 //        }
 
+
+        Attribute<?, ?> effectiveTargetAttribute = mappedByAttribute;
+
+        if (mappedByAttribute == null
+            && !isInverseRelation) {
+            final Set<SingularAttribute<?,?>> idAttributes = (Set<SingularAttribute<?, ?>>) getIdAttributes(targetEntityType);
+
+            if (idAttributes.size() > 1) {
+                throw new IllegalStateException("Composite PKs have not been supported yet.");
+            }
+
+            effectiveTargetAttribute = idAttributes.iterator().next();
+        }
+
+
+        // -- Join Table
+        final JoinTable joinTable;
+
+        if (mappedByAttribute == null) {
+            joinTable = sourceJavaField.getAnnotation(JoinTable.class);
+        } else {
+            joinTable = mappedByField.getAnnotation(JoinTable.class);
+        }
         return new JpaRelation(
                 relationType, null,
                 sourceEntityType,
                 sourceAttribute,
                 targetEntityType,
-                mappedByAttribute,
+                effectiveTargetAttribute,
                 isInverseRelation,
-                effectiveJoinColumn == null ? Collections.EMPTY_LIST : List.of(effectiveJoinColumn)
+                effectiveJoinColumn == null ? Collections.EMPTY_LIST : List.of(effectiveJoinColumn),
+                joinTable == null ? null : joinTable.name()
 //                joinColumns
 //                , mappedByFieldName, mappedByJoinColumns
         );
@@ -394,5 +420,30 @@ public record JpaRelation<S, T>(
 
     private static JoinColumn createJoinColumnAnnotationAtRuntime(Map<String, Object> values) {
         return RuntimeAnnotations.annotationForMap(JoinColumn.class, values);
+    }
+
+    public static <E> Set<SingularAttribute<? super E,?>> getIdAttributes(EntityType<E> et) {
+        if ( et.hasSingleIdAttribute() ) {
+            final SingularAttribute<? super E, ?> idAttribute = et.getId(et.getIdType().getJavaType());
+
+            if (idAttribute == null) {
+                // No sure is it possible or not
+                throw new IllegalStateException("It seems there is no any @Id field, JPA entity '%s'."
+                        .formatted(et.getJavaType().getCanonicalName())
+                );
+            }
+            return Set.of(idAttribute);
+        } else {
+            final Set<SingularAttribute<? super E, ?>> idAttributes = et.getIdClassAttributes();
+
+            if (idAttributes == null || idAttributes.isEmpty()) {
+                throw new IllegalStateException("Can't determine id attributes for JPA entity '%s'."
+                        .formatted(
+                                et.getJavaType().getCanonicalName()
+                        )
+                );
+            }
+            return idAttributes;
+        }
     }
 }

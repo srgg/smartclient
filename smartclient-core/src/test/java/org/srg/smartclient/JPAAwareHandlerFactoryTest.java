@@ -112,6 +112,18 @@ public class JPAAwareHandlerFactoryTest {
 		final EntityType<Employee> et = mm.entity(Employee.class);
 		final Attribute<Employee, ?> attr = (Attribute<Employee, ?>) et.getAttribute("roles");
 
+		final JpaRelation jpaRelation = JpaRelation.describeRelation(mm, et, attr);
+		JsonTestSupport.assertJsonEquals("""
+				{
+					type:'ONE_TO_MANY',
+   					sourceType:'Employee',
+   					sourceAttribute:'roles',
+   					targetType:'EmployeeRole',
+   					targetAttribute:'employee',
+   					isInverse:true,
+   					joinColumns:[]				
+				}""", jpaRelation);
+
 		final DSField dsf = jpaAwareHandlerFactory.describeField(mm, dsId, et, attr);
 
 		JsonTestSupport.assertJsonEquals("""
@@ -178,7 +190,7 @@ public class JPAAwareHandlerFactoryTest {
       			sourceAttribute:'owner',
       			
       			targetType:'Employee',
-      			targetAttribute: null,
+      			targetAttribute: 'id',
       			isInverse: false,
       			joinColumns: [
 					{
@@ -231,6 +243,90 @@ public class JPAAwareHandlerFactoryTest {
    				foreignDisplayField:'name',
 			    dbName:'employee_id'
       		}""", dsf, Option.IGNORING_EXTRA_FIELDS);
+
+		}
+	}
+
+	@Test
+	public void manyToMany() {
+		final Metamodel mm = emf.getMetamodel();
+		final String dsId = "TestDS";
+
+		{
+			final EntityType<Project> projectEntityType = mm.entity(Project.class);
+			final Attribute<Project, ?> projectTeamAttribute = projectEntityType.getDeclaredAttribute("teamMembers");
+
+			final JpaRelation jpaRelation = JpaRelation.describeRelation(mm, projectEntityType, projectTeamAttribute);
+			JsonTestSupport.assertJsonEquals("""
+					{
+						type:'MANY_TO_MANY',
+						sourceType:'Project',
+						sourceAttribute:'teamMembers',
+
+						targetType:'Employee',
+						targetAttribute: 'id',
+						isInverse: false,
+						joinColumns: [
+							{
+								name:'project_id',
+								nullable:true,
+								insertable:true,
+								unique:false,
+								updatable:true,
+								referencedColumnName:'',
+								table:''
+							}
+						]
+					}""", jpaRelation);
+
+			final DSField dsf = jpaAwareHandlerFactory.describeField(mm, dsId, projectEntityType, projectTeamAttribute);
+
+			JsonTestSupport.assertJsonEquals("""
+				{
+					name:'teamMembers',
+   					required:false,
+   					primaryKey:false,
+   					hidden:true,
+   					type:'ENTITY',
+   					foreignKey:'EmployeeDS.id',
+   					includeFrom:null,
+   					foreignDisplayField:null,
+				   	dbName:'project_id',
+   					multiple:true
+				}""", dsf, Option.IGNORING_EXTRA_FIELDS);
+		}
+		{
+			final EntityType<Employee> employeeEntityType = mm.entity(Employee.class);
+			final Attribute<Employee, ?> employeeProjectsAttribute = employeeEntityType.getDeclaredAttribute("projects");
+
+			final JpaRelation jpaRelation = JpaRelation.describeRelation(mm, employeeEntityType, employeeProjectsAttribute);
+			JsonTestSupport.assertJsonEquals("""
+					{
+						type:'MANY_TO_MANY',
+						sourceType:'Employee',
+						sourceAttribute:'projects',
+
+						targetType:'Project',
+						targetAttribute: 'teamMembers',
+						isInverse: true,
+						joinColumns: []
+					}""", jpaRelation);
+
+			final DSField dsf = jpaAwareHandlerFactory.describeField(mm, dsId, employeeEntityType, employeeProjectsAttribute);
+
+			JsonTestSupport.assertJsonEquals("""
+				{
+					name:'projects',
+   					required:false,
+   					primaryKey:false,
+   					hidden:true,
+   					type:'ENTITY',
+   					foreignKey:'ProjectDS.id',
+   					includeFrom:'ProjectDS.teamMembers',
+   					foreignDisplayField:null,
+				   	dbName:'projects',
+   					multiple:true
+				}""", dsf, Option.IGNORING_EXTRA_FIELDS);
 
 		}
 	}

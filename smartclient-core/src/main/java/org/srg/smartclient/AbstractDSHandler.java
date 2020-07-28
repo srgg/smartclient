@@ -108,6 +108,10 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
         return RelationSupport.describeForeignKey(dsId -> this.getDataSourceHandlerById(dsId), this.getDataSource(), foreignKeyField);
     }
 
+    protected ForeignRelation describeForeignRelation(String relation) {
+        return RelationSupport.describeForeignRelation( dsId -> this.getDataSourceHandlerById(dsId), relation);
+    }
+
     protected ForeignRelation determineEffectiveField(DSField dsf) {
         final DataSource effectiveDS;
         final DSField effectiveField;
