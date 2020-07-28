@@ -46,6 +46,8 @@ public class DataSource {
 //     */
 //    private boolean autoDeriveSchema;
 
+    private List<OperationBinding> operationBindings;
+
     public void setId(String id) {
         this.id = id;
     }
@@ -134,11 +136,20 @@ public class DataSource {
 //        this.autoDeriveSchema = autoDeriveSchema;
 //    }
 
+    public List<OperationBinding> getOperationBindings() {
+        return operationBindings;
+    }
+
+    public void setOperationBindings(List<OperationBinding> operationBindings) {
+        final List<OperationBinding> b = new ArrayList<>(operationBindings.size());
+        this.operationBindings = Collections.unmodifiableList(b);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof DataSource)) return false;
-        DataSource that = (DataSource) o;
+        if (!(o instanceof DataSource that)) return false;
         return getId().equals(that.getId());
     }
 

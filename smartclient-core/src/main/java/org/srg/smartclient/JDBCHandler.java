@@ -18,7 +18,7 @@ public class JDBCHandler extends AbstractDSHandler {
         void withConnectionDo(String database, Utils.CheckedFunction<Connection, Void> callback) throws Exception;
     }
 
-    private  Logger logger = LoggerFactory.getLogger(getClass());
+    private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final JDBCPolicy policy;
 
@@ -64,7 +64,7 @@ public class JDBCHandler extends AbstractDSHandler {
                         .formatted(foreignKeyRelation.foreign().dataSourceId());
             }
 
-            /**
+            /*
              * Correspondent entity will be fetched by the subsequent query,
              * therefore it is required to reserve space in the response
              */
@@ -96,7 +96,7 @@ public class JDBCHandler extends AbstractDSHandler {
         }
 
 
-        /**
+        /*
          * It is required to introduce a column alias, to avoid column name duplication
          */
         return "%s AS %s"
@@ -168,6 +168,8 @@ public class JDBCHandler extends AbstractDSHandler {
     protected DSResponse handleFetch(DSRequest request) throws Exception {
         final int pageSize = request.getEndRow() == -1  ? -1 : request.getEndRow() - request.getStartRow();
 
+        final OperationBinding operationBinding = getEffectiveOperationBinding(DSRequest.OperationType.FETCH);
+
         // -- LIMIT
         final String paginationClause =  pageSize <= 0 ? "" : String.format("LIMIT %d OFFSET %d",
                 request.getEndRow(),  request.getStartRow());
@@ -180,8 +182,8 @@ public class JDBCHandler extends AbstractDSHandler {
         if (request.getOutputs() == null || request.getOutputs().isBlank()) {
             requestedFields = getDataSource().getFields();
         } else {
-            requestedFields = request.getOutputs() == null ? null : Stream.of(request.getOutputs().split(","))
-                    .map(str -> str.trim().toLowerCase())
+            requestedFields = Stream.of(request.getOutputs().split(","))
+                    .map(String::trim)
                     .filter(s -> !s.isEmpty() && !s.isBlank())
                     .map( fn -> {
                         final DSField dsf = getField( fn);
@@ -196,41 +198,119 @@ public class JDBCHandler extends AbstractDSHandler {
                     .collect(Collectors.toList());
         }
 
-        final String selectClause = String.format("SELECT %s",
-                String.join(",\n  " ,
-                    requestedFields
-                        .stream()
-                            .map( dsf -> formatFieldNameForSqlSelectClause(dsf))
-                            .collect(Collectors.toList())
-                )
-        );
+        final Map<DSField, List<ForeignRelation>> additionalOutputs;
+
+        if (request.getAdditionalOutputs() == null || request.getAdditionalOutputs().isBlank()){
+            additionalOutputs = Map.of();
+        } else {
+            additionalOutputs = Stream.of(request.getAdditionalOutputs().split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty() && !s.isBlank())
+                    .map( descr -> {
+                        final String[] parsed = descr.split("!");
+
+                        if (parsed.length != 2) {
+                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', valid format is 'localFieldName!relatedDataSourceID.relatedDataSourceFieldName'."
+                                    .formatted(
+                                            dataSource().getId(),
+                                            descr
+                                    )
+                            );
+                        }
+
+                        final String sourceFieldName = parsed[0].trim();
+
+                        final DSField sourceField = JDBCHandler.this.getField(sourceFieldName);
+                        if (sourceField == null) {
+                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', nothing known about field '%s'."
+                                    .formatted(
+                                            dataSource().getId(),
+                                            descr,
+                                            sourceFieldName
+                                    )
+                            );
+                        }
+
+                        final ForeignKeyRelation fkRelation;
+
+                        try {
+                            fkRelation = describeForeignKey(sourceField);
+                        } catch (Throwable t) {
+                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
+                                    .formatted(
+                                            dataSource().getId(),
+                                            descr
+                                    ),
+                                    t
+                            );
+                        }
+
+                        final ForeignRelation fRelation;
+
+                        try {
+                            fRelation = describeForeignRelation(parsed[1].trim());
+                        } catch (Throwable t) {
+                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
+                                    .formatted(
+                                            dataSource().getId(),
+                                            descr
+                                    ),
+                                    t
+                            );
+                        }
+
+                        if (!fkRelation.foreign().dataSourceId().equals(fRelation.dataSourceId())) {
+                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
+                                    .formatted(
+                                            dataSource().getId(),
+                                            descr
+                                    )
+                            );
+                        }
+
+                        return new AbstractMap.SimpleImmutableEntry<>(sourceField, fRelation);
+                    })
+                    .collect(
+                            Collectors.groupingBy(
+                                    AbstractMap.SimpleImmutableEntry::getKey,
+                                    Collectors.mapping(
+                                            AbstractMap.SimpleImmutableEntry::getValue,
+                                            Collectors.toList()
+                                    )
+                            )
+                    );
+        }
+
+        final String selectClause = requestedFields
+            .stream()
+                .map(this::formatFieldNameForSqlSelectClause)
+                .collect(Collectors.joining(",\n  "));
+
 
         // -- FROM
-        final String fromClause = String.format("FROM %s", getDataSource().getTableName());
+        final String fromClause = getDataSource().getTableName();
 
         // -- JOIN ON
-        final String joinClause = String.join(" \n ",
-                getFields()
-                    .stream()
-                    .filter( dsf -> dsf.isIncludeField()
-                            /*
-                            * Entities will be fetched separately via sub-entity fetch request,
-                            * therefore exclude this field from the sql join.
-                            */
-                            && !DSField.FieldType.ENTITY.equals(dsf.getType()))
-                    .map( dsf -> {
+        final String joinClause = getFields()
+            .stream()
+            .filter( dsf -> dsf.isIncludeField()
+                    /*
+                    * Entities will be fetched separately via sub-entity fetch request,
+                    * therefore exclude this field from the sql join.
+                    */
+                    && !DSField.FieldType.ENTITY.equals(dsf.getType()))
+            .map( dsf -> {
 
-                        final ImportFromRelation relation = describeImportFrom(dsf);
+                final ImportFromRelation relation = describeImportFrom(dsf);
 
-                        return " JOIN %s ON %s.%s = %s.%s"
-                                .formatted(
-                                        relation.foreignDataSource().getTableName(),
-                                        this.getDataSource().getTableName(), relation.sourceField().getDbName(),
-                                        relation.foreignDataSource().getTableName(), relation.foreignKey().getDbName()
-                                );
-                    })
-                    .collect(Collectors.toList())
-        );
+                return "%s ON %s.%s = %s.%s"//" JOIN %s ON %s.%s = %s.%s"
+                        .formatted(
+                                relation.foreignDataSource().getTableName(),
+                                this.getDataSource().getTableName(), relation.sourceField().getDbName(),
+                                relation.foreignDataSource().getTableName(), relation.foreignKey().getDbName()
+                        );
+            })
+            .collect(Collectors.joining(" \n "));
 
 
 //        // -- ORDER BY
@@ -264,30 +344,90 @@ public class JDBCHandler extends AbstractDSHandler {
             data = new LinkedList<>();
         }
 
-        final int totalRows[] = new int[] {-1};
+        final int[] totalRows = new int[] {-1};
 
         policy.withConnectionDo(this.getDataSource().getDbName(), conn-> {
 
-            final String genericQuery = String.join("\n ", Arrays.asList(selectClause, fromClause, joinClause /*, whereClause*//*, orderClause*//*, paginationClause*/ ));
+            // -- fetch data
+            final String orderClause = request.getSortBy() == null ? "" :  " ORDER BY \n" +
+                    request.getSortBy().stream()
+                            .map(s -> {
+                                String order = "";
+                                switch (s.charAt(0)) {
+                                    case '-':
+                                        order = " DESC";
+                                    case '+':
+                                        s = s.substring(1);
+                                    default:
+                                        final DSField dsf = getField(s);
+                                        if (dsf == null) {
+                                            throw new RuntimeException("Data source '%s': nothing known about field '%s' listed in order by clause."
+                                                    .formatted(getDataSource().getId(), s));
+                                        }
 
-            final String whereClause = filterData.isEmpty() ?  "" : " \n\tWHERE \n\t\t" +
-                    String.join("\n\t\t AND ",
-                            filterData.stream()
-                                    .map(fd -> fd.sql("opaque"))
-                                    .collect(Collectors.toList())
-                    );
+                                        return "%s.%s%s"
+                                                .formatted(
+                                                        "opaque",
+                                                        formatFieldNameForSqlOrderClause(dsf),
+                                                        order
+                                                );
+                                }
+                            })
+                            .collect(Collectors.joining(", "));
+
+            final String whereClause = filterData.isEmpty() ?  "" : filterData.stream()
+                .map(fd -> fd.sql("opaque"))
+                .collect(Collectors.joining("\n\t\t AND "));
+
+            // -- generate query
+            final String genericQuery;
+            {
+                final Map<String, Object> templateContext = SQLTemplateEngine.createContext(request, selectClause, fromClause, joinClause, whereClause, "");
+
+                templateContext.put("effectiveSelectClause", selectClause);
+
+                final String effectiveFROM = operationBinding == null
+                        || operationBinding.getTableClause() == null
+                        || operationBinding.getTableClause().isBlank()
+                        ? fromClause : operationBinding.getTableClause();
+                templateContext.put("effectiveTableClause", effectiveFROM);
+
+                final String effectiveWhere = operationBinding == null
+                        || operationBinding.getWhereClause() == null
+                        || operationBinding.getWhereClause().isBlank()
+                        ? whereClause : operationBinding.getWhereClause();
+                templateContext.put("effectiveWhereClause", effectiveWhere);
+
+
+                final String effectiveJoin = operationBinding == null
+                        || operationBinding.getAnsiJoinClause() == null
+                        || operationBinding.getAnsiJoinClause().isBlank()
+                        ? joinClause : operationBinding.getAnsiJoinClause();
+                templateContext.put("effectiveAnsiJoinClause", effectiveJoin);
+
+                genericQuery = SQLTemplateEngine.processSQL(templateContext,
+                        """
+                        (
+                            SELECT ${effectiveSelectClause}
+                                FROM ${effectiveTableClause}
+                            <#if effectiveAnsiJoinClause?has_content>
+                                JOIN ${effectiveAnsiJoinClause}
+                            </#if>
+                        ) opaque                                                                                                              
+                        <#if effectiveWhereClause?has_content>
+                            WHERE ${effectiveWhereClause}
+                        </#if>                                                                                                              
+                        """
+                );
+            }
 
             // -- calculate total
-            /**
+            /*
              * Opaque query is required for a proper filtering by calculated fields
              */
-            final String countQuery = """
-                SELECT count(*) FROM (
-                    %s
-                ) opaque
-                %s
-            """.formatted( genericQuery, whereClause );
-
+            @SuppressWarnings("SqlNoDataSourceInspection")
+            final String countQuery = "SELECT count(*) FROM %s"
+                    .formatted( genericQuery);
 
             if (logger.isDebugEnabled()) {
                 logger.debug("DataSource %s fetch count(*) query:\n%s\n\nparams:\n%s"
@@ -296,7 +436,7 @@ public class JDBCHandler extends AbstractDSHandler {
                                 countQuery,
                                 filterData.stream()
                                         .flatMap(fd -> StreamSupport.stream(fd.values().spliterator(), false))
-                                        .map(d-> "%s".formatted(d))
+                                        .map("%s"::formatted)
                                         .collect(Collectors.joining(", "))
                         )
                 );
@@ -316,45 +456,43 @@ public class JDBCHandler extends AbstractDSHandler {
             }
 
             // -- fetch data
-
-            final String orderClause = request.getSortBy() == null ? "" : "ORDER BY \n" +
-                    request.getSortBy().stream()
-                            .map(s -> {
-                                String order = "";
-                                switch (s.charAt(0)) {
-                                    case '-':
-                                        order = " DESC";
-                                    case '+':
-                                        s = s.substring(1);
-                                    default:
-                                        final DSField dsf = getField(s);
-
-                                        if (dsf == null) {
-                                            throw new RuntimeException("Data source '%s': nothing known about field '%s' listed in order by clause."
-                                                    .formatted(getDataSource().getId(), s));
-                                        }
-
-                                        return "%s.%s%s"
-                                                .formatted(
-                                                        "opaque",
-                                                        formatFieldNameForSqlOrderClause(dsf),
-                                                        order
-                                                );
-                                }
-                            })
-                            .collect(Collectors.joining(", "));
-
-            /**
+//
+//            final String orderClause = request.getSortBy() == null ? "" : "ORDER BY \n" +
+//                    request.getSortBy().stream()
+//                            .map(s -> {
+//                                String order = "";
+//                                switch (s.charAt(0)) {
+//                                    case '-':
+//                                        order = " DESC";
+//                                    case '+':
+//                                        s = s.substring(1);
+//                                    default:
+//                                        final DSField dsf = getField(s);
+//
+//                                        if (dsf == null) {
+//                                            throw new RuntimeException("Data source '%s': nothing known about field '%s' listed in order by clause."
+//                                                    .formatted(getDataSource().getId(), s));
+//                                        }
+//
+//                                        return "%s.%s%s"
+//                                                .formatted(
+//                                                        "opaque",
+//                                                        formatFieldNameForSqlOrderClause(dsf),
+//                                                        order
+//                                                );
+//                                }
+//                            })
+//                            .collect(Collectors.joining(", "));
+//
+            /*
              * Opaque query is required for a proper filtering by calculated fields
              */
+            @SuppressWarnings("SqlNoDataSourceInspection")
             final String opaqueFetchQuery = """
-                SELECT * FROM (
+                 SELECT * FROM %s
                     %s
-                ) opaque
-                %s
-                %s
-                %s
-            """.formatted(genericQuery, whereClause, orderClause, paginationClause);
+                    %s
+            """.formatted(genericQuery, orderClause, paginationClause);
 
             if (logger.isDebugEnabled()) {
                 logger.debug("DataSource %s fetch query:\n%s\n\nparams:\n%s"
@@ -362,8 +500,8 @@ public class JDBCHandler extends AbstractDSHandler {
                         getDataSource().getId(),
                             opaqueFetchQuery,
                             filterData.stream()
-                                .flatMap(fd -> StreamSupport.stream(filterData.spliterator(), false))
-                                .map(d-> "%s".formatted(d))
+                                .flatMap(fd -> filterData.stream())
+                                .map("%s"::formatted)
                                 .collect(Collectors.joining(", "))
                     )
                 );
@@ -404,7 +542,7 @@ public class JDBCHandler extends AbstractDSHandler {
                         for(int j=0; j<requestedFields.size(); ++j) {
                             final DSField dsf = requestedFields.get(j);
 
-                            /**
+                            /*
                              * Fetch sub-entities, if any
                              */
                             if (isSubEntityFetchRequired(dsf)) {
@@ -428,9 +566,14 @@ public class JDBCHandler extends AbstractDSHandler {
                                     foreignKeyRelation = describeForeignKey(dsf);
                                 }
 
+                                final List<ForeignRelation> ffs = additionalOutputs.get(dsf);
+                                final String entityOutputs = ffs == null ? null : ffs.stream()
+                                        .map(ForeignRelation::fieldName)
+                                        .collect(Collectors.joining(", "));
+
                                 final DSResponse response;
                                 try {
-                                    response = fetchForeignEntity(foreignKeyRelation, pkValues);
+                                    response = fetchForeignEntity(foreignKeyRelation, entityOutputs, pkValues);
                                     assert response != null;
                                 } catch ( Throwable t) {
                                     throw new RuntimeException("Subsequent entity fetch failed: %s, filters: %s"
@@ -485,7 +628,7 @@ public class JDBCHandler extends AbstractDSHandler {
                 data);
     }
 
-    protected DSResponse fetchForeignEntity(ForeignKeyRelation foreignKeyRelation, Map<String, Object> filtersAndKeys) throws Exception {
+    protected DSResponse fetchForeignEntity(ForeignKeyRelation foreignKeyRelation, String outputs, Map<String, Object> filtersAndKeys) throws Exception {
         logger.debug("Performing foreign fetch for relation '%s' with criteria: %s"
                 .formatted(
                         foreignKeyRelation,
@@ -507,8 +650,9 @@ public class JDBCHandler extends AbstractDSHandler {
         final DSRequest fetchEntity = new DSRequest();
         fetchEntity.setDataSource(dsHandler.id());
         fetchEntity.setOperationType(DSRequest.OperationType.FETCH);
+        fetchEntity.setOutputs(outputs);
 
-        /**
+        /*
          * if type is not provided this indicates that the only PKs should be fetched.
          *
          * @see <a href="https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/JpaHibernateRelations.html">JPA & Hibernate Relations</a>
@@ -526,8 +670,8 @@ public class JDBCHandler extends AbstractDSHandler {
             final DataSource foreignDS = foreignKeyRelation.foreign().dataSource();
 
             final String pkNames = foreignDS.getFields().stream()
-                    .filter(dsf -> dsf.isPrimaryKey())
-                    .map(dsf -> dsf.getName())
+                    .filter(DSField::isPrimaryKey)
+                    .map(DSField::getName)
                     .collect(Collectors.joining(", "));
 
             fetchEntity.setOutputs(pkNames);
@@ -535,8 +679,7 @@ public class JDBCHandler extends AbstractDSHandler {
 
         fetchEntity.wrapAndSetData(Map.of(foreignKeyRelation.foreign().fieldName(), filtersAndKeys.values().iterator().next()));
 
-        final DSResponse response = dsHandler.handle(fetchEntity);
-        return response;
+        return dsHandler.handle(fetchEntity);
     }
 
     protected  List<IFilterData> generateFilterData(DSRequest.TextMatchStyle textMatchStyle, IDSRequestData data ) {
@@ -555,6 +698,7 @@ public class JDBCHandler extends AbstractDSHandler {
                             );
                         }
 
+                        @SuppressWarnings("SwitchStatementWithTooFewBranches")
                         final Object value = switch (dsf.getType()) {
                             case TEXT -> switch (textMatchStyle) {
                                 case EXACT -> e.getValue();
@@ -567,6 +711,7 @@ public class JDBCHandler extends AbstractDSHandler {
                         };
 
 
+                        @SuppressWarnings("SwitchStatementWithTooFewBranches")
                         String filterStr = switch (dsf.getType()) {
                             case TEXT -> "%s like ?";
                             default -> "%s = ?";
@@ -577,7 +722,7 @@ public class JDBCHandler extends AbstractDSHandler {
                     })
                     .collect(Collectors.toList());
         } else if (data == null){
-            return Collections.EMPTY_LIST;
+            return List.of();
         } else {
             throw new IllegalStateException("DataSource '%s': data has unsupported format '%s'."
                     .formatted(
@@ -615,6 +760,7 @@ public class JDBCHandler extends AbstractDSHandler {
             this.value = value;
         }
 
+        @SuppressWarnings("unused")
         public FilterData(ForeignRelation dsFieldPair, String sqlTemplate, Object... values) {
             this.dsFieldPair = dsFieldPair;
             this.sqlTemplate = sqlTemplate;
