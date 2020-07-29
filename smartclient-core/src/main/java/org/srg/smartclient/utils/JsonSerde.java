@@ -1,5 +1,6 @@
 package org.srg.smartclient.utils;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.deser.BeanDeserializerFactory;
@@ -8,6 +9,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.fasterxml.jackson.databind.ser.ResolvableSerializer;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.srg.smartclient.JpaRelation;
 import org.srg.smartclient.isomorphic.*;
@@ -17,7 +19,9 @@ import javax.persistence.JoinColumn;
 import java.io.IOException;
 import java.io.Writer;
 import java.lang.annotation.IncompleteAnnotationException;
-import java.util.Collection;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class JsonSerde {
 
@@ -36,10 +40,25 @@ public class JsonSerde {
         }
     }
 
-    public static void serializeResponse(Writer writer, Collection<DSResponse> response) throws IOException {
-        createMapper()
-            .writerWithDefaultPrettyPrinter()
-        .   writeValue(writer, response);
+    public static void serializeResponse(Writer writer, Collection<DSResponse> responses) throws IOException {
+        final ObjectWriter objectWriter = createMapper()
+                .writerWithDefaultPrettyPrinter()
+                .withRootName("response");
+
+        writer.append("[");
+
+        boolean isFirst = true;
+
+        for (DSResponse r:responses) {
+            if (!isFirst) {
+                writer.append(",\n");
+            } else {
+                isFirst = false;
+            }
+            objectWriter.writeValue(writer, r);
+        }
+
+        writer.append("]");
     }
 
     private static class DSRequestDeserializer extends JsonDeserializer<IDSRequestData> {
@@ -50,8 +69,7 @@ public class JsonSerde {
             if (node.has("operator")) {
                 return  p.getCodec().treeToValue(node, AdvancedCriteria.class);
             } else {
-                final  DSRequest.MapData map = p.getCodec().treeToValue(node, DSRequest.MapData.class);
-                return map;
+                return p.getCodec().treeToValue(node, DSRequest.MapData.class);
             }
         }
     }
@@ -111,34 +129,82 @@ public class JsonSerde {
                 treeParser.nextToken();
             }
 
-            final DSField dsf = (DSField) defaultDeserializer.deserialize(treeParser, ctxt);
-            return dsf;
+            return (DSField) defaultDeserializer.deserialize(treeParser, ctxt);
         }
     }
 
-    private static class RawDataResponseSerializer extends JsonSerializer<DSResponseDataContainer.RawDataResponse> {
+    private static class DSResponseDataContainerSerializer extends JsonSerializer<DSResponseDataContainer> {
+
+        @Override
+        public void serialize(DSResponseDataContainer rc, JsonGenerator jg, SerializerProvider serializers) throws IOException {
+            switch (rc.getResponseType()) {
+                case GENERAL_ERROR -> jg.writeString(rc.getGeneralFailureMessage());
+                case RAW -> {
+                    final DSResponseDataContainer.RawDataResponse rr = rc.getRawDataResponse();
+                    jg.writeObject(rr);
+                }
+            }
+        }
+    }
+
+    public static class RawDataResponseSerializer extends JsonSerializer<DSResponseDataContainer.RawDataResponse> {
+
+        public static String SERIALIZE_FIELDS_ONLY = "SERIALIZE_FIELDS_ONLY";
+
+        protected void serializeFieldsOnly(DSResponseDataContainer.RawDataResponse rr, JsonGenerator jg, SerializerProvider serializers) throws IOException {
+
+            final List<String> names = StreamSupport.stream(rr.getFields().spliterator(), false)
+                    .map(DSField::getName)
+                    .collect(Collectors.toList());
+
+            jg.writeStartObject();
+            jg.writeObjectField("resulting-fields", names);
+            jg.writeEndObject();
+        }
 
         @Override
         public void serialize(DSResponseDataContainer.RawDataResponse rr, JsonGenerator jg, SerializerProvider serializers) throws IOException {
-            jg.writeStartArray();
-            for (Object r[]: rr.getData()) {
-                jg.writeStartObject();
-                int i=0;
-                for (DSField f: rr.getFields()) {
-                    jg.writeFieldName(f.getName());
+            final boolean isFieldsOnly = serializers.getAttribute(RawDataResponseSerializer.SERIALIZE_FIELDS_ONLY) != null;
 
-                    final Object value = r[i++];
-                    writeValue(jg, f, value);
-                }
-                jg.writeEndObject();
+            if (isFieldsOnly) {
+                // Reduce verbosity for logging
+                serializeFieldsOnly(rr, jg, serializers);
+                return;
+            }
+
+            jg.writeStartArray();
+
+            final LinkedHashMap<String, Object> data = new LinkedHashMap<>();
+            final LinkedList<DSField> fields = new LinkedList<>();
+
+            rr.getFields().forEach( dsf -> {
+                data.put(dsf.getName(), null);
+                fields.add(dsf);
+            });
+
+            for (Object r[]: rr.getData()) {
+                int[] idx= {0};
+                data.replaceAll((k,v) -> {
+                    int i = idx[0];
+                    final DSField f = fields.get(i);
+                    final Object formattedValue = formatValue(f, r[i]);
+                    idx[0]++;
+                    return formattedValue;
+                });
+                jg.writeObject(data);
             }
             jg.writeEndArray();
         }
 
-        private static void writeValue(JsonGenerator jsonGenerator, DSField field, Object value) throws IOException {
+        private static Object formatValue(DSField field, Object value) {
             if (/*field.getIncludeFrom() != null && !field.getIncludeFrom().isBlank() &&*/ field.getType() ==  null) {
-                jsonGenerator.writeObject(value);
-                return;
+                /*
+                 * field type can be null for nested entities and should be treated as
+                 * {@code DSField.FieldType.ENTITY}.
+                 *
+                 * This may happen in case when the only Ids should be fetched for a sub-entity.
+                 */
+                return value;
             }
 
             switch (field.getType()) {
@@ -154,26 +220,29 @@ public class JsonSerde {
 
                 case INTENUM:
 
-                    // TODO: write ENUM name instead of  writing ordina
+                // TODO: write ENUM name instead of  writing ordinal
                 case ENUM:
 //                    jsonGenerator.writeString(value.toString());
-                    jsonGenerator.writeObject(value);
-                    break;
+//                    jsonGenerator.writeObject(value);
+                    return value;
 
 
                 case DATE:
-                    final String s = "%tF".formatted(value);
-                    jsonGenerator.writeString(s);
-                    break;
+                    if (value != null) {
+                        return "%tF".formatted(value);
+                    } else {
+                        return null;
+                    }
 
                 case TIME:
-                    final String s2 = "%tT".formatted(value);
-                    jsonGenerator.writeString(s2);
-                    break;
+                    if (value != null) {
+                        return "%tT".formatted(value);
+                    } else {
+                        return null;
+                    }
 
                 case ENTITY:
-                    jsonGenerator.writeObject(value);
-                    break;
+                    return value;
 
                 default:
                     throw new IllegalStateException("Unsupported DSField type '%s'.".formatted(field.getType()));
@@ -181,33 +250,42 @@ public class JsonSerde {
         }
     }
 
-    private static class DSResponseSerialize extends  JsonSerializer<DSResponse> {
-        @Override
-        public void serialize(DSResponse dsResponse, JsonGenerator jg, SerializerProvider serializerProvider) throws IOException {
-            jg.writeStartObject();
-            jg.writeFieldName("response");
-            jg.writeStartObject();
-            jg.writeNumberField("status", dsResponse.getStatus());
-            jg.writeNumberField("startRow", dsResponse.getStartRow());
-            jg.writeNumberField("endRow", dsResponse.getEndRow());
-            jg.writeNumberField("totalRows", dsResponse.getTotalRows());
-
-            final DSResponseDataContainer rc = dsResponse.getData();
-            switch (dsResponse.getData().getResponseType()) {
-                case GENERAL_ERROR:
-                    jg.writeStringField("data", rc.getGeneralFailureMessage());
-                    break;
-
-                case RAW:
-                    jg.writeFieldName("data");
-                    jg.writeObject(rc.getRawDataResponse());
-                    break;
-
-            }
-            jg.writeEndObject();
-            jg.writeEndObject();
-        }
-    }
+//    private static class DSResponseSerialize extends  JsonSerializer<DSResponse> {
+//        @Override
+//        public void serialize(DSResponse dsResponse, JsonGenerator jg, SerializerProvider serializerProvider) throws IOException {
+////            JavaType javaType = serializerProvider.constructType(DSResponse.class);
+////            BeanDescription beanDesc = serializerProvider.getConfig().introspect(javaType);
+////            JsonSerializer<Object> serializer = BeanSerializerFactory.instance.findBeanSerializer(serializerProvider,
+////                    javaType,
+////                    beanDesc);
+////
+////
+////            BeanSerializer beanSerializer = (BeanSerializer) serializer;
+////            beanSerializer.resolve(serializerProvider);
+//            jg.writeStartObject();
+//            jg.writeFieldName("response");
+//            jg.writeStartObject();
+//            jg.writeNumberField("status", dsResponse.getStatus());
+//            jg.writeNumberField("startRow", dsResponse.getStartRow());
+//            jg.writeNumberField("endRow", dsResponse.getEndRow());
+//            jg.writeNumberField("totalRows", dsResponse.getTotalRows());
+//
+//            final DSResponseDataContainer rc = dsResponse.getData();
+//            switch (dsResponse.getData().getResponseType()) {
+//                case GENERAL_ERROR:
+//                    jg.writeStringField("data", rc.getGeneralFailureMessage());
+//                    break;
+//
+//                case RAW:
+//                    jg.writeFieldName("data");
+//                    jg.writeObject(rc.getRawDataResponse());
+//                    break;
+//
+//            }
+//            jg.writeEndObject();
+//            jg.writeEndObject();
+//        }
+//    }
 
     private static class JpaRelationSerializer extends JsonSerializer<JpaRelation> {
 
@@ -307,7 +385,8 @@ public class JsonSerde {
     public static ObjectMapper createMapper() {
         final ObjectMapper mapper = new ObjectMapper();
         final SimpleModule module = new SimpleModule("DSResponse-Serialization", Version.unknownVersion());
-        module.addSerializer(DSResponse.class, new DSResponseSerialize() );
+//        module.addSerializer(DSResponse.class, new DSResponseSerialize() );
+        module.addSerializer(DSResponseDataContainer.class, new DSResponseDataContainerSerializer());
         module.addSerializer(DSResponseDataContainer.RawDataResponse.class, new RawDataResponseSerializer());
         module.addSerializer(JpaRelation.class, new JpaRelationSerializer());
         module.addSerializer(JoinColumn.class, new JoinColumnSerializer());
@@ -318,6 +397,7 @@ public class JsonSerde {
         mapper.registerModule(module);
         mapper
             .enable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+                .setSerializationInclusion(JsonInclude.Include.NON_NULL)
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
 //                .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
                 .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)

@@ -417,8 +417,7 @@ public class JpaDSDispatcherTest {
         JsonTestSupport.assertJsonEquals(
             """
             [
-               {
-                  response:{
+                {
                      status:0,
                      startRow:0,
                      endRow:2,
@@ -437,8 +436,7 @@ public class JpaDSDispatcherTest {
                            clientName: 'client 2' 
                         }
                      ]
-                  }
-               }
+                }
             ]""",
             responses);
     }
@@ -458,7 +456,6 @@ public class JpaDSDispatcherTest {
                 """
                 [
                     {
-                        response:{
                         status:0,
                         startRow:0,
                         endRow:2,
@@ -487,7 +484,6 @@ public class JpaDSDispatcherTest {
                                ]
                             }
                          ]
-                      }
                     }
                 ]""", responses
         );
@@ -507,44 +503,42 @@ public class JpaDSDispatcherTest {
         JsonTestSupport.assertJsonEquals(
                 """
             {
-               response:{
-                  status:0,
-                  startRow:0,
-                  endRow:5,
-                  totalRows:5,
-                  data:[
-                     {
-                        id:1,
-                        name:'Project 1 for client 1',
-                        client:1,
-                        clientName: 'client 1'                         
-                     },
-                     {
-                        id:2,
-                        name:'Project 2 for client 1',
-                        client:1,
-                        clientName: 'client 1'                         
-                     },
-                     {
-                        id:3,
-                        name:'Project 1 for client 2',
-                        client:2,
-                        clientName: 'client 2'                         
-                     },
-                     {
-                        id:4,
-                        name:'Project 2 for client 2',
-                        client:2,
-                        clientName: 'client 2'                         
-                     },
-                     {
-                        id:5,
-                        name:'Project 3 for client 2',
-                        client:2,
-                        clientName: 'client 2'                                                     
-                     }
-                  ]
-               }
+                status:0,
+                startRow:0,
+                endRow:5,
+                totalRows:5,
+                data:[
+                 {
+                    id:1,
+                    name:'Project 1 for client 1',
+                    client:1,
+                    clientName: 'client 1'                         
+                 },
+                 {
+                    id:2,
+                    name:'Project 2 for client 1',
+                    client:1,
+                    clientName: 'client 1'                         
+                 },
+                 {
+                    id:3,
+                    name:'Project 1 for client 2',
+                    client:2,
+                    clientName: 'client 2'                         
+                 },
+                 {
+                    id:4,
+                    name:'Project 2 for client 2',
+                    client:2,
+                    clientName: 'client 2'                         
+                 },
+                 {
+                    id:5,
+                    name:'Project 3 for client 2',
+                    client:2,
+                    clientName: 'client 2'                                                     
+                 }
+                ]
             }"""
             , responses.iterator().next());
     }
@@ -565,54 +559,52 @@ public class JpaDSDispatcherTest {
                 """
                 [
                     {
-                        response:{
-                            status:0,
-                            startRow:0,
-                            endRow:2,
-                            totalRows:2,
-                            data:[
-                            {
-                                id:1,
-                                projects:[
-                                    {
-                                        id:1,
-                                        client:1,
-                                        clientName:'client 1',
-                                        name:'Project 1 for client 1'
-                                    },
-                                    {
-                                        id:2,
-                                        client:1,
-                                        clientName:'client 1',
-                                        name:'Project 2 for client 1'
-                                    }
-                                ]
-                            },
-                            {
-                                id:2,
-                                projects:[
-                                    {
-                                        id:3,
-                                        client:2,
-                                        clientName:'client 2',
-                                        name:'Project 1 for client 2'
-                                    },
-                                    {
-                                        id:4,
-                                        client:2,
-                                        clientName:'client 2',
-                                        name:'Project 2 for client 2'
-                                    },
-                                    {
-                                        id:5,
-                                        client:2,
-                                        clientName:'client 2',
-                                        name:'Project 3 for client 2'
-                                    }
-                                ]
-                            }
-                         ]
-                      }
+                        status:0,
+                        startRow:0,
+                        endRow:2,
+                        totalRows:2,
+                        data:[
+                        {
+                            id:1,
+                            projects:[
+                                {
+                                    id:1,
+                                    client:1,
+                                    clientName:'client 1',
+                                    name:'Project 1 for client 1'
+                                },
+                                {
+                                    id:2,
+                                    client:1,
+                                    clientName:'client 1',
+                                    name:'Project 2 for client 1'
+                                }
+                            ]
+                        },
+                        {
+                            id:2,
+                            projects:[
+                                {
+                                    id:3,
+                                    client:2,
+                                    clientName:'client 2',
+                                    name:'Project 1 for client 2'
+                                },
+                                {
+                                    id:4,
+                                    client:2,
+                                    clientName:'client 2',
+                                    name:'Project 2 for client 2'
+                                },
+                                {
+                                    id:5,
+                                    client:2,
+                                    clientName:'client 2',
+                                    name:'Project 3 for client 2'
+                                }
+                            ]
+                        }
+                     ]
                    }
                 ]""",
                 responses
@@ -635,48 +627,46 @@ public class JpaDSDispatcherTest {
                 """
                 [
                    {
-                      response:{
-                         status:0,
-                         startRow:0,
-                         endRow:5,
-                         totalRows:5,
-                         data:[
-                            {
-                               id:1,
-                               roles:[
-                                  {
-                                     role:'Admin',
-                                     employee:1
-                                  },
-                                  {
-                                     role:'Developer',
-                                     employee:1
-                                  }
-                               ]
-                            },
-                            {
-                               id:2,
-                               roles:[
-                                  {
-                                     role:'Developer',
-                                     employee:2
-                                  }
-                               ]
-                            },
-                            {
-                               id:3,
-                               roles:[]
-                            },
-                            {
-                               id:4,
-                               roles:[]
-                            },
-                            {
-                               id:5,
-                               roles:[]
-                            }
-                         ]
-                      }
+                        status:0,
+                        startRow:0,
+                        endRow:5,
+                        totalRows:5,
+                        data:[
+                        {
+                           id:1,
+                           roles:[
+                              {
+                                 role:'Admin',
+                                 employee:1
+                              },
+                              {
+                                 role:'Developer',
+                                 employee:1
+                              }
+                           ]
+                        },
+                        {
+                           id:2,
+                           roles:[
+                              {
+                                 role:'Developer',
+                                 employee:2
+                              }
+                           ]
+                        },
+                        {
+                           id:3,
+                           roles:[]
+                        },
+                        {
+                           id:4,
+                           roles:[]
+                        },
+                        {
+                           id:5,
+                           roles:[]
+                        }
+                        ]
                    }
                 ]""",
                 responses
@@ -704,44 +694,42 @@ public class JpaDSDispatcherTest {
             """
             [
                {
-                  "response":{
-                     "data":[
-                        {
-                           "client":1,
-                           "clientName":"client 1",
-                           "id":1,
-                           "name":"Project 1 for client 1"
-                        },
-                        {
-                           "client":1,
-                           "clientName":"client 1",
-                           "id":2,
-                           "name":"Project 2 for client 1"
-                        },
-                        {
-                           "client":2,
-                           "clientName":"client 2",
-                           "id":3,
-                           "name":"Project 1 for client 2"
-                        },
-                        {
-                           "client":2,
-                           "clientName":"client 2",
-                           "id":4,
-                           "name":"Project 2 for client 2"
-                        },
-                        {
-                           "client":2,
-                           "clientName":"client 2",
-                           "id":5,
-                           "name":"Project 3 for client 2"
-                        }
-                     ],
-                     "endRow":5,
-                     "startRow":0,
-                     "status":0,
-                     "totalRows":5
-                  }
+                 "data":[
+                    {
+                       "client":1,
+                       "clientName":"client 1",
+                       "id":1,
+                       "name":"Project 1 for client 1"
+                    },
+                    {
+                       "client":1,
+                       "clientName":"client 1",
+                       "id":2,
+                       "name":"Project 2 for client 1"
+                    },
+                    {
+                       "client":2,
+                       "clientName":"client 2",
+                       "id":3,
+                       "name":"Project 1 for client 2"
+                    },
+                    {
+                       "client":2,
+                       "clientName":"client 2",
+                       "id":4,
+                       "name":"Project 2 for client 2"
+                    },
+                    {
+                       "client":2,
+                       "clientName":"client 2",
+                       "id":5,
+                       "name":"Project 3 for client 2"
+                    }
+                 ],
+                 "endRow":5,
+                 "startRow":0,
+                 "status":0,
+                 "totalRows":5
                }                
             ]""", responses);
     }
@@ -762,7 +750,6 @@ public class JpaDSDispatcherTest {
     """
             [
                    {
-                      response:{
                          status:0,
                          startRow:0,
                          endRow:5,
@@ -792,8 +779,7 @@ public class JpaDSDispatcherTest {
                                        owner:1,
                                        employeeName: 'admin',
                                        status:'status 3',
-                                       startDate:'2000-07-06',
-                                       endDate:'null'
+                                       startDate:'2000-07-06'
                                     }
                                  ]
                               },
@@ -813,8 +799,7 @@ public class JpaDSDispatcherTest {
                                  "id":5,
                                  "statuses":[]
                               }                     
-                             ]
-                          }
+                            ]
                        }
                    ]
                 }

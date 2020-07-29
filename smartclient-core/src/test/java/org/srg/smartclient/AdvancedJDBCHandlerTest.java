@@ -92,24 +92,22 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                         }""",
                 """
                         {
-                            response:{
-                                data:[
-                                    {
-                                        id:1,
-                                        name:'admin',
-                                        firedAt: '2000-01-02T01:04:05.000+00:00'
-                                    },
-                                    {
-                                        id:5,
-                                        name:'user5',
-                                        firedAt: '2000-05-04T00:02:01.000+00:00'
-                                    }
-                                ],
-                                endRow:2,
-                                startRow:0,
-                                status:0,
-                                totalRows:2
-                            }
+                            data:[
+                                {
+                                    id:1,
+                                    name:'admin',
+                                    firedAt: '2000-01-02T01:04:05.000+00:00'
+                                },
+                                {
+                                    id:5,
+                                    name:'user5',
+                                    firedAt: '2000-05-04T00:02:01.000+00:00'
+                                }
+                            ],
+                            endRow:2,
+                            startRow:0,
+                            status:0,
+                            totalRows:2
                         }""",
                 null
         );
@@ -137,26 +135,24 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                         }""",
                 """
                         {
-                            response:{
-                                data:[
-                                    {
-                                        id:1,
-                                        name:'admin',
-                                        firedAt: '2000-01-02T01:04:05.000+00:00',
-                                        email:"admin@acmE.org"
-                                    },
-                                    {
-                                        id:5,
-                                        name:'user5',
-                                        firedAt: '2000-05-04T00:02:01.000+00:00',
-                                        email:"u5@acme.org"
-                                    }
-                                ],
-                                endRow:2,
-                                startRow:0,
-                                status:0,
-                                totalRows:2
-                            }
+                            data:[
+                                {
+                                    id:1,
+                                    name:'admin',
+                                    firedAt: '2000-01-02T01:04:05.000+00:00',
+                                    email:"admin@acmE.org"
+                                },
+                                {
+                                    id:5,
+                                    name:'user5',
+                                    firedAt: '2000-05-04T00:02:01.000+00:00',
+                                    email:"u5@acme.org"
+                                }
+                            ],
+                            endRow:2,
+                            startRow:0,
+                            status:0,
+                            totalRows:2
                         }""",
                 ExtraField.Email
         );
@@ -184,32 +180,30 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                         }""",
                 """
                     {
-                        response:{
-                            data:[
-                                {
-                                    id:1,
-                                    name:'admin',
-                                    firedAt: '2000-01-02T01:04:05.000+00:00',
-                                    email:"admin@acmE.org"
-                                },
-                                {
-                                    id:4,
-                                    name:'user4',
-                                    firedAt: null,
-                                    email:"u4@acmE.org"
-                                },
-                                {
-                                    id:5,
-                                    name:'user5',
-                                    firedAt: '2000-05-04T00:02:01.000+00:00',
-                                    email:"u5@acme.org"
-                                }
-                            ],
-                            endRow:3,
-                            startRow:0,
-                            status:0,
-                            totalRows:3
-                        }
+                        data:[
+                            {
+                                id:1,
+                                name:'admin',
+                                firedAt: '2000-01-02T01:04:05.000+00:00',
+                                email:"admin@acmE.org"
+                            },
+                            {
+                                id:4,
+                                name:'user4',
+                                firedAt: null,
+                                email:"u4@acmE.org"
+                            },
+                            {
+                                id:5,
+                                name:'user5',
+                                firedAt: '2000-05-04T00:02:01.000+00:00',
+                                email:"u5@acme.org"
+                            }
+                        ],
+                        endRow:3,
+                        startRow:0,
+                        status:0,
+                        totalRows:3
                     }""",
                 ExtraField.Email
         );
@@ -234,20 +228,18 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                         }""" ,
                 """
                         {
-                            response:{
-                                data:[
-                                    {
-                                        id:3,
-                                        name:'UseR3',
-                                        firedAt: null,
-                                        email:"u3@emca.org"
-                                    }
-                                ],
-                                endRow:1,
-                                startRow:0,
-                                status:0,
-                                totalRows:1
-                            }
+                            data:[
+                                {
+                                    id:3,
+                                    name:'UseR3',
+                                    firedAt: null,
+                                    email:"u3@emca.org"
+                                }
+                            ],
+                            endRow:1,
+                            startRow:0,
+                            status:0,
+                            totalRows:1
                         }""",
                 ExtraField.Email
         );
@@ -271,19 +263,17 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                         }""",
                 """
                         {
-                            response:{
-                                data:[
-                                    {
-                                        id:2,
-                                        name:'developer',
-                                        firedAt: null
-                                    }
-                                ],
-                                endRow:1,
-                                startRow:0,
-                                status:0,
-                                totalRows:1
-                            }
+                            data:[
+                                {
+                                    id:2,
+                                    name:'developer',
+                                    firedAt: null
+                                }
+                            ],
+                            endRow:1,
+                            startRow:0,
+                            status:0,
+                            totalRows:1
                         }"""
         );
     }
@@ -306,19 +296,17 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                         }""",
                 """
                         {
-                            response:{
-                                data:[
-                                    {
-                                        id:3,
-                                        name:'UseR3',
-                                        firedAt:null
-                                    }
-                                ],
-                                endRow:1,
-                                startRow:0,
-                                status:0,
-                                totalRows:1
-                            }
+                            data:[
+                                {
+                                    id:3,
+                                    name:'UseR3',
+                                    firedAt:null
+                                }
+                            ],
+                            endRow:1,
+                            startRow:0,
+                            status:0,
+                            totalRows:1
                         }"""
         );
     }
@@ -341,39 +329,37 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                         }""",
                 """
             {
-                response:{
-                    data:[
-                        {
-                            id:1,
-                            name:'admin',
-                            firedAt: '2000-01-02T01:04:05.000+00:00'
-                        },
-                        {
-                            id:2,
-                            name:'developer',
-                            firedAt: null
-                        },
-                        {
-                            id:3,
-                            name:'UseR3',
-                            firedAt: null
-                        },                        
-                        {
-                            id:4,
-                            name:'user4',
-                            firedAt: null
-                        },
-                        {
-                            id:5,
-                            name:'user5',
-                            firedAt: '2000-05-04T00:02:01.000+00:00'
-                        }
-                    ],
-                    endRow:5,
-                    startRow:0,
-                    status:0,
-                    totalRows:5
-                }
+                data:[
+                    {
+                        id:1,
+                        name:'admin',
+                        firedAt: '2000-01-02T01:04:05.000+00:00'
+                    },
+                    {
+                        id:2,
+                        name:'developer',
+                        firedAt: null
+                    },
+                    {
+                        id:3,
+                        name:'UseR3',
+                        firedAt: null
+                    },                        
+                    {
+                        id:4,
+                        name:'user4',
+                        firedAt: null
+                    },
+                    {
+                        id:5,
+                        name:'user5',
+                        firedAt: '2000-05-04T00:02:01.000+00:00'
+                    }
+                ],
+                endRow:5,
+                startRow:0,
+                status:0,
+                totalRows:5
             }"""
         );
     }
@@ -396,20 +382,18 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                         }""",
                 """
                         {
-                            response:{
-                                data:[
-                                    {
-                                        calculated:'3_UseR3',
-                                        firedAt:null,
-                                        id:3,
-                                        name:'UseR3'
-                                    }
-                                ],
-                                endRow:1,
-                                startRow:0,
-                                status:0,
-                                totalRows:1
-                            }
+                            data:[
+                                {
+                                    calculated:'3_UseR3',
+                                    firedAt:null,
+                                    id:3,
+                                    name:'UseR3'
+                                }
+                            ],
+                            endRow:1,
+                            startRow:0,
+                            status:0,
+                            totalRows:1
                         }""",
                 ExtraField.SqlCalculated
         );
@@ -433,19 +417,17 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                         }""",
                 """
                         {
-                            response:{
-                                data:[
-                                    {
-                                        id:3,
-                                        name:'UseR3',
-                                        firedAt:null
-                                    }
-                                ],
-                                endRow:1,
-                                startRow:0,
-                                status:0,
-                                totalRows:1
-                            }
+                            data:[
+                                {
+                                    id:3,
+                                    name:'UseR3',
+                                    firedAt:null
+                                }
+                            ],
+                            endRow:1,
+                            startRow:0,
+                            status:0,
+                            totalRows:1
                         }"""
         );
     }
@@ -469,29 +451,27 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                         }""",
                 """
                         {
-                            response:{
-                                data:[
-                                    {
-                                        id:3,
-                                        name:'UseR3',
-                                        firedAt:null
-                                    },
-                                    {
-                                        id:4,
-                                        name:'user4',
-                                        firedAt:null
-                                    },
-                                    {
-                                        id:5,
-                                        name:'user5',
-                                        firedAt:'2000-05-04T00:02:01.000+00:00'
-                                    }
-                                ],
-                                endRow:3,
-                                startRow:0,
-                                status:0,
-                                totalRows:3
-                            }
+                            data:[
+                                {
+                                    id:3,
+                                    name:'UseR3',
+                                    firedAt:null
+                                },
+                                {
+                                    id:4,
+                                    name:'user4',
+                                    firedAt:null
+                                },
+                                {
+                                    id:5,
+                                    name:'user5',
+                                    firedAt:'2000-05-04T00:02:01.000+00:00'
+                                }
+                            ],
+                            endRow:3,
+                            startRow:0,
+                            status:0,
+                            totalRows:3
                         }"""
         );
     }

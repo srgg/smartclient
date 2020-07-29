@@ -5,10 +5,15 @@ package org.srg.smartclient;
 
 // server_properties
 // https://www.smartclient.com/smartclient-10.0/isomorphic/system/reference/SmartClient_Reference.html?ref=group:iscInstall#group..server_properties
+import com.fasterxml.jackson.annotation.JsonFilter;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.core.util.DefaultIndenter;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.cfg.ContextAttributes;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.*;
@@ -63,40 +68,80 @@ public class DSDispatcher implements IDSDispatcher {
         return dsHandler.dataSource();
     }
 
+    private ObjectWriter createObjectWriter() {
+        final SimpleFilterProvider filterProvider = new SimpleFilterProvider();
+
+        final DefaultPrettyPrinter pp = new DefaultPrettyPrinter();
+        final DefaultIndenter indenter = new DefaultIndenter() {
+            @Override
+            public void writeIndentation(JsonGenerator jg, int level) throws IOException {
+                super.writeIndentation(jg, level + 2);
+            }
+        };
+
+        pp.indentArraysWith(indenter);
+        pp.indentObjectsWith(indenter);
+
+        ObjectMapper om = JsonSerde.createMapper();
+
+        final ContextAttributes attrs = om.getSerializationConfig().getAttributes()
+                .withSharedAttribute(JsonSerde.RawDataResponseSerializer.SERIALIZE_FIELDS_ONLY, logger.isTraceEnabled() ? null : Boolean.TRUE);
+
+        SerializationConfig sc =  om.getSerializationConfig().with(attrs);
+        om.setConfig(sc);
+
+        ObjectWriter objectWriter = om
+                .enable(SerializationFeature.INDENT_OUTPUT)
+
+                .disable(JsonGenerator.Feature.QUOTE_FIELD_NAMES)
+
+                .addMixIn(DSResponse.class, PropertyFilterMixIn.class)
+                .setFilterProvider(filterProvider)
+                .writer(pp)
+                .withAttribute(JsonSerde.RawDataResponseSerializer.SERIALIZE_FIELDS_ONLY, logger.isTraceEnabled() ? null : Boolean.TRUE);
+
+
+//        if (!logger.isTraceEnabled()) {
+//            filterProvider.addFilter("PropertyFilter", SimpleBeanPropertyFilter.serializeAllExcept("data"));
+//        } else {
+            filterProvider.addFilter("PropertyFilter", SimpleBeanPropertyFilter.serializeAll());
+//        }
+
+        return objectWriter;
+    }
+
     protected DSResponse handleRequest(DSRequest request) {
         try {
             final DSHandler ds = getHandlerByName(request.getDataSource());
             final DSResponse response = ds.handle(request);
 
             if (logger.isDebugEnabled()){
-                final ObjectWriter maper = JsonSerde.createMapper()
-                        .writerWithDefaultPrettyPrinter();
-
+                final ObjectWriter objectWriter = createObjectWriter();
                 String strRequest, strResponse;
 
                 try {
-                    strRequest = maper.writeValueAsString(request);
+                    strRequest = objectWriter.writeValueAsString(request);
                 } catch (JsonProcessingException ex) {
-                    strRequest = "{Cant't serialize request: %s}".formatted(ex.getMessage());
+                    strRequest = "{Can't serialize request: %s}".formatted(ex.getMessage());
                 }
 
                 try {
-                    strResponse = maper.writeValueAsString(response);
+                    strResponse = objectWriter.writeValueAsString(response);
                 } catch (JsonProcessingException ex) {
-                    strResponse = "{Cant't serialize response: %s}".formatted(ex.getMessage());
+                    strResponse = "{Can't serialize response: %s}".formatted(ex.getMessage());
                 }
 
                 logger.debug("""
-                        \n
-                        -------------------------------------------------
-                        - [DSDispatcher - %s]  %s
-                        -------
-                        Request:
+                    
+                    -------------------------------------------------
+                    - [DSDispatcher - %s]  %s
+                    -------------------------------------------------
+                      Request:
                         %s
-                        -------
-                        Response:
-                        %s\\n" +
-                        -------------------------------------------------
+                    
+                      Response:   
+                        %s
+                    -------------------------------------------------
                     """.formatted(
                         request.getOperationType(),
                         request.getDataSource(),
@@ -114,7 +159,7 @@ public class DSDispatcher implements IDSDispatcher {
                         .writerWithDefaultPrettyPrinter()
                         .writeValueAsString(request);
             } catch (JsonProcessingException ex) {
-                strRequest = "{Cant't serialize request: %s}".formatted(ex.getMessage());
+                strRequest = "{Can't serialize request: %s}".formatted(ex.getMessage());
             }
 
             final StringWriter sw = new StringWriter();
@@ -122,18 +167,21 @@ public class DSDispatcher implements IDSDispatcher {
             t.printStackTrace(pw);
 
             logger.error("""
-                \n
+                                
                 -------------------------------------------------
-                - [DSDispatcher]   Unhandled Exception
-                -------
-                Request:
-                %s\n
-                  --
-                %s
-                -------------------------------------------------                                                        
+                - [DSDispatcher]  Unhandled Exception
+                -------------------------------------------------
+                  Request:
+                    %s
+                
+                  -------
+                     
+                    %s
+                -------------------------------------------------
+   
                 """.formatted(
-                    strRequest,
-                    sw
+                        strRequest,
+                        sw
                     )
             );
             return DSResponse.failure(t.getMessage() == null ? t.getClass().getCanonicalName() : t.getMessage());
@@ -231,5 +279,10 @@ public class DSDispatcher implements IDSDispatcher {
     public void registerDatasource(DSHandler handler) {
         datasourceMap.put(handler.id(), handler);
         logger.info("A new DSHandler has been registered as '%s' ".formatted(handler.id()));
+    }
+
+    @JsonFilter("PropertyFilter")
+    static class PropertyFilterMixIn
+    {
     }
 }

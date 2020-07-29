@@ -429,8 +429,8 @@ public class JDBCHandler extends AbstractDSHandler {
             final String countQuery = "SELECT count(*) FROM %s"
                     .formatted( genericQuery);
 
-            if (logger.isDebugEnabled()) {
-                logger.debug("DataSource %s fetch count(*) query:\n%s\n\nparams:\n%s"
+            if (logger.isTraceEnabled()) {
+                logger.trace("DataSource %s fetch count(*) query:\n%s\n\nparams:\n%s"
                         .formatted(
                                 getDataSource().getId(),
                                 countQuery,
@@ -494,8 +494,8 @@ public class JDBCHandler extends AbstractDSHandler {
                     %s
             """.formatted(genericQuery, orderClause, paginationClause);
 
-            if (logger.isDebugEnabled()) {
-                logger.debug("DataSource %s fetch query:\n%s\n\nparams:\n%s"
+            if (logger.isTraceEnabled()) {
+                logger.trace("DataSource %s fetch query:\n%s\n\nparams:\n%s"
                     .formatted(
                         getDataSource().getId(),
                             opaqueFetchQuery,
