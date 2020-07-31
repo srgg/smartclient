@@ -63,16 +63,16 @@ CREATE TABLE project
 (
     id INT NOT NULL,
     client_id INT,
+    manager_id int null,
     name VARCHAR(255) NOT NULL,
---     manager_id int null,
 
     CONSTRAINT pk_projects PRIMARY KEY (id),
 
     CONSTRAINT fkProject_ClientId
-        FOREIGN KEY (client_id) REFERENCES CLIENT (id)
+        FOREIGN KEY (client_id) REFERENCES client (id),
 
---     constraint FKdmtefyns5kjj5u2p99o3pk37y
---         foreign key (manager_id) references employee (id)
+    CONSTRAINT fkProject_ManagerId
+        FOREIGN KEY (manager_id) REFERENCES employee (id)
 );
 
 CREATE TABLE project_team
@@ -113,12 +113,15 @@ INSERT INTO locations VALUES (3, 'USA', 'USA');
 INSERT INTO employee VALUES (1, 'admin', 'admin@acmE.org', 1, '2000-01-02 03:04:05');
 INSERT INTO employee VALUES (2, 'developer', 'developer@acme.org', 2, null);
 INSERT INTO employee VALUES (3, 'UseR3', 'u3@emca.org', 3, null);
-INSERT INTO employee VALUES (4, 'user4', 'u4@acmE.org', 1, null);
-INSERT INTO employee VALUES (5, 'user5', 'u5@acme.org', 2, '2000-05-04 03:02:01');
+INSERT INTO employee VALUES (6, 'user2', 'u2@emca.org', 3, null);
+INSERT INTO employee VALUES (4, 'manager1', 'pm1@acmE.org', 1, null);
+INSERT INTO employee VALUES (5, 'manager2', 'pm2@acme.org', 2, '2000-05-04 03:02:01');
 
 INSERT INTO employee_role VALUES (1, 'Admin');
 INSERT INTO employee_role VALUES (1, 'Developer');
 INSERT INTO employee_role VALUES (2, 'Developer');
+INSERT INTO employee_role VALUES (4, 'PM');
+INSERT INTO employee_role VALUES (5, 'PM');
 
 
 INSERT INTO client VALUES (1, 'client 1');
@@ -127,11 +130,11 @@ INSERT INTO client VALUES (2, 'client 2');
 INSERT INTO client_data VALUES (1, 'Data1: client 1', 1);
 INSERT INTO client_data VALUES (2, 'Data2: client 2', 2);
 
-INSERT INTO project VALUES (1, 1, 'Project 1 for client 1');
-INSERT INTO project VALUES (2, 1, 'Project 2 for client 1');
-INSERT INTO project VALUES (3, 2, 'Project 1 for client 2');
-INSERT INTO project VALUES (4, 2, 'Project 2 for client 2');
-INSERT INTO project VALUES (5, 2, 'Project 3 for client 2');
+INSERT INTO project VALUES (1, 1, 4, 'Project 1 for client 1');
+INSERT INTO project VALUES (2, 1, 4, 'Project 2 for client 1');
+INSERT INTO project VALUES (3, 2, 5, 'Project 1 for client 2');
+INSERT INTO project VALUES (4, 2, 5, 'Project 2 for client 2');
+INSERT INTO project VALUES (5, 2, 5, 'Project 3 for client 2');
 
 INSERT INTO project_team VALUES (1, 1);
 INSERT INTO project_team VALUES (1, 2);

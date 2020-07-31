@@ -55,7 +55,48 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
             ]"""
         ),
 
-        IncludeFrom("""
+        Project_IncludeFromEmployee(""" 
+           [
+                {
+                    name:"manager"
+                    ,foreignKey:"EmployeeDS.id"
+                    ,displayField:"employeeFullName"
+                    ,foreignDisplayField:"fullName"
+                    ,dbName:"manager_id"
+                    ,canEdit:false
+                },
+                {
+                    name:"employeeFullName"
+                    ,type:"TEXT"
+                    ,includeFrom:"EmployeeDS.calculated"
+                    ,includeVia:"manager"
+                    ,canEdit:false
+                    ,hidden:true
+                }
+           
+           ]"""),
+
+        Project_IncludeFromClient("""
+            [            
+                {
+                    name:"client"
+                    ,foreignKey:"ClientDS.id"
+                    ,displayField:"clientName"
+                    ,foreignDisplayField:"name"
+                    ,dbName:"client_id"
+                    ,canEdit:false
+                },
+                {
+                    name:"clientName"
+                    ,type:"TEXT"
+                    ,includeFrom:"ClientDS.name"
+                    ,includeVia:"client"
+                    ,canEdit:false
+                    ,hidden:true
+                }   
+            ]"""),
+
+        IncludeFromLocation("""
             [
                 {
                     name: 'location'
@@ -129,6 +170,24 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                   ]
                 }"""),
 
+        Client("""
+                {
+                  id: "ClientDS",
+                  tableName: "client",
+                  fields: [
+                    {
+                      name: "id",
+                      type: "integer",
+                      required: true,
+                      primaryKey: true
+                    },
+                    {
+                      name: "name",
+                      type: "text"
+                    }
+                  ]
+                }"""),
+
         Employee("""
                 {
                    id: 'EmployeeDS',
@@ -179,7 +238,27 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                             ,hidden:true
                         }
                     ]
-                }""");
+                }"""),
+
+                Project(""" 
+                    {                        
+                        id: 'ProjectDS',
+                        tableName: 'project',
+                        fields:[
+                            {
+                                name:"id"
+                                ,type:"INTEGER"
+                                ,primaryKey:true
+                                ,canEdit:false
+                                ,hidden:true
+                            },
+                            {
+                                name:"name"
+                                ,type:"TEXT"
+                                ,canEdit:false
+                            }
+                        ]
+                    }""");
 
         final String dsDefinition;
 
@@ -269,14 +348,19 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
 
     abstract protected Class<H> getHandlerClass();
 
-    protected void withExtraFields(ExtraField... extraFields) {
+    protected static <H extends JDBCHandler> H withExtraFields(H h, ExtraField... extraFields) {
         for (ExtraField ef: extraFields) {
-            final List<DSField> ofs = new LinkedList<>(handler.getDataSource().getFields());
+            final List<DSField> ofs = new LinkedList<>(h.getDataSource().getFields());
             final List<DSField> efs = JsonTestSupport.fromJSON(new TypeReference<>() {}, ef.fieldDefinition);
             ofs.addAll(efs);
 
-            handler.getDataSource().setFields(ofs);
+            h.getDataSource().setFields(ofs);
         }
+        return h;
+    }
+
+    protected void withExtraFields(ExtraField... extraFields) {
+        withExtraFields(handler, extraFields);
     }
 
     protected H withHandlers(Handler... handlers) throws Exception {

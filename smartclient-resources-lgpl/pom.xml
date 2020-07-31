@@ -20,8 +20,7 @@
 
 			On the other hand - size of the source is bigger than allowed by GitHub, therefore distro can not be uploaded to GH.
 		  -->
-		<SMART_CLIENT_RELEASE_DATE>2020-06-27</SMART_CLIENT_RELEASE_DATE>
-
+		<SMART_CLIENT_RELEASE_DATE>2020-07-29</SMART_CLIENT_RELEASE_DATE>
 		<smartclient-lgpl.version>SmartClient_v121p_${SMART_CLIENT_RELEASE_DATE}_LGPL</smartclient-lgpl.version>
 	</properties>
 	<build>

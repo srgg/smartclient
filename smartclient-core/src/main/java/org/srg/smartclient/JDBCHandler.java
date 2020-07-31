@@ -3,6 +3,7 @@ package org.srg.smartclient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.*;
+import org.srg.smartclient.utils.ContextualRuntimeException;
 import org.srg.smartclient.utils.Utils;
 
 import java.sql.*;
@@ -112,57 +113,6 @@ public class JDBCHandler extends AbstractDSHandler {
 
     protected String formatFieldNameForSqlSelectClause(DSField dsf) {
         return formatFieldNameFor(true, dsf);
-//        final ForeignRelation effectiveRelation;
-//        final String effectiveColumn;
-//
-//        if ( isSubEntityFetchRequired(dsf) ) {
-//
-//            // Populate extra information for the sake of troubleshooting
-//            final String extraInfo;
-//            final ForeignKeyRelation foreignKeyRelation = describeForeignKey(dsf);
-//            if (logger.isDebugEnabled()) {
-//                extraInfo = "Sub-entity placeholder for '%s' (will be fetched as a subsequent request)"
-//                        .formatted(
-//                                foreignKeyRelation
-//                        );
-//            } else {
-//                extraInfo = "Sub-entity placeholder for '%s' (will be fetched as a subsequent request)"
-//                        .formatted(foreignKeyRelation.foreign().dataSourceId());
-//            }
-//
-//            /**
-//             * Correspondent entity will be fetched by the subsequent query,
-//             * therefore it is required to reserve space in the response
-//             */
-//            effectiveRelation = new ForeignRelation(foreignKeyRelation.dataSource().getId(), foreignKeyRelation.dataSource(),
-//                    dsf.getName(), dsf );
-//
-//            effectiveColumn = "NULL  /*  %s  */"
-//                    .formatted(extraInfo);
-//        } else {
-//            effectiveRelation = determineEffectiveField(dsf);
-//
-//            // If a custom SQL snippet is provided for column -- use it
-//            if (effectiveRelation.field().isCustomSQL()
-//                    && effectiveRelation.field().getCustomSelectExpression() != null
-//                    && !effectiveRelation.field().getCustomSelectExpression().isBlank()) {
-//                effectiveColumn = effectiveRelation.field().getCustomSelectExpression();
-//            } else {
-//                effectiveColumn = effectiveRelation.formatAsSQL();
-//            }
-//        }
-//
-//        /**
-//         * It is required to introduce a column alias, to avoid column name dublica
-//         */
-//        return "%s AS %s"
-//                .formatted(
-//                        effectiveColumn,
-//                        formatColumnNameToAvoidAnyPotentionalDuplication(
-//                                effectiveRelation.dataSource(),
-//                                effectiveRelation.field()
-//                        )
-//                );
     }
 
     protected DSResponse handleFetch(DSRequest request) throws Exception {
@@ -303,7 +253,7 @@ public class JDBCHandler extends AbstractDSHandler {
 
                 final ImportFromRelation relation = describeImportFrom(dsf);
 
-                return "%s ON %s.%s = %s.%s"//" JOIN %s ON %s.%s = %s.%s"
+                return " JOIN %s ON %s.%s = %s.%s"
                         .formatted(
                                 relation.foreignDataSource().getTableName(),
                                 this.getDataSource().getTableName(), relation.sourceField().getDbName(),
@@ -312,27 +262,6 @@ public class JDBCHandler extends AbstractDSHandler {
             })
             .collect(Collectors.joining(" \n "));
 
-
-//        // -- ORDER BY
-//        final String orderClause = request.getSortBy() == null ? "" : "ORDER BY \n" +
-//                request.getSortBy().stream()
-//                .map(s -> {
-//                    String order = "";
-//                    switch (s.charAt(0)) {
-//                        case '-':
-//                            order = " DESC";
-//                        case '+':
-//                            s = s.substring(1);
-//                        default:
-//                            return "%s.%s%s"
-//                                    .formatted(
-//                                        getDataSource().getTableName(),
-//                                        getField(s).getDbName(),
-//                                        order
-//                                    );
-//                    }
-//                })
-//                .collect(Collectors.joining(", "));
 
         // -- WHERE
         final List<IFilterData> filterData  = generateFilterData(request.getTextMatchStyle(), request.getData());
@@ -379,10 +308,14 @@ public class JDBCHandler extends AbstractDSHandler {
                 .map(fd -> fd.sql("opaque"))
                 .collect(Collectors.joining("\n\t\t AND "));
 
+            final SQLExecutionContext sqlExecutionContext = new SQLExecutionContext();
+            sqlExecutionContext.setFilterData(filterData);
+
             // -- generate query
             final String genericQuery;
             {
                 final Map<String, Object> templateContext = SQLTemplateEngine.createContext(request, selectClause, fromClause, joinClause, whereClause, "");
+                sqlExecutionContext.setTemplateContext(templateContext);
 
                 templateContext.put("effectiveSelectClause", selectClause);
 
@@ -411,7 +344,7 @@ public class JDBCHandler extends AbstractDSHandler {
                             SELECT ${effectiveSelectClause}
                                 FROM ${effectiveTableClause}
                             <#if effectiveAnsiJoinClause?has_content>
-                                JOIN ${effectiveAnsiJoinClause}
+                                ${effectiveAnsiJoinClause}
                             </#if>
                         ) opaque                                                                                                              
                         <#if effectiveWhereClause?has_content>
@@ -442,6 +375,8 @@ public class JDBCHandler extends AbstractDSHandler {
                 );
             }
 
+            sqlExecutionContext.setEffectiveSQL(countQuery);
+
             try (PreparedStatement st = conn.prepareStatement(countQuery, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
                 int idx =0;
 
@@ -453,37 +388,11 @@ public class JDBCHandler extends AbstractDSHandler {
                     rs.next();
                     totalRows[0] = rs.getInt(1);
                 }
+            } catch (Throwable t) {
+                throw new ContextualRuntimeException("SQL count query execution failed.", t, sqlExecutionContext);
             }
 
             // -- fetch data
-//
-//            final String orderClause = request.getSortBy() == null ? "" : "ORDER BY \n" +
-//                    request.getSortBy().stream()
-//                            .map(s -> {
-//                                String order = "";
-//                                switch (s.charAt(0)) {
-//                                    case '-':
-//                                        order = " DESC";
-//                                    case '+':
-//                                        s = s.substring(1);
-//                                    default:
-//                                        final DSField dsf = getField(s);
-//
-//                                        if (dsf == null) {
-//                                            throw new RuntimeException("Data source '%s': nothing known about field '%s' listed in order by clause."
-//                                                    .formatted(getDataSource().getId(), s));
-//                                        }
-//
-//                                        return "%s.%s%s"
-//                                                .formatted(
-//                                                        "opaque",
-//                                                        formatFieldNameForSqlOrderClause(dsf),
-//                                                        order
-//                                                );
-//                                }
-//                            })
-//                            .collect(Collectors.joining(", "));
-//
             /*
              * Opaque query is required for a proper filtering by calculated fields
              */
@@ -506,6 +415,8 @@ public class JDBCHandler extends AbstractDSHandler {
                     )
                 );
             }
+
+            sqlExecutionContext.setEffectiveSQL(opaqueFetchQuery);
 
             try(PreparedStatement st = conn.prepareStatement(opaqueFetchQuery, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)){
                 st.setFetchSize(pageSize);
@@ -546,7 +457,7 @@ public class JDBCHandler extends AbstractDSHandler {
                              * Fetch sub-entities, if any
                              */
                             if (isSubEntityFetchRequired(dsf)) {
-                                logger.debug("Processing multi-value and/or Entity relations for data source '%s', requested fields '%s'..."
+                                logger.trace("Processing multi-value and/or Entity relations for data source '%s', requested fields '%s'..."
                                         .formatted(
                                                 getDataSource().getId(),
                                                 requestedFields
@@ -619,6 +530,12 @@ public class JDBCHandler extends AbstractDSHandler {
                         data.add(r);
                     }
                     return null;
+                } catch (Throwable t) {
+                    if (t instanceof ContextualRuntimeException) {
+                        throw t;
+                    }
+
+                    throw new ContextualRuntimeException("SQL fetch query execution failed.", t, sqlExecutionContext);
                 }
             }
         });
@@ -658,8 +575,8 @@ public class JDBCHandler extends AbstractDSHandler {
          * @see <a href="https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/JpaHibernateRelations.html">JPA & Hibernate Relations</a>
          */
         if (null == foreignKeyRelation.sourceField().getType()) {
-            logger.debug(("Field type is not provided for the source field '%s.%s', therefore the only primary key[s] " +
-                    "will be fetched by the foreign fetch.")
+            logger.trace(("Field type is not provided for the source field '%s.%s', therefore the only primary key[s] " +
+                    "will be fetched by the foreign fetch %s.")
                     .formatted(
                             foreignKeyRelation.dataSource().getId(),
                             foreignKeyRelation.sourceField().getName(),
@@ -809,6 +726,36 @@ public class JDBCHandler extends AbstractDSHandler {
                     ", sqlTemplate='" + sqlTemplate + '\'' +
                     ", value=" + value +
                     '}';
+        }
+    }
+
+    public static class SQLExecutionContext {
+        private Map<String, Object> templateContext;
+        private String effectiveSQL;
+        private List<IFilterData> filterData;
+
+        public List<IFilterData> getFilterData() {
+            return filterData;
+        }
+
+        public void setFilterData(List<IFilterData> filterData) {
+            this.filterData = filterData;
+        }
+
+        public String getEffectiveSQL() {
+            return effectiveSQL;
+        }
+
+        public void setEffectiveSQL(String effectiveSQL) {
+            this.effectiveSQL = effectiveSQL;
+        }
+
+        public Map<String, Object> getTemplateContext() {
+            return templateContext;
+        }
+
+        public void setTemplateContext(Map<String, Object> templateContext) {
+            this.templateContext = templateContext;
         }
     }
 }

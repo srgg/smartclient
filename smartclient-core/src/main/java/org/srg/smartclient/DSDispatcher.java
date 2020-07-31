@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.*;
+import org.srg.smartclient.utils.ContextualRuntimeException;
 import org.srg.smartclient.utils.JsonSerde;
 import org.srg.smartclient.utils.Utils;
 
@@ -152,12 +153,22 @@ public class DSDispatcher implements IDSDispatcher {
             }
             return response;
         } catch (Throwable t) {
+            final ObjectWriter objectWriter = createObjectWriter();
+            StringWriter contextWriter = null;
+
+            if ( t instanceof ContextualRuntimeException crte) {
+                contextWriter = new StringWriter();
+
+                contextWriter.write("""                      
+                      Context:                        
+                    """);
+
+                crte.dumpContext_ifAny(contextWriter, "    ", objectWriter);
+            }
+
             String strRequest;
             try {
-                strRequest = JsonSerde
-                        .createMapper()
-                        .writerWithDefaultPrettyPrinter()
-                        .writeValueAsString(request);
+                strRequest = objectWriter.writeValueAsString(request);
             } catch (JsonProcessingException ex) {
                 strRequest = "{Can't serialize request: %s}".formatted(ex.getMessage());
             }
@@ -174,13 +185,13 @@ public class DSDispatcher implements IDSDispatcher {
                   Request:
                     %s
                 
-                  -------
-                     
+                  -------%s                                 
+                  Stack Trace:                         
                     %s
                 -------------------------------------------------
-   
                 """.formatted(
                         strRequest,
+                        contextWriter == null ? "" : "%s\n".formatted(contextWriter),
                         sw
                     )
             );

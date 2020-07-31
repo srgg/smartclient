@@ -24,6 +24,11 @@ public class Project {
     @JsonManagedReference
     private Client client;
 
+    @SmartClientField(foreignDisplayField = "name")
+    @OneToOne
+    @JoinColumn(name = "manager_id", foreignKey = @ForeignKey(name = "fkProject_ManagerId"))
+    private Employee manager;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "project_team",
@@ -43,6 +48,10 @@ public class Project {
 
     public Client getClient() {
         return client;
+    }
+
+    public Employee getManager() {
+        return manager;
     }
 
     public Set<Employee> getTeamMembers() {

@@ -1,5 +1,10 @@
 package org.srg.smartclient.jpa;
 
+import com.fasterxml.jackson.databind.BeanDescription;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializationConfig;
+import com.fasterxml.jackson.databind.ser.BeanPropertyWriter;
+import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.configuration.FluentConfiguration;
 import org.hibernate.internal.SessionFactoryImpl;
@@ -21,6 +26,7 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.util.Collection;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -161,6 +167,21 @@ public class JpaDSDispatcherTest {
 
     @Test
     public void checkThatJpaMappingsAreCorrectAndRelevant_Projects() {
+
+        // "Employee.projects" serialization
+        final BeanSerializerModifier beanSerializerModifier = new BeanSerializerModifier() {
+            @Override
+            public List<BeanPropertyWriter> changeProperties(SerializationConfig config, BeanDescription beanDesc, List<BeanPropertyWriter> beanProperties) {
+                if (beanDesc.getBeanClass().equals(Employee.class)){
+                    return beanProperties.stream()
+                            .filter( bpw -> !bpw.getName().equals("projects") )
+                            .collect(Collectors.toList());
+                } else {
+                    return super.changeProperties(config, beanDesc, beanProperties);
+                }
+            }
+        };
+
         final List<Project> projects;
         final EntityManager em = emf.createEntityManager();
         try {
@@ -185,6 +206,16 @@ public class JpaDSDispatcherTest {
                             id:1,
                             data:'Data1: client 1'
                          }
+                      },
+                      manager: {
+                        id:4,
+                        name:'manager1',
+                        roles:[
+                            {
+                                role:'PM'
+                            }
+                        ],
+                        statuses:[]
                       }
                    },
                    {
@@ -197,6 +228,16 @@ public class JpaDSDispatcherTest {
                             id:1,
                             data:'Data1: client 1'
                          }
+                      },
+                      manager: {
+                        id:4,
+                        name:'manager1',
+                        roles:[
+                            {
+                                role:'PM'
+                            }
+                        ],
+                        statuses:[]
                       }
                    },
                    {
@@ -209,6 +250,16 @@ public class JpaDSDispatcherTest {
                             id:2,
                             data:'Data2: client 2'
                          }
+                      },
+                      manager: {
+                        id:5,
+                        name:'manager2',
+                        roles:[
+                            {
+                                role:'PM'
+                            }
+                        ],
+                        statuses:[]
                       }
                    },
                    {
@@ -221,6 +272,16 @@ public class JpaDSDispatcherTest {
                             id:2,
                             data:'Data2: client 2'
                          }
+                      },
+                      manager: {
+                        id:5,
+                        name:'manager2',
+                        roles:[
+                            {
+                                role:'PM'
+                            }
+                        ],
+                        statuses:[]
                       }
                    },
                    {
@@ -233,13 +294,39 @@ public class JpaDSDispatcherTest {
                             id:2,
                             data:'Data2: client 2'
                          }
+                      },
+                      manager: {
+                        id:5,
+                        name:'manager2',
+                        roles:[
+                            {
+                                role:'PM'
+                            }
+                        ],
+                        statuses:[]
                       }
                    }
-                ]""", projects);
+                ]""", projects, beanSerializerModifier);
     }
 
     @Test
     public void checkThatJpaMappingsAreCorrectAndRelevant_Employees() {
+        /* Ignore "Project.manager" serialization to avoid:
+         * java.lang.RuntimeException: com.fasterxml.jackson.databind.JsonMappingException: Infinite recursion (StackOverflowError) (through reference chain: org.srg.smartclient.jpa.Project["manager"]->org.srg.smartclient.jpa.Employee["projects"]
+         */
+        final BeanSerializerModifier beanSerializerModifier = new BeanSerializerModifier() {
+            @Override
+            public List<BeanPropertyWriter> changeProperties(SerializationConfig config, BeanDescription beanDesc, List<BeanPropertyWriter> beanProperties) {
+                if (beanDesc.getBeanClass().equals(Project.class)){
+                    return beanProperties.stream()
+                            .filter( bpw -> !bpw.getName().equals("manager") )
+                            .collect(Collectors.toList());
+                } else {
+                    return super.changeProperties(config, beanDesc, beanProperties);
+                }
+            }
+        };
+
 
         final List<Employee> employees;
         final EntityManager em = emf.createEntityManager();
@@ -264,7 +351,7 @@ public class JpaDSDispatcherTest {
                         }, 
                         {
                             role:'Admin'
-                        }
+                        }   
                       ],
                       projects:[
                          {
@@ -359,8 +446,12 @@ public class JpaDSDispatcherTest {
                    },
                    {
                       id:4,
-                      name:'user4',
-                      roles:[],
+                      name:'manager1',
+                      roles:[
+                        {
+                            role:'PM'
+                        }
+                      ],
                       projects:[
                          {
                             client:{
@@ -379,8 +470,12 @@ public class JpaDSDispatcherTest {
                    },
                    {
                       id:5,
-                      name:'user5',
-                      roles:[],
+                      name:'manager2',
+                      roles:[
+                        {
+                            role:'PM'
+                        }
+                      ],
                       projects:[
                          {
                             client:{
@@ -396,10 +491,15 @@ public class JpaDSDispatcherTest {
                          }
                       ],
                       statuses:[]
+                   },
+                   {
+                      id:6,
+                      name:'user2',
+                      roles:[],
+                      projects:[],
+                      statuses:[]
                    }
-                ]""", employees );
-
-
+                ]""", employees, beanSerializerModifier);
     }
 
 
@@ -491,6 +591,7 @@ public class JpaDSDispatcherTest {
 
     @Test
     public void manyToOneRelation() {
+        dispatcher.registerJPAEntity(Employee.class);
         dispatcher.registerJPAEntity(Client.class);
         final String projectDsId = dispatcher.registerJPAEntity(Project.class);
 
@@ -546,6 +647,7 @@ public class JpaDSDispatcherTest {
     @Test
     public void oneToManyRelation() {
         final String clientDsId = dispatcher.registerJPAEntity(Client.class);
+        dispatcher.registerJPAEntity(Employee.class);
         dispatcher.registerJPAEntity(Project.class);
 
         final DSRequest request = new DSRequest();
@@ -629,8 +731,8 @@ public class JpaDSDispatcherTest {
                    {
                         status:0,
                         startRow:0,
-                        endRow:5,
-                        totalRows:5,
+                        endRow:6,
+                        totalRows:6,
                         data:[
                         {
                            id:1,
@@ -660,13 +762,27 @@ public class JpaDSDispatcherTest {
                         },
                         {
                            id:4,
-                           roles:[]
+                           roles:[
+                              {
+                                 role:'PM',
+                                 employee:4
+                              }
+                           ]
                         },
                         {
                            id:5,
+                           roles:[
+                              {
+                                 role:'PM',
+                                 employee:5
+                              }
+                           ]
+                        },
+                        {
+                           id:6,
                            roles:[]
-                        }
-                        ]
+                        }                        
+                    ]
                    }
                 ]""",
                 responses
@@ -752,8 +868,8 @@ public class JpaDSDispatcherTest {
                    {
                          status:0,
                          startRow:0,
-                         endRow:5,
-                         totalRows:5,
+                         endRow:6,
+                         totalRows:6,
                          data:[
                              {
                                  id:1,
@@ -797,6 +913,10 @@ public class JpaDSDispatcherTest {
                               },
                               {
                                  "id":5,
+                                 "statuses":[]
+                              },                     
+                              {
+                                 "id":6,
                                  "statuses":[]
                               }                     
                             ]

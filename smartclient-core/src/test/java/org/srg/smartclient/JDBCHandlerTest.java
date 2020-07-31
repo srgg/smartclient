@@ -24,8 +24,8 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                  {
                      status: 0,
                      startRow: 0,
-                     endRow: 5,
-                     totalRows: 5,
+                     endRow: 6,
+                     totalRows: 6,
                      data:[
                          {
                              id:1,
@@ -41,11 +41,15 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                          },
                          {
                              id:4,
-                             name: 'user4'
+                             name: 'manager1'
                          },
                          {
                              id:5,
-                             name: 'user5'
+                             name: 'manager2'
+                         },
+                         {
+                             id:6,
+                             name: 'user2'
                          }
                      ]
                 }""", response);
@@ -63,8 +67,8 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
             {
               status:0,
               startRow:0,
-              endRow:5,
-              totalRows:5,
+              endRow:6,
+              totalRows:6,
               data:[
                  {
                     id:1,
@@ -80,11 +84,15 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                  },
                  {
                     id:4,
-                    email:'u4@acmE.org'
+                    email:'pm1@acmE.org'
                  },
                  {
                     id:5,
-                    email:'u5@acme.org'
+                    email:'pm2@acme.org'
+                 },
+                 {
+                    id:6,
+                    email:'u2@emca.org'
                  }
               ]
             }""", response
@@ -105,7 +113,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                     status: 0,
                     startRow: 0,
                     endRow: 2,
-                    totalRows: 5,
+                    totalRows: 6,
                     data:[
                         {
                             id:1,
@@ -127,7 +135,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                     status: 0,
                     startRow: 2,
                     endRow: 4,
-                    totalRows: 5,
+                    totalRows: 6,
                     data:[
                         {
                             id:3,
@@ -135,7 +143,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                         },
                         {
                             id:4,
-                            name: 'user4'
+                            name: 'manager1'
                         }
                     ]    
                 }""", response2);
@@ -149,12 +157,16 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                 {
                     status: 0,
                     startRow: 4,
-                    endRow: 5,
-                    totalRows: 5,
+                    endRow: 6,
+                    totalRows: 6,
                     data:[
                         {
                             id:5,
-                            name: 'user5'
+                            name: 'manager2'
+                        },
+                        {
+                            id:6,
+                            name: 'user2'
                         }
                     ]    
                 }""", response3);
@@ -162,7 +174,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
 
     @Test
     public void fetchIncludeFromField() throws Exception {
-        withExtraFields(ExtraField.IncludeFrom);
+        withExtraFields(ExtraField.IncludeFromLocation);
         withHandlers(Handler.Location);
 
         final DSRequest request = new DSRequest();
@@ -174,8 +186,8 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                  {
                      status: 0,
                      startRow: 0,
-                     endRow: 5,
-                     totalRows: 5,
+                     endRow: 6,
+                     totalRows: 6,
                      data:[
                          {
                              id:1,
@@ -197,15 +209,21 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                          },
                          {
                              id:4,
-                             name: 'user4',
+                             name: 'manager1',
                              location: 1,
                              locationCity: 'Kharkiv'
                          },
                          {
                              id:5,
-                             name: 'user5',
+                             name: 'manager2',
                              location: 2,
                              locationCity: 'Lviv'
+                         },
+                         {
+                             id:6,
+                             name: 'user2',
+                             location: 3,
+                             locationCity: 'USA'
                          }
                      ]
                 }""", response);
@@ -226,7 +244,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                 status: 0,
                 startRow: 0,
                 endRow: 2,
-                totalRows: 5,
+                totalRows: 6,
                 data:[
                     {
                         id:3,
@@ -248,15 +266,15 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                 status: 0,
                 startRow: 0,
                 endRow: 2,
-                totalRows: 5,
+                totalRows: 6,
                 data:[
                     {
-                        id:5,
-                        name: 'user5'
+                        id:6,
+                        name: 'user2'
                     },
                     {
-                        id:4,
-                        name: 'user4'
+                        id:5,
+                        name: 'manager2'
                     }
                 ]    
             }""", response2);
@@ -269,7 +287,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                 status: 0,
                 startRow: 0,
                 endRow: 2,
-                totalRows: 5,
+                totalRows: 6,
                 data:[
                     {
                         id:3,
@@ -291,7 +309,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         request.setStartRow(0);
         request.setEndRow(2);
         request.setTextMatchStyle(DSRequest.TextMatchStyle.SUBSTRING);
-        request.wrapAndSetData(Map.of("email", "u5"));
+        request.wrapAndSetData(Map.of("email", "pm2"));
 
         // -- check default order (should be ascending)
         final DSResponse response = handler.handleFetch(request);
@@ -304,8 +322,8 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                 data:[
                     {
                         id:5,
-                        name: 'user5',
-                        email: 'u5@acme.org'
+                        name: 'manager2',
+                        email: 'pm2@acme.org'
                     }
                 ]    
             }""", response);
@@ -313,7 +331,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
 
     @Test
     public void fetchWithIncludeFromField() throws Exception {
-        withExtraFields(ExtraField.IncludeFrom);
+        withExtraFields(ExtraField.IncludeFromLocation);
         withHandlers(Handler.Location);
 
         DSRequest request = new DSRequest();
@@ -339,7 +357,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                     },
                     {
                         id: 4,
-                        name: 'user4',
+                        name: 'manager1',
                         location: 1,
                         locationCity: 'Kharkiv'
                     }
@@ -361,7 +379,7 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                 status:0,
                 startRow:0,
                 endRow:2,
-                totalRows:5,
+                totalRows:6,
                 data: [
                     {
                         id:1,
@@ -392,8 +410,8 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
             {
               status:0,
               startRow:0,
-              endRow:3,
-              totalRows:3,
+              endRow:5,
+              totalRows:5,
               data:[
                  {
                     role:'Admin',
@@ -409,6 +427,16 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                     role:'Developer',
                     employee:2,
                     employeeCalculated:'2_developer'
+                 },
+                 {
+                    role:'PM',
+                    employee:4,
+                    employeeCalculated:'4_manager1'
+                 },
+                 {
+                    role:'PM',
+                    employee:5,
+                    employeeCalculated:'5_manager2'
                  }
               ]
             }""", response);
@@ -427,61 +455,80 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         final DSRequest request = new DSRequest();
         final DSResponse response = handler.handleFetch(request);
         JsonTestSupport.assertJsonEquals("""
-            {
-              status:0,
-              startRow:0,
-              endRow:5,
-              totalRows:5,
-              data:[
-                 {
-                    id:1,
-                    name:'admin',
-                    calculated:'1_admin', 
-                    roles:[
-                       {
-                          role:'Admin',
-                          employee:1,
-                          employeeCalculated:'1_admin'
-                       },
-                       {
-                          role:'Developer',
-                          employee:1,
-                          employeeCalculated:'1_admin'
-                       }
-                    ]
-                 },
-                 {
-                    id:2,
-                    name:'developer',
-                    calculated:'2_developer', 
-                    roles:[
-                       {
-                          role:'Developer',
-                          employee:2,
-                          employeeCalculated:'2_developer'
-                       }
-                    ]
-                 },
-                 {
-                    id:3,
-                    name:'UseR3',
-                    calculated:'3_UseR3', 
-                    roles:[]
-                 },
-                 {
-                    id:4,
-                    name:'user4',
-                    calculated:'4_user4', 
-                    roles:[]
-                 },
-                 {
-                    id:5,
-                    name:'user5',
-                    calculated:'5_user5', 
-                    roles:[]
-                 }
-              ]
-            }""", response);
+                {
+                  status:0,
+                  startRow:0,
+                  endRow:6,
+                  totalRows:6,
+                  data:[
+                     {
+                        id:1,
+                        name:'admin',
+                        calculated:'1_admin', 
+                        roles:[
+                           {
+                              role:'Admin',
+                              employee:1,
+                              employeeCalculated:'1_admin'
+                           },
+                           {
+                              role:'Developer',
+                              employee:1,
+                              employeeCalculated:'1_admin'
+                           }
+                        ]
+                     },
+                     {
+                        id:2,
+                        name:'developer',
+                        calculated:'2_developer', 
+                        roles:[
+                           {
+                              role:'Developer',
+                              employee:2,
+                              employeeCalculated:'2_developer'
+                           }
+                        ]
+                     },
+                     {
+                        id:3,
+                        name:'UseR3',
+                        calculated:'3_UseR3', 
+                        roles:[]
+                     },
+                     {
+                        id:4,
+                        name:'manager1',
+                        calculated:'4_manager1', 
+                        roles:[
+                            {
+                                role:'PM',
+                                employee:4,
+                                employeeCalculated:'4_manager1'
+                             }
+                        ]
+                     },
+                     {
+                        id:5,
+                        name:'manager2',
+                        calculated:'5_manager2', 
+                        roles:[
+                            {
+                                role:'PM',
+                                employee:5,
+                                employeeCalculated:'5_manager2'
+                             }
+                        ]
+                     },
+                     {
+                        id:6,
+                        name:'user2',
+                        calculated:'6_user2', 
+                        roles:[
+                        ]
+                     }                     
+                  ]
+                }""", response);
     }
 
     @Test
@@ -495,54 +542,66 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
 
         JsonTestSupport.assertJsonEquals("""
             {
-              "status":0,
-              "startRow":0,
-              "endRow":5,
-              "totalRows":5,
-              "data":[
+              status:0,
+              startRow:0,
+              endRow:6,
+              totalRows:6,
+              data:[
                  {
-                    "id":1,
-                    "name":"admin",
-                    "roles":[
+                    id:1,
+                    name:'admin',
+                    roles:[
                        {
-                          "role":"Admin",
-                          "employee":1
+                          role:'Admin',
+                          employee:1
                        },
                        {
-                          "role":"Developer",
-                          "employee":1
+                          role:'Developer',
+                          employee:1
                        }
                     ]
                  },
                  {
-                    "id":2,
-                    "name":"developer",
-                    "roles":[
+                    id:2,
+                    name:'developer',
+                    roles:[
                        {
-                          "role":"Developer",
-                          "employee":2
+                          role:'Developer',
+                          employee:2
                        }
                     ]
                  },
                  {
-                    "id":3,
-                    "name":"UseR3",
-                    "roles":[
+                    id:3,
+                    name:'UseR3',
+                    roles:[
         
                     ]
                  },
                  {
-                    "id":4,
-                    "name":"user4",
-                    "roles":[
-        
+                    id:4,
+                    name:'manager1',
+                    roles:[
+                       {
+                          role:'PM',
+                          employee:4
+                       }
                     ]
                  },
                  {
-                    "id":5,
-                    "name":"user5",
-                    "roles":[
-        
+                    id:5,
+                    name:'manager2',
+                    roles:[
+                       {
+                          role:'PM',
+                          employee:5
+                       }
+                    ]
+                 },
+                 {
+                    id:6,
+                    name:'user2',
+                    roles:[
                     ]
                  }
               ]
@@ -563,8 +622,8 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
             {
               status:0,
               startRow:0,
-              endRow:5,
-              totalRows:5,
+              endRow:6,
+              totalRows:6,
               data:[
                  {
                     id:1,
@@ -580,14 +639,78 @@ public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                  },
                  {
                     id:4,
-                    calculated:'4_user4' 
+                    calculated:'4_manager1' 
                  },
                  {
                     id:5,
-                    calculated:'5_user5' 
+                    calculated:'5_manager2' 
+                 },                  
+                 {
+                    id:6,
+                    calculated:'6_user2' 
                  }                  
               ]
             }""", response);
     }
 
+    @Test
+    @Regression("Requests with multiple 'includeFrom' fails due to improper JOIN clause generation")
+    public void fetchWithMultipleJoin() throws Exception {
+        final JDBCHandler projectHandler =  withHandlers(Handler.Client, Handler.Project);
+        withExtraFields(ExtraField.SqlCalculated);
+        withExtraFields(projectHandler, ExtraField.Project_IncludeFromClient, ExtraField.Project_IncludeFromEmployee);
+
+        DSRequest request = new DSRequest();
+        final DSResponse response = projectHandler.handleFetch(request);
+
+        JsonTestSupport.assertJsonEquals("""
+            {
+               status:0,
+               startRow:0,
+               endRow:5,
+               totalRows:5,
+               data:[
+                  {
+                     id:1,
+                     name:'Project 1 for client 1',
+                     client:1,
+                     clientName:'client 1',
+                     manager:4,
+                     employeeFullName:'4_manager1'
+                  },
+                  {
+                     id:2,
+                     name:'Project 2 for client 1',
+                     client:1,
+                     clientName:'client 1',
+                     manager:4,
+                     employeeFullName:'4_manager1'
+                  },
+                  {
+                     id:3,
+                     name:'Project 1 for client 2',
+                     client:2,
+                     clientName:'client 2',
+                     manager:5,
+                     employeeFullName:'5_manager2'
+                  },
+                  {
+                     id:4,
+                     name:'Project 2 for client 2',
+                     client:2,
+                     clientName:'client 2',
+                     manager:5,
+                     employeeFullName:'5_manager2'
+                  },
+                  {
+                     id:5,
+                     name:'Project 3 for client 2',
+                     client:2,
+                     clientName:'client 2',
+                     manager:5,
+                     employeeFullName:'5_manager2'
+                  }
+               ]                
+            }""", response);
+    }
 }

@@ -2,15 +2,16 @@ package org.srg.smartclient;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
 import net.javacrumbs.jsonunit.JsonAssert;
 import net.javacrumbs.jsonunit.core.Configuration;
 import net.javacrumbs.jsonunit.core.Option;
+import org.srg.smartclient.jpa.Project;
 
 import java.io.IOException;
+import java.util.List;
 
 public class JsonTestSupport {
 
@@ -50,27 +51,46 @@ public class JsonTestSupport {
         return data;
     }
 
+    public static Configuration defaultConfiguration = Configuration.empty().withOptions(Option.IGNORING_ARRAY_ORDER);
+
     public static void assertJsonEquals(Object expected, Object actual, Option...options) {
-        assertEqualsUsingJSONImpl(expected, actual, Configuration.empty().withOptions(Option.IGNORING_ARRAY_ORDER, options));
+        assertEqualsUsingJSONImpl(expected, actual, defaultConfiguration.withOptions(Option.IGNORING_ARRAY_ORDER, options), null);
     }
 
     public static void assertJsonEquals(Object expected, Object actual) {
-        assertEqualsUsingJSONImpl(expected, actual, Configuration.empty().withOptions(Option.IGNORING_ARRAY_ORDER));
+        assertEqualsUsingJSONImpl(expected, actual, defaultConfiguration, null);
     }
 
     public static void assertJsonEquals_WithOrder(Object expected, Object actual) {
-        assertEqualsUsingJSONImpl(expected, actual, Configuration.empty());
+        assertEqualsUsingJSONImpl(expected, actual, Configuration.empty(), null);
     }
 
-    protected static void assertEqualsUsingJSONImpl(Object expected, Object actual, Configuration configuration) {
+    public static void assertJsonEquals(Object expected, Object actual, BeanSerializerModifier beanSerializerModifier) {
+        assertEqualsUsingJSONImpl(expected, actual, defaultConfiguration, beanSerializerModifier);
+    }
+
+    protected static void assertEqualsUsingJSONImpl(Object expected, Object actual, Configuration configuration, BeanSerializerModifier beanSerializerModifier) {
+
+        final ObjectMapper om = tolerantMapper().copy();
+
+        if (beanSerializerModifier != null) {
+            om.registerModule(new SimpleModule() {
+                @Override
+                public void setupModule(SetupContext context) {
+                    super.setupModule(context);
+                    context.addBeanSerializerModifier(beanSerializerModifier);
+                }
+            });
+        }
+
         String strExpected = null;
         String strActual = null;
         try {
-            strExpected = tolerantMapper()
+            strExpected = om
                     .writerWithDefaultPrettyPrinter()
                     .writeValueAsString(parseIfString(expected));
 
-            strActual = tolerantMapper()
+            strActual = om
                     .writerWithDefaultPrettyPrinter()
                     .writeValueAsString(parseIfString(actual));
         } catch (Exception e) {

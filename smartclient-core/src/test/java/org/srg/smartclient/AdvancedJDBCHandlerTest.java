@@ -100,7 +100,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 },
                                 {
                                     id:5,
-                                    name:'user5',
+                                    name:'manager2',
                                     firedAt: '2000-05-04T00:02:01.000+00:00'
                                 }
                             ],
@@ -144,9 +144,9 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 },
                                 {
                                     id:5,
-                                    name:'user5',
+                                    name:'manager2',
                                     firedAt: '2000-05-04T00:02:01.000+00:00',
-                                    email:"u5@acme.org"
+                                    email:"pm2@acme.org"
                                 }
                             ],
                             endRow:2,
@@ -189,15 +189,15 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             },
                             {
                                 id:4,
-                                name:'user4',
+                                name:'manager1',
                                 firedAt: null,
-                                email:"u4@acmE.org"
+                                email:"pm1@acmE.org"
                             },
                             {
                                 id:5,
-                                name:'user5',
+                                name:'manager2',
                                 firedAt: '2000-05-04T00:02:01.000+00:00',
-                                email:"u5@acme.org"
+                                email:"pm2@acme.org"
                             }
                         ],
                         endRow:3,
@@ -234,12 +234,18 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                     name:'UseR3',
                                     firedAt: null,
                                     email:"u3@emca.org"
+                                },
+                                {
+                                    id:6,
+                                    name:'user2',
+                                    firedAt: null,
+                                    email:"u2@emca.org"
                                 }
                             ],
-                            endRow:1,
+                            endRow:2,
                             startRow:0,
                             status:0,
-                            totalRows:1
+                            totalRows:2
                         }""",
                 ExtraField.Email
         );
@@ -347,19 +353,24 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                     },                        
                     {
                         id:4,
-                        name:'user4',
+                        name:'manager1',
                         firedAt: null
                     },
                     {
                         id:5,
-                        name:'user5',
+                        name:'manager2',
                         firedAt: '2000-05-04T00:02:01.000+00:00'
-                    }
+                    },
+                    {
+                        id:6,
+                        name:'user2',
+                        firedAt: null
+                    }              
                 ],
-                endRow:5,
+                endRow:6,
                 startRow:0,
                 status:0,
-                totalRows:5
+                totalRows:6
             }"""
         );
     }
@@ -458,20 +469,15 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                     firedAt:null
                                 },
                                 {
-                                    id:4,
-                                    name:'user4',
+                                    id:6,
+                                    name:'user2',
                                     firedAt:null
-                                },
-                                {
-                                    id:5,
-                                    name:'user5',
-                                    firedAt:'2000-05-04T00:02:01.000+00:00'
                                 }
                             ],
-                            endRow:3,
+                            endRow:2,
                             startRow:0,
                             status:0,
-                            totalRows:3
+                            totalRows:2
                         }"""
         );
     }
