@@ -254,9 +254,31 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
 
         if (jpaRelation != null
                 && jpaRelation.joinColumns().size() == 1) {
-            final JoinColumn joinColumnAnnotation = (JoinColumn) jpaRelation.joinColumns().get(0);
+            final JoinColumn joinColumnAnnotation = jpaRelation.joinColumns().get(0);
             if (!joinColumnAnnotation.name().isBlank()) {
                 f.setDbName(joinColumnAnnotation.name());
+            }
+        } else {
+            Column columnAnnotation = field.getAnnotation(Column.class);
+
+            if (columnAnnotation == null && attributeBelongsToCompositeId) {
+                /*
+                 * Since attribute is a part of the composite Id/PK, it is possible that @Column annotation
+                 * was put on the Entity field, rather than on the IdClass field.
+                 *
+                 * Therefore, it is required to check the entity field for @SmartClientField and apply it if it exists
+                 */
+                columnAnnotation = getAnnotation(entityType.getJavaType(), attr.getName(), Column.class);
+            }
+
+            if (columnAnnotation != null) {
+                if (!columnAnnotation.name().isBlank()) {
+                    f.setDbName(columnAnnotation.name());
+                }
+
+                if (!columnAnnotation.nullable()) {
+                    f.setRequired(true);
+                }
             }
         }
 
