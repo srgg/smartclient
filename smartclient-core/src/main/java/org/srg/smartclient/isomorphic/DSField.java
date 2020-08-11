@@ -36,10 +36,10 @@ public class DSField {
         TIME,
 
         /**
-         * IS not originally supported by SmartClient.
-         * Can be used ONLY in conjunction with foreignKey
+         * This is not originally supported by SmartClient.
+         * It can be used ONLY in conjunction with foreignKey
          */
-        ENTITY
+        ENTITY,
     }
 
     private String name;
