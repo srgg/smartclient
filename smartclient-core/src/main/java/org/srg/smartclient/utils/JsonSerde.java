@@ -209,9 +209,25 @@ public class JsonSerde {
 
             switch (field.getType()) {
                 case TEXT:
-//                    jsonGenerator.writeString((String) value);
-//                    break;
-//
+                    /**
+                     * For PostgreSQL in case of jsonb, value will be a PGobject instance, therefore for proper
+                     * serialization it is required to use value.toString() method.
+                     *
+                     * Otherwise, it will be serialized improperly:
+                     *
+                     * "changedData" : {
+                     *      "type" : "jsonb",
+                     *      "value" : "{\"id\": 12, \"name\": \"Zmags Publicator\", \"zoho_id\": 401759000008069015, \"client_id\": 3, \"created_at\": null, \"manager_id\": 41, \"modified_at\": \"2020-07-28T19:43:46.384\"}"
+                     * }
+                     */
+                    if (value != null) {
+                      return value.toString();
+                    } else {
+                        return  null;
+                    }
+                    //jsonGenerator.writeString((String) value);
+                    //break;
+
                 case INTEGER:
 //                    jsonGenerator.writeNumber((Long)value);
 //                    break;
