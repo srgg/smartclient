@@ -1,5 +1,6 @@
 package org.srg.smartclient;
 
+import org.apache.commons.lang3.reflect.ConstructorUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,15 +22,29 @@ public class JDBCHandlerFactory {
 
 
     public JDBCHandler createJDBCHandler(JDBCHandler.JDBCPolicy jdbcPolicy, IDSRegistry dsRegistry, DataSource ds) {
-        return new AdvancedJDBCHandler( jdbcPolicy, dsRegistry, ds);
+        if (ds.getServerConstructor() != null) {
+            try {
+                final Class< ? super JDBCHandler> c = (Class<? super JDBCHandler>) Class.forName(ds.getServerConstructor());
+                return (JDBCHandler) ConstructorUtils.invokeConstructor(c, jdbcPolicy, dsRegistry, ds);
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            return new AdvancedJDBCHandler(jdbcPolicy, dsRegistry, ds);
+        }
     }
 
     protected <T> DataSource describeEntity(Class<T> entityClass) {
         final DataSource ds = new DataSource();
         final String id = getDsId(entityClass);
         ds.setId(id);
-        ds.setServerType(DataSource.DSServerType.GENERIC);
+        ds.setServerType(DataSource.DSServerType.SQL);
         ds.setBeanClassName(entityClass.getCanonicalName());
+
+        final SmartClientHandler a = entityClass.getAnnotation(SmartClientHandler.class);
+        if (a != null && a.serverConstructor() != null && !a.serverConstructor().isBlank()) {
+            ds.setServerConstructor(a.serverConstructor());
+        }
 
         final List<Field> fields = FieldUtils.getAllFieldsList(entityClass);
 

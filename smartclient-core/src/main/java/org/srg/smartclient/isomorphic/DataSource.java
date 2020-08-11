@@ -48,6 +48,8 @@ public class DataSource {
 
     private List<OperationBinding> operationBindings;
 
+    private String serverConstructor;
+
     public void setId(String id) {
         this.id = id;
     }
@@ -143,6 +145,14 @@ public class DataSource {
     public void setOperationBindings(List<OperationBinding> operationBindings) {
         final List<OperationBinding> b = new ArrayList<>(operationBindings.size());
         this.operationBindings = Collections.unmodifiableList(b);
+    }
+
+    public String getServerConstructor() {
+        return serverConstructor;
+    }
+
+    public void setServerConstructor(String serverConstructor) {
+        this.serverConstructor = serverConstructor;
     }
 
     @Override
