@@ -113,6 +113,7 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
     }
 
     protected DSHandler getDataSourceHandlerById(String id) {
+        assert dsRegistry != null;
         final DSHandler dsHandler = dsRegistry.getHandlerByName(id);
         return dsHandler;
     }
@@ -120,6 +121,17 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
     protected DataSource getDataSourceById(String dsId) {
         assert dsRegistry != null;
         return dsRegistry.getDataSourceById(dsId);
+    }
+
+    protected DataSource getDatasourceByTableName(String tableName) {
+        assert dsRegistry != null;
+
+        for (DSHandler h: dsRegistry.handlers()) {
+            if (h.dataSource().getTableName().equalsIgnoreCase(tableName)) {
+                return h.dataSource();
+            }
+        }
+        return null;
     }
 
     protected ImportFromRelation describeImportFrom(DSField importFromField) {

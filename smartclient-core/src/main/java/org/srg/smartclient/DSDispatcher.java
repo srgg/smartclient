@@ -49,6 +49,7 @@ public class DSDispatcher implements IDSDispatcher {
     }
 
 
+    @Override
     public DSHandler getHandlerByName(String dsId) {
         final DSHandler ds = datasourceMap.get(dsId);
 
@@ -67,6 +68,11 @@ public class DSDispatcher implements IDSDispatcher {
         }
 
         return dsHandler.dataSource();
+    }
+
+    @Override
+    public Collection<DSHandler> handlers() {
+        return datasourceMap.values();
     }
 
     private ObjectWriter createObjectWriter() {

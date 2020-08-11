@@ -109,7 +109,7 @@ public class RelationSupport {
         }
     }
 
-    public static ImportFromRelation describeImportFrom(IDSRegistry idsRegistry, DataSource dataSource, DSField importFromField) {
+    public static ImportFromRelation describeImportFrom(IDSLookup idsRegistry, DataSource dataSource, DSField importFromField) {
         if (!importFromField.isIncludeField()) {
             throw new IllegalStateException();
         }
@@ -236,7 +236,7 @@ public class RelationSupport {
         );
     }
 
-    protected static ForeignRelation describeForeignRelation(IDSRegistry dsRegistry, String relation) {
+    protected static ForeignRelation describeForeignRelation(IDSLookup dsRegistry, String relation) {
         final String parsedIncludeFrom[] = relation.trim().split("\\.");
         if (parsedIncludeFrom.length != 2) {
             throw new RuntimeException(
@@ -284,7 +284,7 @@ public class RelationSupport {
         return new ForeignRelation(foreignDsId, foreignDS, foreignDsFieldName, foreignField);
     }
 
-    static public ForeignKeyRelation describeForeignKey(IDSRegistry dsRegistry, DataSource dataSource, DSField foreignKeyField) {
+    static public ForeignKeyRelation describeForeignKey(IDSLookup dsRegistry, DataSource dataSource, DSField foreignKeyField) {
         if (foreignKeyField.getForeignKey() == null || foreignKeyField.getForeignKey().isBlank()) {
             throw new IllegalStateException();
         }

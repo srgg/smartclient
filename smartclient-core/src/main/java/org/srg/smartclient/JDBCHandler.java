@@ -116,6 +116,8 @@ public class JDBCHandler extends AbstractDSHandler {
     }
 
     protected DSResponse handleFetch(DSRequest request) throws Exception {
+        final SQLExecutionContext sqlExecutionContext = new SQLExecutionContext();
+
         final int pageSize = request.getEndRow() == -1  ? -1 : request.getEndRow() - request.getStartRow();
 
         final OperationBinding operationBinding = getEffectiveOperationBinding(DSRequest.OperationType.FETCH);
@@ -127,33 +129,26 @@ public class JDBCHandler extends AbstractDSHandler {
         // -- SELECT
 
         // -- filter requested columns if any provided, or stick with all
-        final List<DSField> requestedFields;
-
         if (request.getOutputs() == null || request.getOutputs().isBlank()) {
-            requestedFields = getDataSource().getFields();
+            sqlExecutionContext.getRequestedFields().addAll(getDataSource().getFields());
         } else {
-            requestedFields = Stream.of(request.getOutputs().split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty() && !s.isBlank())
-                    .map( fn -> {
-                        final DSField dsf = getField( fn);
+            for ( String s: request.getOutputs().split(",")) {
+                final String fn = s.trim();
+                if (!fn.isBlank()) {
+                    final DSField dsf = getField(fn);
+                    if (dsf == null) {
+                        throw new RuntimeException("%s: nothing known about requested field '%s', data source: %s."
+                                .formatted(getClass().getSimpleName(), fn, getDataSource().getId()));
+                    }
 
-                        if (dsf == null) {
-                            throw new RuntimeException("%s: nothing known about requested field '%s', data source: %s."
-                                    .formatted(getClass().getSimpleName(), fn, getDataSource().getId()));
-                        }
-
-                        return dsf;
-                    } )
-                    .collect(Collectors.toList());
+                    sqlExecutionContext.getRequestedFields().add(dsf);
+                }
+            }
         }
 
-        final Map<DSField, List<ForeignRelation>> additionalOutputs;
-
-        if (request.getAdditionalOutputs() == null || request.getAdditionalOutputs().isBlank()){
-            additionalOutputs = Map.of();
-        } else {
-            additionalOutputs = Stream.of(request.getAdditionalOutputs().split(","))
+        if (request.getAdditionalOutputs() != null
+                && !request.getAdditionalOutputs().isBlank()) {
+            final Map<DSField, List<ForeignRelation>> additionalOutputs = Stream.of(request.getAdditionalOutputs().split(","))
                     .map(String::trim)
                     .filter(s -> !s.isEmpty() && !s.isBlank())
                     .map( descr -> {
@@ -229,9 +224,11 @@ public class JDBCHandler extends AbstractDSHandler {
                                     )
                             )
                     );
+
+            sqlExecutionContext.getAdditionalOutputs().putAll(additionalOutputs);
         }
 
-        final String selectClause = requestedFields
+        final String selectClause = sqlExecutionContext.getRequestedFields()
             .stream()
                 .map(this::formatFieldNameForSqlSelectClause)
                 .collect(Collectors.joining(",\n  "));
@@ -264,7 +261,7 @@ public class JDBCHandler extends AbstractDSHandler {
 
 
         // -- WHERE
-        final List<IFilterData> filterData  = generateFilterData(request.getTextMatchStyle(), request.getData());
+        sqlExecutionContext.getFilterData().addAll(generateFilterData(request.getTextMatchStyle(), request.getData()));
 
         final List<Object[]> data;
         if (pageSize > 0) {
@@ -304,12 +301,9 @@ public class JDBCHandler extends AbstractDSHandler {
                             })
                             .collect(Collectors.joining(", "));
 
-            final String whereClause = filterData.isEmpty() ?  "" : filterData.stream()
+            final String whereClause = sqlExecutionContext.getFilterData().isEmpty() ?  "" : sqlExecutionContext.getFilterData().stream()
                 .map(fd -> fd.sql("opaque"))
                 .collect(Collectors.joining("\n\t\t AND "));
-
-            final SQLExecutionContext sqlExecutionContext = new SQLExecutionContext();
-            sqlExecutionContext.setFilterData(filterData);
 
             // -- generate query
             final String genericQuery;
@@ -367,7 +361,7 @@ public class JDBCHandler extends AbstractDSHandler {
                         .formatted(
                                 getDataSource().getId(),
                                 countQuery,
-                                filterData.stream()
+                                sqlExecutionContext.getFilterData().stream()
                                         .flatMap(fd -> StreamSupport.stream(fd.values().spliterator(), false))
                                         .map("%s"::formatted)
                                         .collect(Collectors.joining(", "))
@@ -380,7 +374,7 @@ public class JDBCHandler extends AbstractDSHandler {
             try (PreparedStatement st = conn.prepareStatement(countQuery, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
                 int idx =0;
 
-                for (IFilterData fd: filterData) {
+                for (IFilterData fd: sqlExecutionContext.getFilterData()) {
                     idx = fd.setStatementParameters(idx, st);
                 }
 
@@ -408,8 +402,8 @@ public class JDBCHandler extends AbstractDSHandler {
                     .formatted(
                         getDataSource().getId(),
                             opaqueFetchQuery,
-                            filterData.stream()
-                                .flatMap(fd -> filterData.stream())
+                            sqlExecutionContext.getFilterData().stream()
+                                .flatMap(fd -> sqlExecutionContext.getFilterData().stream())
                                 .map("%s"::formatted)
                                 .collect(Collectors.joining(", "))
                     )
@@ -424,11 +418,12 @@ public class JDBCHandler extends AbstractDSHandler {
                 st.setFetchDirection(ResultSet.FETCH_FORWARD);
 
                 int idx =0;
-                for (IFilterData fd: filterData) {
+                for (IFilterData fd: sqlExecutionContext.getFilterData()) {
                     idx = fd.setStatementParameters(idx, st);
                 }
 
-                final Map<String, Object> pkValues = new HashMap<>();
+                final Map<String, Object> pkValues = sqlExecutionContext.getPkValues();
+                pkValues.clear();
 
                 try (ResultSet rs = st.executeQuery() ) {
                     while (rs.next())  {
@@ -437,8 +432,8 @@ public class JDBCHandler extends AbstractDSHandler {
 
                         int i =0;
 
-                        // ORIGINAL FIELD ORDER MUST BE USED
-                        for (DSField dsf: requestedFields) {
+                        // ORIGINAL FIELD ORDER MUST BE PRESERVED
+                        for (DSField dsf: sqlExecutionContext.getRequestedFields()) {
                             Object v = rs.getObject(i + 1);
                             if (rs.wasNull()) {
                                 v = null;
@@ -450,99 +445,115 @@ public class JDBCHandler extends AbstractDSHandler {
                             }
                         }
 
-                        for(int j=0; j<requestedFields.size(); ++j) {
-                            final DSField dsf = requestedFields.get(j);
+                        for(int j=0; j<sqlExecutionContext.getRequestedFields().size(); ++j) {
+                            final DSField dsf = sqlExecutionContext.getRequestedFields().get(j);
 
-                            /*
-                             * Fetch sub-entities, if any
-                             */
-                            if (isSubEntityFetchRequired(dsf)) {
-                                logger.trace("Processing multi-value and/or Entity relations for data source '%s', requested fields '%s'..."
-                                        .formatted(
-                                                getDataSource().getId(),
-                                                requestedFields
-                                        )
-                                    );
-
-                                final ForeignKeyRelation foreignKeyRelation;
-
-                                if (dsf.getIncludeFrom() != null
-                                        && !dsf.getIncludeFrom().isBlank()) {
-                                    /*
-                                     * Use 'includeFrom' if it is provided
-                                     */
-                                    final ImportFromRelation importFromRelation = describeImportFrom(dsf);
-                                    foreignKeyRelation = importFromRelation.toForeignDisplayKeyRelation();
-                                } else {
-                                    foreignKeyRelation = describeForeignKey(dsf);
-                                }
-
-                                final List<ForeignRelation> ffs = additionalOutputs.get(dsf);
-                                final String entityOutputs = ffs == null ? null : ffs.stream()
-                                        .map(ForeignRelation::fieldName)
-                                        .collect(Collectors.joining(", "));
-
-                                final DSResponse response;
-                                try {
-                                    response = fetchForeignEntity(foreignKeyRelation, entityOutputs, pkValues);
-                                    assert response != null;
-                                } catch ( Throwable t) {
-                                    throw new RuntimeException("Subsequent entity fetch failed: %s, filters: %s"
-                                            .formatted(
-                                                    foreignKeyRelation,
-                                                    pkValues.entrySet().stream()
-                                                        .map( e -> "'%s': %s"
-                                                                .formatted(
-                                                                        e.getKey(),
-                                                                        e.getValue()
-                                                                )
-                                                        )
-                                                    .collect(Collectors.joining(","))
-                                                ),
-                                            t
-                                    );
-                                }
-
-                                if (0 != response.getStatus()) {
-                                    throw new RuntimeException("Subsequent entity fetch failed: %s, %s, filters: %s"
-                                            .formatted(
-                                                    response.getData().getGeneralFailureMessage(),
-                                                    foreignKeyRelation,
-                                                    pkValues.entrySet().stream()
-                                                            .map( e -> "'%s': %s"
-                                                                    .formatted(
-                                                                            e.getKey(),
-                                                                            e.getValue()
-                                                                    )
-                                                            )
-                                                            .collect(Collectors.joining(","))
-                                            )
-                                    );
-                                }
-
-                                r[j] = response.getData().getRawDataResponse();
-                                assert r[j] != null;
-                            }
+                            r[j] = postProcessFieldValue(sqlExecutionContext, dsf, r[j]);
                         }
 
                         pkValues.clear();
 
-                        data.add(r);
+                        final Object[] postProcessed = postProcessRow(sqlExecutionContext, r);
+
+                        assert postProcessed.length == r.length;
+                        data.add(postProcessed);
                     }
                     return null;
                 } catch (Throwable t) {
                     if (t instanceof ContextualRuntimeException) {
                         throw t;
                     }
-
                     throw new ContextualRuntimeException("SQL fetch query execution failed.", t, sqlExecutionContext);
                 }
             }
         });
 
         return DSResponse.success(request.getStartRow(), request.getStartRow() + data.size(), totalRows[0],
-                requestedFields,
+                sqlExecutionContext.getRequestedFields(),
                 data);
+    }
+
+    protected Object[] postProcessRow(SQLExecutionContext ctxt, Object[] row) {
+        return row;
+    }
+
+    protected Object postProcessFieldValue(SQLExecutionContext ctxt, DSField dsf, Object value) {
+
+        if (!isSubEntityFetchRequired(dsf)) {
+            return value;
+        }
+
+        /*
+         * Fetch sub-entities
+         */
+
+        logger.trace("Processing multi-value and/or Entity relations for data source '%s', requested fields '%s'..."
+                .formatted(
+                        getDataSource().getId(),
+                        ctxt.getRequestedFields()
+                )
+        );
+
+        final ForeignKeyRelation foreignKeyRelation;
+
+        if (dsf.getIncludeFrom() != null
+                && !dsf.getIncludeFrom().isBlank()) {
+            /*
+             * Use 'includeFrom' if it is provided
+             */
+            final ImportFromRelation importFromRelation = describeImportFrom(dsf);
+            foreignKeyRelation = importFromRelation.toForeignDisplayKeyRelation();
+        } else {
+            foreignKeyRelation = describeForeignKey(dsf);
+        }
+
+        final List<ForeignRelation> ffs = ctxt.getAdditionalOutputs().get(dsf);
+        final String entityOutputs = ffs == null ? null : ffs.stream()
+                .map(ForeignRelation::fieldName)
+                .collect(Collectors.joining(", "));
+
+        final DSResponse response;
+        try {
+            response = fetchForeignEntity(foreignKeyRelation, entityOutputs, ctxt.getPkValues());
+            assert response != null;
+        } catch ( Throwable t) {
+            throw new RuntimeException("Subsequent entity fetch failed: %s, filters: %s"
+                    .formatted(
+                            foreignKeyRelation,
+                            ctxt.getPkValues().entrySet().stream()
+                                    .map( e -> "'%s': %s"
+                                            .formatted(
+                                                    e.getKey(),
+                                                    e.getValue()
+                                            )
+                                    )
+                                    .collect(Collectors.joining(","))
+                    ),
+                    t
+            );
+        }
+
+        if (0 != response.getStatus()) {
+            throw new RuntimeException("Subsequent entity fetch failed: %s, %s, filters: %s"
+                    .formatted(
+                            response.getData().getGeneralFailureMessage(),
+                            foreignKeyRelation,
+                            ctxt.getPkValues().entrySet().stream()
+                                    .map( e -> "'%s': %s"
+                                            .formatted(
+                                                    e.getKey(),
+                                                    e.getValue()
+                                            )
+                                    )
+                                    .collect(Collectors.joining(","))
+                    )
+            );
+        }
+
+        Object o = response.getData().getRawDataResponse();
+        assert o != null;
+
+        return o;
     }
 
     protected DSResponse fetchForeignEntity(ForeignKeyRelation foreignKeyRelation, String outputs, Map<String, Object> filtersAndKeys) throws Exception {
@@ -729,18 +740,37 @@ public class JDBCHandler extends AbstractDSHandler {
         }
     }
 
-    public static class SQLExecutionContext {
-        private Map<String, Object> templateContext;
-        private String effectiveSQL;
-        private List<IFilterData> filterData;
+    public static class FetchContext {
+        private List<DSField> requestedFields = new LinkedList<>();
+        private Map<DSField, List<ForeignRelation>> additionalOutputs = new HashMap<>();
+        private List<IFilterData> filterData = new LinkedList<>();
+
+        private Map<String, Object> pkValues = new HashMap<>();
+
+        public List<DSField> getRequestedFields() {
+            return requestedFields;
+        }
+
+        public Map<DSField, List<ForeignRelation>> getAdditionalOutputs() {
+            return additionalOutputs;
+        }
+
+        public Map<String, Object> getPkValues() {
+            return pkValues;
+        }
+
+        public void setPkValue(Map<String, Object> pkValues) {
+            this.pkValues = pkValues;
+        }
 
         public List<IFilterData> getFilterData() {
             return filterData;
         }
+    }
 
-        public void setFilterData(List<IFilterData> filterData) {
-            this.filterData = filterData;
-        }
+    public static class SQLExecutionContext extends FetchContext {
+        private Map<String, Object> templateContext;
+        private String effectiveSQL;
 
         public String getEffectiveSQL() {
             return effectiveSQL;
