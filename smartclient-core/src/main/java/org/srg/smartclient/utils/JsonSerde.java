@@ -240,8 +240,8 @@ public class JsonSerde {
                 case ENUM:
 //                    jsonGenerator.writeString(value.toString());
 //                    jsonGenerator.writeObject(value);
+                case FLOAT:
                     return value;
-
 
                 case DATE:
                     if (value != null) {
