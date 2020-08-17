@@ -20,9 +20,9 @@
 
 			On the other hand - size of the source is bigger than allowed by GitHub, therefore distro can not be uploaded to GH.
 		  -->
-		<SMART_CLIENT_RELEASE_DATE>2020-07-29</SMART_CLIENT_RELEASE_DATE>
+		<SMART_CLIENT_RELEASE_DATE>2020-08-16</SMART_CLIENT_RELEASE_DATE>
 		<smartclient-lgpl.version>SmartClient_v121p_${SMART_CLIENT_RELEASE_DATE}_LGPL</smartclient-lgpl.version>
-		<smartclient-lgpl.version>SmartClient_SNAPSHOT_v130d_2020-08-06_LGPL</smartclient-lgpl.version>
+<!--		<smartclient-lgpl.version>SmartClient_SNAPSHOT_v130d_2020-08-06_LGPL</smartclient-lgpl.version>-->
 	</properties>
 	<build>
 		<plugins>
@@ -41,8 +41,8 @@
 
 								<echo message="downloading smartclient lgpl ${smartclient-lgpl.version}.zip" />
 
-<!--								<get src="https://www.smartclient.com/builds/SmartClient/12.1p/LGPL/latest/${smartclient-lgpl.version}.zip"-->
-								<get src="https://www.smartclient.com/builds/SmartClient/13.0d/LGPL/latest/${smartclient-lgpl.version}.zip"
+								<!--								<get src="https://www.smartclient.com/builds/SmartClient/13.0d/LGPL/latest/${smartclient-lgpl.version}.zip"-->
+								<get src="https://www.smartclient.com/builds/SmartClient/12.1p/LGPL/latest/${smartclient-lgpl.version}.zip"
 								dest="${project.build.directory}"
 								skipexisting="true"
 								verbose="false"
