@@ -20,6 +20,7 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.srg.smartclient.IDSDispatcher;
+import org.srg.smartclient.isomorphic.DSTransaction;
 import org.srg.smartclient.utils.JsonSerde;
 import org.srg.smartclient.isomorphic.DSResponse;
 import org.srg.smartclient.isomorphic.IDSRequest;
@@ -70,6 +71,8 @@ public class SmartClientAutoConfiguration {
                     .bodyValue(ex.getMessage());
         }
 
+        final Integer transactionNum = dsRequest instanceof DSTransaction dsTransaction ? dsTransaction.getTransactionNum() : null;
+
 
         try {
             final Collection<DSResponse> responses = dsDispatcher.dispatch(dsRequest);
@@ -78,7 +81,7 @@ public class SmartClientAutoConfiguration {
             try (final StringWriter sw = new StringWriter();) {
                 sw.write("<SCRIPT>//'\"]]>>isc_JSONResponseStart>>\n");
 
-                JsonSerde.serializeResponse(sw, responses);
+                JsonSerde.serializeResponse(sw, transactionNum, responses);
 
                 sw.write("\n//isc_JSONResponseEnd");
 

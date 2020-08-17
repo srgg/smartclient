@@ -522,6 +522,8 @@ public class JpaDSDispatcherTest {
                      startRow:0,
                      endRow:2,
                      totalRows:2,
+                     queueStatus:0,
+                     operationType:"FETCH",
                      data:[
                         {
                            id:1,
@@ -560,6 +562,8 @@ public class JpaDSDispatcherTest {
                         startRow:0,
                         endRow:2,
                         totalRows:2,
+                        queueStatus:0,
+                        operationType:"FETCH",
                         data:[
                             {
                                 id:1,
@@ -608,6 +612,8 @@ public class JpaDSDispatcherTest {
                 startRow:0,
                 endRow:5,
                 totalRows:5,
+                queueStatus:0,
+                operationType:"FETCH",
                 data:[
                  {
                     id:1,
@@ -665,6 +671,8 @@ public class JpaDSDispatcherTest {
                         startRow:0,
                         endRow:2,
                         totalRows:2,
+                        queueStatus:0,
+                        operationType:"FETCH",
                         data:[
                         {
                             id:1,
@@ -733,6 +741,8 @@ public class JpaDSDispatcherTest {
                         startRow:0,
                         endRow:6,
                         totalRows:6,
+                        queueStatus:0,
+                        operationType:"FETCH",
                         data:[
                         {
                            id:1,
@@ -845,6 +855,8 @@ public class JpaDSDispatcherTest {
                  "endRow":5,
                  "startRow":0,
                  "status":0,
+                 "queueStatus":0,
+                 "operationType":"FETCH",
                  "totalRows":5
                }                
             ]""", responses);
@@ -870,6 +882,8 @@ public class JpaDSDispatcherTest {
                          startRow:0,
                          endRow:6,
                          totalRows:6,
+                         queueStatus:0,
+                         operationType:"FETCH",
                          data:[
                              {
                                  id:1,

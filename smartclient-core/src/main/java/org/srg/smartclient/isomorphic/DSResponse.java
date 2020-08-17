@@ -21,6 +21,11 @@ public class DSResponse {
     private int endRow;
     private int totalRows;
 
+    private String operationId;
+    private DSRequest.OperationType operationType;
+    private int queueStatus = 0;
+    private Integer transactionNum;
+
     private DSResponseDataContainer data;
     private List<Object> errors;
 
@@ -95,5 +100,37 @@ public class DSResponse {
         retVal.data = DSResponseDataContainer.createRaw(fields, data);
         retVal.setStatus(DSResponse.STATUS_SUCCESS);
         return retVal;
+    }
+
+    public String getOperationId() {
+        return operationId;
+    }
+
+    public void setOperationId(String operationId) {
+        this.operationId = operationId;
+    }
+
+    public DSRequest.OperationType getOperationType() {
+        return operationType;
+    }
+
+    public void setOperationType(DSRequest.OperationType operationType) {
+        this.operationType = operationType;
+    }
+
+    public Integer getTransactionNum() {
+        return transactionNum;
+    }
+
+    public void setTransactionNum(Integer transactionNum) {
+        this.transactionNum = transactionNum;
+    }
+
+    public int getQueueStatus() {
+        return queueStatus;
+    }
+
+    public void setQueueStatus(int queueStatus) {
+        this.queueStatus = queueStatus;
     }
 }

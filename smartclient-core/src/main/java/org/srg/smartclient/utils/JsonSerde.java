@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.fasterxml.jackson.databind.ser.ResolvableSerializer;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.srg.smartclient.JpaRelation;
 import org.srg.smartclient.isomorphic.*;
@@ -40,21 +39,36 @@ public class JsonSerde {
         }
     }
 
-    public static void serializeResponse(Writer writer, Collection<DSResponse> responses) throws IOException {
+    public static void serializeResponse(Writer writer, Integer transactionNum, Collection<DSResponse> responses) throws IOException {
         final ObjectWriter objectWriter = createMapper()
                 .writerWithDefaultPrettyPrinter()
                 .withRootName("response");
 
         writer.append("[");
 
+        int status = 0;
+        for (DSResponse r:responses) {
+            if (r.getStatus() != 0) {
+                status = -1;
+                break;
+            }
+        }
+
         boolean isFirst = true;
 
         for (DSResponse r:responses) {
+            r.setQueueStatus(status);
+            r.setTransactionNum(transactionNum);
+
             if (!isFirst) {
                 writer.append(",\n");
             } else {
                 isFirst = false;
             }
+
+            r.setQueueStatus(status);
+            r.setTransactionNum(transactionNum);
+
             objectWriter.writeValue(writer, r);
         }
 

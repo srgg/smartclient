@@ -21,7 +21,7 @@ public class DSResponseSerializationTest {
 
     private static String serializeResponse(DSResponse response) throws IOException {
         final StringWriter sw = new StringWriter();
-        JsonSerde.serializeResponse(sw, List.of(response));
+        JsonSerde.serializeResponse(sw, null, List.of(response));
         return sw.toString();
     }
 
@@ -54,6 +54,7 @@ public class DSResponseSerializationTest {
                 {                
                     response:{
                         status:0,
+                        queueStatus:0,
                         startRow:0,
                         endRow:0,
                         totalRows:0,
@@ -88,6 +89,7 @@ public class DSResponseSerializationTest {
                 {
                     "response":{
                        "status":0,
+                       "queueStatus":0,
                        "startRow":0,
                        "endRow":1,
                        "totalRows":-1,
@@ -159,6 +161,7 @@ public class DSResponseSerializationTest {
                 {
                     response:{
                         status:0,
+                        queueStatus:0,
                         startRow:0,
                         endRow:2,
                         totalRows:-1,

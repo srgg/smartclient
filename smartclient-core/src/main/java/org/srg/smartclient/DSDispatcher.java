@@ -122,6 +122,9 @@ public class DSDispatcher implements IDSDispatcher {
             final DSHandler ds = getHandlerByName(request.getDataSource());
             final DSResponse response = ds.handle(request);
 
+            response.setOperationId( request.getOperationId());
+            response.setOperationType( request.getOperationType());
+
             if (logger.isDebugEnabled()){
                 final ObjectWriter objectWriter = createObjectWriter();
                 String strRequest, strResponse;

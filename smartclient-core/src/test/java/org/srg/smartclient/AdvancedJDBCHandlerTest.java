@@ -107,6 +107,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             endRow:2,
                             startRow:0,
                             status:0,
+                            queueStatus:0,
                             totalRows:2
                         }""",
                 null
@@ -152,6 +153,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             endRow:2,
                             startRow:0,
                             status:0,
+                            queueStatus:0,
                             totalRows:2
                         }""",
                 ExtraField.Email
@@ -203,6 +205,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                         endRow:3,
                         startRow:0,
                         status:0,
+                        queueStatus:0,
                         totalRows:3
                     }""",
                 ExtraField.Email
@@ -245,6 +248,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             endRow:2,
                             startRow:0,
                             status:0,
+                            queueStatus:0,
                             totalRows:2
                         }""",
                 ExtraField.Email
@@ -279,6 +283,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             endRow:1,
                             startRow:0,
                             status:0,
+                            queueStatus:0,
                             totalRows:1
                         }"""
         );
@@ -312,6 +317,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             endRow:1,
                             startRow:0,
                             status:0,
+                            queueStatus:0,
                             totalRows:1
                         }"""
         );
@@ -370,6 +376,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                 endRow:6,
                 startRow:0,
                 status:0,
+                queueStatus:0,
                 totalRows:6
             }"""
         );
@@ -404,6 +411,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             endRow:1,
                             startRow:0,
                             status:0,
+                            queueStatus:0,
                             totalRows:1
                         }""",
                 ExtraField.SqlCalculated
@@ -438,6 +446,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             endRow:1,
                             startRow:0,
                             status:0,
+                            queueStatus:0,
                             totalRows:1
                         }"""
         );
@@ -477,6 +486,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             endRow:2,
                             startRow:0,
                             status:0,
+                            queueStatus:0,
                             totalRows:2
                         }"""
         );
