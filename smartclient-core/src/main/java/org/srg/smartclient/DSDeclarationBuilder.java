@@ -90,6 +90,7 @@ abstract class DSDeclarationBuilder {
                   disableQueuing:false,
                   useStrictJSON:true,
                   allowAdvancedCriteria: %b,
+                  criteriaPolicy: "dropOnChange",
                   operationBindings:[
                     {operationType:"fetch", dataProtocol:"postMessage"},
                     {operationType:"add", dataProtocol:"postMessage"},
