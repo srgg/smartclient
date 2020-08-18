@@ -401,9 +401,10 @@ public class JDBCHandler extends AbstractDSHandler {
                 logger.trace("DataSource %s fetch query:\n%s\n\nparams:\n%s"
                     .formatted(
                         getDataSource().getId(),
-                            opaqueFetchQuery,
-                            sqlExecutionContext.getFilterData().stream()
+                        opaqueFetchQuery,
+                        sqlExecutionContext.getFilterData().stream()
                                 .flatMap(fd -> sqlExecutionContext.getFilterData().stream())
+                                .flatMap(fd -> StreamSupport.stream(fd.values().spliterator(), false))
                                 .map("%s"::formatted)
                                 .collect(Collectors.joining(", "))
                     )

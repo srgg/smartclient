@@ -294,5 +294,14 @@ public class AdvancedJDBCHandler extends JDBCHandler {
                 }
             };
         }
+
+        @Override
+        public String toString() {
+            return "CompositeFilterData{" +
+                    "operator='" + operator + '\'' +
+                    ", filterDataList=" + filterDataList +
+                    ", formattedSql='" + formattedSql + '\'' +
+                    '}';
+        }
     }
 }
