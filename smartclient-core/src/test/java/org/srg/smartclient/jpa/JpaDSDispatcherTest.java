@@ -801,7 +801,7 @@ public class JpaDSDispatcherTest {
 
 
     @Test
-    public void loadSqlDataSourceFromResource() {
+    public void loadSqlDataSourceFromResource() throws Exception {
         dispatcher.registerJPAEntity(Employee.class);
         dispatcher.registerJPAEntity(Client.class);
         dispatcher.registerJPAEntity(ClientData.class);

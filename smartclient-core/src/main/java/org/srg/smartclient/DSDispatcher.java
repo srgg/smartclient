@@ -22,12 +22,13 @@ import org.srg.smartclient.utils.JsonSerde;
 import org.srg.smartclient.utils.Utils;
 
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.stream.Collectors;
 
 public class DSDispatcher implements IDSDispatcher {
     private static Logger logger = LoggerFactory.getLogger(DSDispatcher.class);
@@ -252,7 +253,17 @@ public class DSDispatcher implements IDSDispatcher {
         final ObjectMapper mapper = new ObjectMapper()
                 .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
 
-        final DataSource ds = mapper.readValue(file, DataSource.class);
+        logger.debug("trying to load DataSource from '%s'...".formatted(file));
+
+        final DataSource ds;
+
+        final InputStream is = Utils.getResourceAsStream(file.getPath());
+        if (is == null) {
+            logger.debug("Can't load datasource from InputStream, trying to load from File object");
+            ds = mapper.readValue(file, DataSource.class);
+        } else {
+            ds = mapper.readValue(is, DataSource.class);
+        }
 
         if (DataSource.DSServerType.SQL.equals(ds.getServerType())
             && ( ds.getTableName() == null || ds.getTableName().isBlank()) ) {
@@ -266,28 +277,121 @@ public class DSDispatcher implements IDSDispatcher {
     }
 
     @Override
-    public void loadFromResource(String path) {
+    public void loadFromResource(String path) throws Exception {
         final URL url = Utils.getResource(path);
+
         if (url == null) {
             logger.debug("Datasource path does not set properly, loading datasource will be skipped.");
             return;
         }
 
-        final String urlPath = url.getPath();
-        File f = new File(urlPath);
+        logger.debug("\n\nSCAN BUILTIN RESOURCES in '%s', url: %s\n".formatted(path, url));
 
-        final String files[];
+        final Set<String> files = new HashSet<>();
 
-        if (f.isDirectory()) {
-            files = f.list( (dir, name) -> name.endsWith(".ds.json"));
-        } else {
-            files = new String[]{f.getName()};
-            f = new File(f.getParent());
+        final Enumeration<URL> resources = Thread.currentThread().getContextClassLoader().getResources(path + '/');
+        while (resources.hasMoreElements()) {
+            URL url1 = resources.nextElement();
+            logger.info("Resource URL: %s".formatted( url1));
+
+            if (url.getProtocol().equals("jar")) {
+                logger.debug("Scanning a jar file via URL: %s".formatted( url1));
+
+
+                /* A JAR path */
+                final String jarPath = url1.getPath().substring(5, url1.getPath().indexOf("!")); //strip out only the JAR file
+                final String relativePath = url1.getPath().substring(5 + jarPath.length() + 2 /* '/!' */).replace("!", "");
+
+                logger.debug("jarPath: '%s'".formatted(jarPath));
+                logger.debug("relativePath: '%s'".formatted(relativePath));
+
+                final Set<String> result = new HashSet<>();
+
+                try (final JarFile jar = new JarFile(URLDecoder.decode(jarPath, "UTF-8")) ) {
+                    final Enumeration<JarEntry> entries = jar.entries(); //gives ALL entries in jar
+
+                    while (entries.hasMoreElements()) {
+                        JarEntry je = entries.nextElement();
+                        String name = je.getName();
+                        logger.trace("analyzing jarEntry: '%s'".formatted(name));
+
+                        if (name.startsWith(relativePath)) { //filter according to the path
+                            logger.debug("found a match, jarEntry: '%s'".formatted(name));
+
+                            if (je.isDirectory()) {
+                                logger.debug("   skipped as it is a directory");
+                                continue;
+                            }
+
+                            String entry = name.substring(path.length());
+                            int checkSubdir = entry.lastIndexOf("/");
+                            if (checkSubdir >= 0) {
+                                // if it is a subdirectory, we just return the directory name
+                                entry = entry.substring(checkSubdir + 1);
+                            }
+
+                            logger.debug("found a file in jar: '%s'".formatted(entry));
+                            result.add(path + '/' + entry);
+                        } else {
+                            logger.trace("   ignore as it does not match a relative path.");
+                        }
+                    }
+                }
+
+                logger.debug("""
+                    Jar scan was completed, the following matches were found in the '%s':               
+                        """
+                        .formatted(
+                                url1,
+                                result.stream()
+                                .collect(Collectors.joining(",\n"))
+                        )
+                );
+                files.addAll(result);
+            } else {
+                File f = new File(url.getFile());
+
+                List<String> result;
+                if (f.isDirectory()) {
+
+                    logger.info("loading Data Sources from resources, scanning resource directory '%s'."
+                            .formatted(f));
+
+
+                    result = Arrays.stream(f.list((dir, name) -> name.endsWith(".ds.json")))
+                    .map(p -> path + '/' + p)
+                    .collect(Collectors.toList());
+                } else {
+                    result = List.of(f.getName());
+                }
+
+                logger.debug("""
+                    Directory scan was completed, the following matches were found in the '%s':               
+                        """
+                        .formatted(
+                                url1,
+                                result.stream()
+                                        .collect(Collectors.joining(",\n"))
+                        )
+                );
+
+                files.addAll(result);
+            }
         }
+
+        logger.info("""
+                    BUILTIN RESOURCES SCAN COMPLETED, the following matches were found in the '%s':
+                       %s            
+                    """.formatted(
+                        url,
+                        files.stream()
+                                .collect(Collectors.joining(",\n   "))
+                )
+        );
 
         for (String s: files ) {
             try {
-                final DSHandler ds = loadDsFromResource(new File(f, s));
+                final DSHandler ds = loadDsFromResource(new File(s));
                 registerDatasource(ds);
             } catch (Exception ex) {
                 logger.warn("Can't load Smart Client DSHandler from file '%s'".formatted(s), ex);

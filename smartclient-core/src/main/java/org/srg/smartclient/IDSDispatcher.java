@@ -19,9 +19,9 @@ public interface IDSDispatcher extends IDSRegistry {
     Collection<DSResponse> dispatch(IDSRequest request);
     <A extends Appendable> A generateDSJavaScript(A out, String dispatcherUrl, String... dsId) throws Exception;
     void registerDatasource(DSHandler handler);
-    void loadFromResource(String path);
+    void loadFromResource(String path) throws Exception;
 
-    default void loadFromResource() {
+    default void loadFromResource() throws Exception {
         loadFromResource(DEFAULT_DS_PATH);
     }
 }
