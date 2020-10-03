@@ -23,17 +23,17 @@ public enum OperatorId {
     OR("or"),
 
 
-//
-//    /**
-//     * shortcut for "greaterThan" + "lessThan" + "and".
-//     */
-//    BETWEEN,
-//
-//    /**
-//     * shortcut for "greaterOrEqual" + "lessOrEqual" + "and".
-//     */
-//    BETWEEN_INCLUSIVE,
-//
+
+    /**
+     * shortcut for "greaterThan" + "lessThan" + "and".
+     */
+    BETWEEN("between"),
+
+    /**
+     * shortcut for "greaterOrEqual" + "lessOrEqual" + "and".
+     */
+    BETWEEN_INCLUSIVE("betweenInclusive"),
+
     /**
      * Contains as sub-string (match case)
      */

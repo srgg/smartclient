@@ -131,6 +131,19 @@ public class AdvancedJDBCHandler extends JDBCHandler {
                     }
                     break;
 
+                case BETWEEN:
+                    /*
+                     * SQL between is inclusive, therefore it can not be used for non inclusive conditions.
+                     */
+                    values = Arrays.asList(ac.getStart(), ac.getEnd());
+                    filterStr = "(%1$s > ? AND %1$s < ?)";
+                    break;
+
+                case BETWEEN_INCLUSIVE:
+                    values = Arrays.asList(ac.getStart(), ac.getEnd());
+                    filterStr = "%s BETWEEN ? AND ?";
+                    break;
+
                 default:
                     throw new RuntimeException("DataSource '%s': unsupported operator '%s'"
                             .formatted(

@@ -24,6 +24,8 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                 ,iContains_by_SQLCalculatedField_Criteria()
                 ,iStartsWithCriteria()
                 ,startsWithCriteria()
+                ,betweenInclusiveCriteria()
+                , betweenCriteria()
         );
     }
 
@@ -488,6 +490,83 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             status:0,
                             queueStatus:0,
                             totalRows:2
+                        }"""
+        );
+    }
+
+
+
+    private static Arguments betweenInclusiveCriteria() {
+        return Arguments.of(
+                "betweenInclusiveCriteria condition",
+                """
+                        {
+                            "operator" : "and",
+                            "_constructor" : "AdvancedCriteria",
+                            "criteria" : [
+                                {
+                                    "fieldName" : "firedAt",
+                                    "operator":"betweenInclusive",
+                                    "start":"1970-10-01T00:00:00.000",
+                                    "end":"2000-05-04T00:02:01.000+00:00",
+                                    "_constructor":null
+                                }
+                            ]
+                        }""",
+                """
+                        {
+                            data:[
+                                {
+                                    id:1,
+                                    name:'admin',
+                                    firedAt: "2000-01-02T01:04:05.000+00:00"
+                                },
+                                {
+                                    id:5,
+                                    name:'manager2',
+                                    firedAt: "2000-05-04T00:02:01.000+00:00"
+                                }
+                            ],
+                            endRow:2,
+                            startRow:0,
+                            status:0,
+                            queueStatus:0,
+                            totalRows:2
+                        }"""
+        );
+    }
+
+    private static Arguments betweenCriteria() {
+        return Arguments.of(
+                "betweenCriteria condition",
+                """
+                        {
+                            "operator" : "and",
+                            "_constructor" : "AdvancedCriteria",
+                            "criteria" : [
+                                {
+                                    "fieldName" : "firedAt",
+                                    "operator":"between",
+                                    "start":"1970-10-01T00:00:00.000",
+                                    "end":"2000-05-04T00:02:01.000+00:00",
+                                    "_constructor":null
+                                }
+                            ]
+                        }""",
+                """
+                        {
+                            data:[
+                                {
+                                    id:1,
+                                    name:'admin',
+                                    firedAt: "2000-01-02T01:04:05.000+00:00"
+                                }
+                            ],
+                            endRow:1,
+                            startRow:0,
+                            status:0,
+                            queueStatus:0,
+                            totalRows:1
                         }"""
         );
     }
