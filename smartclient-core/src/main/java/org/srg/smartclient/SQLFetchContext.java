@@ -316,7 +316,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
 
 
         // -- WHERE
-        this.filterData = dsHandler().generateFilterData(request().getTextMatchStyle(), request().getData());
+        this.filterData = dsHandler().generateFilterData(DSRequest.OperationType.FETCH, request().getTextMatchStyle(), request().getData());
 
 
         final String whereClause = this.getFilterData().isEmpty() ?  "" : this.getFilterData().stream()

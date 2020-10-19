@@ -83,19 +83,53 @@ public class RelationSupport {
         }
     }
 
-    protected static record ForeignRelation(
-        String dataSourceId,
-        DataSource dataSource,
+    protected static class ForeignRelation {
+        private final String dataSourceId;
+        private final DataSource dataSource;
+        private final String fieldName;
+        private final DSField field;
 
-        String fieldName,
-        DSField field
+        private String sqlFieldAlias;
 
+        public ForeignRelation(String dataSourceId, DataSource dataSource, String fieldName, DSField field) {
+            this.dataSourceId = dataSourceId;
+            this.dataSource = dataSource;
+            this.fieldName = fieldName;
+            this.field = field;
+        }
 
-    ){
+        public String dataSourceId() {
+            return dataSourceId;
+        }
+
+        public DataSource dataSource() {
+            return dataSource;
+        }
+
+        public String fieldName() {
+            return fieldName;
+        }
+
+        public DSField field() {
+            return field;
+        }
+
+        public String getSqlFieldAlias() {
+            return sqlFieldAlias;
+        }
+
+        public void setSqlFieldAlias(String sqlFieldAlias) {
+            this.sqlFieldAlias = sqlFieldAlias;
+        }
+
         public String formatAsSQL() {
+            return formatAsSQL(dataSource().getTableName());
+        }
+
+        public String formatAsSQL(String aliasOrTable) {
             return "%s.%s".formatted(
-                    dataSource().getTableName(),
-                    field().getDbName()
+                    aliasOrTable,
+                    getSqlFieldAlias() != null ? getSqlFieldAlias() : field().getDbName()
             );
 
         }

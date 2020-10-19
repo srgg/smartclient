@@ -154,6 +154,13 @@ public class AdvancedJDBCHandler extends JDBCHandler {
             }
 
             final ForeignRelation effectiveField = determineEffectiveField(dsf);
+            effectiveField.setSqlFieldAlias(
+                formatColumnNameToAvoidAnyPotentialDuplication(
+                    effectiveField.dataSource(),
+                    effectiveField.field()
+                )
+            );
+
             return ValueFilterData.create(effectiveField, filterStr, values);
         } else {
             switch (ac.getOperator()) {
@@ -175,17 +182,16 @@ public class AdvancedJDBCHandler extends JDBCHandler {
 
             return new CompositeFilterData(ac.getOperator().name(), fds);
         }
-
     }
 
 
     @Override
-    protected List<IFilterData> generateFilterData(DSRequest.TextMatchStyle textMatchStyle, IDSRequestData data) {
+    protected List<IFilterData> generateFilterData(DSRequest.OperationType operationType, DSRequest.TextMatchStyle textMatchStyle, IDSRequestData data) {
         if (data instanceof AdvancedCriteria ac) {
             return Collections.singletonList(generateFD(ac));
 
         } else {
-            return super.generateFilterData(textMatchStyle, data);
+            return super.generateFilterData(operationType, textMatchStyle, data);
         }
     }
 

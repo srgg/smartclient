@@ -11,6 +11,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import static org.srg.smartclient.isomorphic.DSField.FieldType.TEXT;
+
 
 public class JDBCHandler extends AbstractDSHandler {
     public interface JDBCPolicy {
@@ -27,6 +29,76 @@ public class JDBCHandler extends AbstractDSHandler {
         policy = jdbcPolicy;
     }
 
+    @Override
+    protected DSResponse handleUpdate(DSRequest request) throws Exception {
+        if (! (request.getData() instanceof Map)) {
+            throw new RuntimeException("Bad request: operation 'UPDATE', the map of modified and PK fields " +
+                    "must be provided in the  'data' field.");
+        }
+
+        final OperationBinding operationBinding = getEffectiveOperationBinding(DSRequest.OperationType.FETCH);
+        final SQLUpdateContext<JDBCHandler> sqlUpdateContext = new SQLUpdateContext<>(this, request, operationBinding);
+
+
+        // --
+        policy.withConnectionDo(this.getDataSource().getDbName(), conn-> {
+
+            try (PreparedStatement st = conn.prepareStatement(sqlUpdateContext.getUpdateSQL(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
+                int idx =0;
+
+                final List<IFilterData> l = sqlUpdateContext.getModifiedData();
+                for (IFilterData fd: l) {
+                    idx = fd.setStatementParameters(idx, st);
+                }
+
+                final List<IFilterData> ll = sqlUpdateContext.getPkFieldData();
+                for (IFilterData fd: ll) {
+                    idx = fd.setStatementParameters(idx, st);
+                }
+
+                final int qnt = st.executeUpdate();
+
+
+                if (qnt == 0) {
+                    // There is no updated/affected records
+                    throw new RuntimeException("Zero rows were updated.");
+                }
+
+                conn.commit();
+            } catch (Throwable t) {
+                conn.rollback();
+                throw new ContextualRuntimeException("SQL update query execution failed.", t, sqlUpdateContext);
+            }
+
+            return null;
+        });
+
+        /*
+         * It is required to return modified row back to the client.
+         *
+         * This can be done either by:
+         *  1) comprehensive fetch from DB
+         *  2) by modifying "old values" sent from client w/o real  retch.
+         *
+         * The first option is more durable, since it will handle all side effects like calculated fields? operation bindings
+         * with respect of security rules tat can be affected by side effects.
+         */
+
+
+        final DSRequest fr = new DSRequest();
+        fr.setDataSource(request.getDataSource());
+        fr.setOperationType(DSRequest.OperationType.FETCH);
+        fr.setOperationId(request.getOperationId());
+        fr.setComponentId(request.getComponentId());
+        fr.wrapAndSetData(sqlUpdateContext.getPkValues());
+
+        // return the only fields that was provided within request
+        fr.setOutputs( String.join(", ", ((Map)request.getData()).keySet()));
+
+        return handleFetch(fr);
+    }
+
+    @Override
     protected DSResponse handleFetch(DSRequest request) throws Exception {
         final OperationBinding operationBinding = getEffectiveOperationBinding(DSRequest.OperationType.FETCH);
         final SQLFetchContext<JDBCHandler> sqlFetchContext = new SQLFetchContext<>(this, request, operationBinding);
@@ -301,7 +373,7 @@ public class JDBCHandler extends AbstractDSHandler {
         return dsHandler.handle(fetchEntity);
     }
 
-    protected  List<IFilterData> generateFilterData(DSRequest.TextMatchStyle textMatchStyle, IDSRequestData data ) {
+    protected  List<IFilterData> generateFilterData(DSRequest.OperationType operationType, DSRequest.TextMatchStyle textMatchStyle, IDSRequestData data ) {
         if (data instanceof Map) {
             return ((Map<String, Object>) data).entrySet()
                     .stream()
@@ -329,14 +401,23 @@ public class JDBCHandler extends AbstractDSHandler {
                             default -> e.getValue();
                         };
 
+                        final String filterStr;
 
-                        @SuppressWarnings("SwitchStatementWithTooFewBranches")
-                        String filterStr = switch (dsf.getType()) {
-                            case TEXT -> "%s like ?";
-                            default -> "%s = ?";
+                        if (TEXT.equals(dsf.getType()) && (!DSRequest.TextMatchStyle.EXACT.equals(textMatchStyle)) ) {
+                            filterStr = "%s like ?";
+                        } else {
+                            filterStr = "%s = ?";
                         };
 
                         final ForeignRelation effectiveField = determineEffectiveField(dsf);
+                        effectiveField.setSqlFieldAlias(
+                            operationType == DSRequest.OperationType.FETCH ?
+                                formatColumnNameToAvoidAnyPotentialDuplication(
+                                        effectiveField.dataSource(),
+                                        effectiveField.field()
+                                )
+                                : effectiveField.field().getDbName());
+
                         return new FilterData(effectiveField, filterStr, value);
                     })
                     .collect(Collectors.toList());
@@ -407,13 +488,7 @@ public class JDBCHandler extends AbstractDSHandler {
             assert sqlTemplate != null;
 
             return sqlTemplate.formatted(
-                    "%s.%s".formatted(
-                            aliasOrTable,
-                            formatColumnNameToAvoidAnyPotentialDuplication(
-                                    getDsFieldPair().dataSource(),
-                                    getDsFieldPair().field()
-                            )
-                    )
+                dsFieldPair.formatAsSQL(aliasOrTable)
             );
         }
 
