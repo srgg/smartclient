@@ -9,7 +9,6 @@ import org.srg.smartclient.utils.Utils;
 import java.sql.*;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 
@@ -28,244 +27,13 @@ public class JDBCHandler extends AbstractDSHandler {
         policy = jdbcPolicy;
     }
 
-    protected static boolean isSubEntityFetchRequired(DSField dsf){
-        return dsf.isMultiple()
-                || DSField.FieldType.ENTITY.equals(dsf.getType());
-    }
-
-    protected static String formatColumnNameToAvoidAnyPotentionalDuplication(DataSource ds, DSField field) {
-        return "%s_%s"
-                .formatted(
-                        field.getDbName(),
-                        ds.getTableName()
-                );
-
-    }
-
-    private String formatFieldNameFor(boolean formatForSelect, DSField dsf) {
-        final ForeignRelation effectiveRelation;
-        final String effectiveColumn;
-
-        if ( isSubEntityFetchRequired(dsf) ) {
-
-            if (!formatForSelect) {
-                throw new IllegalStateException("MNot supported yet.");
-            }
-
-            // Populate extra information for the sake of troubleshooting
-            final String extraInfo;
-            final ForeignKeyRelation foreignKeyRelation = describeForeignKey(dsf);
-            if (logger.isDebugEnabled()) {
-                extraInfo = "Sub-entity placeholder for '%s' (will be fetched as a subsequent request)"
-                        .formatted(
-                                foreignKeyRelation
-                        );
-            } else {
-                extraInfo = "Sub-entity placeholder for '%s' (will be fetched as a subsequent request)"
-                        .formatted(foreignKeyRelation.foreign().dataSourceId());
-            }
-
-            /*
-             * Correspondent entity will be fetched by the subsequent query,
-             * therefore it is required to reserve space in the response
-             */
-            effectiveRelation = new ForeignRelation(foreignKeyRelation.dataSource().getId(), foreignKeyRelation.dataSource(),
-                    dsf.getName(), dsf );
-
-            effectiveColumn = "NULL  /*  %s  */"
-                    .formatted(extraInfo);
-        } else {
-            effectiveRelation = determineEffectiveField(dsf);
-
-            // If a custom SQL snippet is provided for column -- use it
-            if (effectiveRelation.field().isCustomSQL()
-                    && effectiveRelation.field().getCustomSelectExpression() != null
-                    && !effectiveRelation.field().getCustomSelectExpression().isBlank()) {
-                effectiveColumn = effectiveRelation.field().getCustomSelectExpression();
-            } else {
-                effectiveColumn = effectiveRelation.formatAsSQL();
-            }
-        }
-
-        final String formattedFieldName = formatColumnNameToAvoidAnyPotentionalDuplication(
-                effectiveRelation.dataSource(),
-                effectiveRelation.field()
-            );
-
-        if (!formatForSelect) {
-            return formattedFieldName;
-        }
-
-
-        /*
-         * It is required to introduce a column alias, to avoid column name duplication
-         */
-        return "%s AS %s"
-                .formatted(
-                    effectiveColumn,
-                    formattedFieldName
-                );
-    }
-
-    protected String formatFieldNameForSqlOrderClause(DSField dsf) {
-        return formatFieldNameFor(false, dsf);
-    }
-
-    protected String formatFieldNameForSqlSelectClause(DSField dsf) {
-        return formatFieldNameFor(true, dsf);
-    }
-
     protected DSResponse handleFetch(DSRequest request) throws Exception {
-        final SQLExecutionContext sqlExecutionContext = new SQLExecutionContext();
-
-        final int pageSize = request.getEndRow() == -1  ? -1 : request.getEndRow() - request.getStartRow();
-
         final OperationBinding operationBinding = getEffectiveOperationBinding(DSRequest.OperationType.FETCH);
-
-        // -- LIMIT
-        final String paginationClause =  pageSize <= 0 ? "" : String.format("LIMIT %d OFFSET %d",
-                request.getEndRow(),  request.getStartRow());
-
-        // -- SELECT
-
-        // -- filter requested columns if any provided, or stick with all
-        if (request.getOutputs() == null || request.getOutputs().isBlank()) {
-            sqlExecutionContext.getRequestedFields().addAll(getDataSource().getFields());
-        } else {
-            for ( String s: request.getOutputs().split(",")) {
-                final String fn = s.trim();
-                if (!fn.isBlank()) {
-                    final DSField dsf = getField(fn);
-                    if (dsf == null) {
-                        throw new RuntimeException("%s: nothing known about requested field '%s', data source: %s."
-                                .formatted(getClass().getSimpleName(), fn, getDataSource().getId()));
-                    }
-
-                    sqlExecutionContext.getRequestedFields().add(dsf);
-                }
-            }
-        }
-
-        if (request.getAdditionalOutputs() != null
-                && !request.getAdditionalOutputs().isBlank()) {
-            final Map<DSField, List<ForeignRelation>> additionalOutputs = Stream.of(request.getAdditionalOutputs().split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty() && !s.isBlank())
-                    .map( descr -> {
-                        final String[] parsed = descr.split("!");
-
-                        if (parsed.length != 2) {
-                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', valid format is 'localFieldName!relatedDataSourceID.relatedDataSourceFieldName'."
-                                    .formatted(
-                                            dataSource().getId(),
-                                            descr
-                                    )
-                            );
-                        }
-
-                        final String sourceFieldName = parsed[0].trim();
-
-                        final DSField sourceField = JDBCHandler.this.getField(sourceFieldName);
-                        if (sourceField == null) {
-                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', nothing known about field '%s'."
-                                    .formatted(
-                                            dataSource().getId(),
-                                            descr,
-                                            sourceFieldName
-                                    )
-                            );
-                        }
-
-                        final ForeignKeyRelation fkRelation;
-
-                        try {
-                            fkRelation = describeForeignKey(sourceField);
-                        } catch (Throwable t) {
-                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
-                                    .formatted(
-                                            dataSource().getId(),
-                                            descr
-                                    ),
-                                    t
-                            );
-                        }
-
-                        final ForeignRelation fRelation;
-
-                        try {
-                            fRelation = describeForeignRelation(parsed[1].trim());
-                        } catch (Throwable t) {
-                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
-                                    .formatted(
-                                            dataSource().getId(),
-                                            descr
-                                    ),
-                                    t
-                            );
-                        }
-
-                        if (!fkRelation.foreign().dataSourceId().equals(fRelation.dataSourceId())) {
-                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
-                                    .formatted(
-                                            dataSource().getId(),
-                                            descr
-                                    )
-                            );
-                        }
-
-                        return new AbstractMap.SimpleImmutableEntry<>(sourceField, fRelation);
-                    })
-                    .collect(
-                            Collectors.groupingBy(
-                                    AbstractMap.SimpleImmutableEntry::getKey,
-                                    Collectors.mapping(
-                                            AbstractMap.SimpleImmutableEntry::getValue,
-                                            Collectors.toList()
-                                    )
-                            )
-                    );
-
-            sqlExecutionContext.getAdditionalOutputs().putAll(additionalOutputs);
-        }
-
-        final String selectClause = sqlExecutionContext.getRequestedFields()
-            .stream()
-                .map(this::formatFieldNameForSqlSelectClause)
-                .collect(Collectors.joining(",\n  "));
-
-
-        // -- FROM
-        final String fromClause = getDataSource().getTableName();
-
-        // -- JOIN ON
-        final String joinClause = getFields()
-            .stream()
-            .filter( dsf -> dsf.isIncludeField()
-                    /*
-                    * Entities will be fetched separately via sub-entity fetch request,
-                    * therefore exclude this field from the sql join.
-                    */
-                    && !DSField.FieldType.ENTITY.equals(dsf.getType()))
-            .map( dsf -> {
-
-                final ImportFromRelation relation = describeImportFrom(dsf);
-
-                return " JOIN %s ON %s.%s = %s.%s"
-                        .formatted(
-                                relation.foreignDataSource().getTableName(),
-                                this.getDataSource().getTableName(), relation.sourceField().getDbName(),
-                                relation.foreignDataSource().getTableName(), relation.foreignKey().getDbName()
-                        );
-            })
-            .collect(Collectors.joining(" \n "));
-
-
-        // -- WHERE
-        sqlExecutionContext.getFilterData().addAll(generateFilterData(request.getTextMatchStyle(), request.getData()));
+        final SQLFetchContext<JDBCHandler> sqlFetchContext = new SQLFetchContext<>(this, request, operationBinding);
 
         final List<Object[]> data;
-        if (pageSize > 0) {
-            data = new ArrayList<>(pageSize);
+        if (sqlFetchContext.getPageSize() > 0) {
+            data = new ArrayList<>(sqlFetchContext.getPageSize());
         } else {
             data = new LinkedList<>();
         }
@@ -273,95 +41,20 @@ public class JDBCHandler extends AbstractDSHandler {
         final int[] totalRows = new int[] {-1};
 
         policy.withConnectionDo(this.getDataSource().getDbName(), conn-> {
-
-            // -- fetch data
-            final String orderClause = request.getSortBy() == null ? "" :  " ORDER BY \n" +
-                    request.getSortBy().stream()
-                            .map(s -> {
-                                String order = "";
-                                switch (s.charAt(0)) {
-                                    case '-':
-                                        order = " DESC";
-                                    case '+':
-                                        s = s.substring(1);
-                                    default:
-                                        final DSField dsf = getField(s);
-                                        if (dsf == null) {
-                                            throw new RuntimeException("Data source '%s': nothing known about field '%s' listed in order by clause."
-                                                    .formatted(getDataSource().getId(), s));
-                                        }
-
-                                        return "%s.%s%s"
-                                                .formatted(
-                                                        "opaque",
-                                                        formatFieldNameForSqlOrderClause(dsf),
-                                                        order
-                                                );
-                                }
-                            })
-                            .collect(Collectors.joining(", "));
-
-            final String whereClause = sqlExecutionContext.getFilterData().isEmpty() ?  "" : sqlExecutionContext.getFilterData().stream()
-                .map(fd -> fd.sql("opaque"))
-                .collect(Collectors.joining("\n\t\t AND "));
-
-            // -- generate query
-            final String genericQuery;
-            {
-                final Map<String, Object> templateContext = SQLTemplateEngine.createContext(request, selectClause, fromClause, joinClause, whereClause, "");
-                sqlExecutionContext.setTemplateContext(templateContext);
-
-                templateContext.put("effectiveSelectClause", selectClause);
-
-                final String effectiveFROM = operationBinding == null
-                        || operationBinding.getTableClause() == null
-                        || operationBinding.getTableClause().isBlank()
-                        ? fromClause : operationBinding.getTableClause();
-                templateContext.put("effectiveTableClause", effectiveFROM);
-
-                final String effectiveWhere = operationBinding == null
-                        || operationBinding.getWhereClause() == null
-                        || operationBinding.getWhereClause().isBlank()
-                        ? whereClause : operationBinding.getWhereClause();
-                templateContext.put("effectiveWhereClause", effectiveWhere);
-
-
-                final String effectiveJoin = operationBinding == null
-                        || operationBinding.getAnsiJoinClause() == null
-                        || operationBinding.getAnsiJoinClause().isBlank()
-                        ? joinClause : operationBinding.getAnsiJoinClause();
-                templateContext.put("effectiveAnsiJoinClause", effectiveJoin);
-
-                genericQuery = SQLTemplateEngine.processSQL(templateContext,
-                        """
-                        (
-                            SELECT ${effectiveSelectClause}
-                                FROM ${effectiveTableClause}
-                            <#if effectiveAnsiJoinClause?has_content>
-                                ${effectiveAnsiJoinClause}
-                            </#if>
-                        ) opaque                                                                                                              
-                        <#if effectiveWhereClause?has_content>
-                            WHERE ${effectiveWhereClause}
-                        </#if>                                                                                                              
-                        """
-                );
-            }
-
             // -- calculate total
             /*
              * Opaque query is required for a proper filtering by calculated fields
              */
             @SuppressWarnings("SqlNoDataSourceInspection")
             final String countQuery = "SELECT count(*) FROM %s"
-                    .formatted( genericQuery);
+                    .formatted( sqlFetchContext.getGenericQuery());
 
             if (logger.isTraceEnabled()) {
                 logger.trace("DataSource %s fetch count(*) query:\n%s\n\nparams:\n%s"
                         .formatted(
                                 getDataSource().getId(),
                                 countQuery,
-                                sqlExecutionContext.getFilterData().stream()
+                                sqlFetchContext.getFilterData().stream()
                                         .flatMap(fd -> StreamSupport.stream(fd.values().spliterator(), false))
                                         .map("%s"::formatted)
                                         .collect(Collectors.joining(", "))
@@ -369,12 +62,12 @@ public class JDBCHandler extends AbstractDSHandler {
                 );
             }
 
-            sqlExecutionContext.setEffectiveSQL(countQuery);
+            sqlFetchContext.setEffectiveSQL(countQuery);
 
             try (PreparedStatement st = conn.prepareStatement(countQuery, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
                 int idx =0;
 
-                for (IFilterData fd: sqlExecutionContext.getFilterData()) {
+                for (IFilterData fd: sqlFetchContext.getFilterData()) {
                     idx = fd.setStatementParameters(idx, st);
                 }
 
@@ -383,7 +76,7 @@ public class JDBCHandler extends AbstractDSHandler {
                     totalRows[0] = rs.getInt(1);
                 }
             } catch (Throwable t) {
-                throw new ContextualRuntimeException("SQL count query execution failed.", t, sqlExecutionContext);
+                throw new ContextualRuntimeException("SQL count query execution failed.", t, sqlFetchContext);
             }
 
             // -- fetch data
@@ -395,15 +88,15 @@ public class JDBCHandler extends AbstractDSHandler {
                  SELECT * FROM %s
                     %s
                     %s
-            """.formatted(genericQuery, orderClause, paginationClause);
+            """.formatted(sqlFetchContext.getGenericQuery(), sqlFetchContext.getOrderClause(), sqlFetchContext.getPaginationClause());
 
             if (logger.isTraceEnabled()) {
                 logger.trace("DataSource %s fetch query:\n%s\n\nparams:\n%s"
                     .formatted(
                         getDataSource().getId(),
                         opaqueFetchQuery,
-                        sqlExecutionContext.getFilterData().stream()
-                                .flatMap(fd -> sqlExecutionContext.getFilterData().stream())
+                        sqlFetchContext.getFilterData().stream()
+                                .flatMap(fd -> sqlFetchContext.getFilterData().stream())
                                 .flatMap(fd -> StreamSupport.stream(fd.values().spliterator(), false))
                                 .map("%s"::formatted)
                                 .collect(Collectors.joining(", "))
@@ -411,21 +104,19 @@ public class JDBCHandler extends AbstractDSHandler {
                 );
             }
 
-            sqlExecutionContext.setEffectiveSQL(opaqueFetchQuery);
+            sqlFetchContext.setEffectiveSQL(opaqueFetchQuery);
 
             try(PreparedStatement st = conn.prepareStatement(opaqueFetchQuery, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)){
-                st.setFetchSize(pageSize);
-                st.setMaxRows(pageSize);
+                st.setFetchSize(sqlFetchContext.getPageSize());
+                st.setMaxRows(sqlFetchContext.getPageSize());
                 st.setFetchDirection(ResultSet.FETCH_FORWARD);
 
                 int idx =0;
-                for (IFilterData fd: sqlExecutionContext.getFilterData()) {
+                for (IFilterData fd: sqlFetchContext.getFilterData()) {
                     idx = fd.setStatementParameters(idx, st);
                 }
 
-                final Map<String, Object> pkValues = sqlExecutionContext.getPkValues();
-                pkValues.clear();
-
+                final Map<String, Object> rowPkValues =  new HashMap<>();
                 try (ResultSet rs = st.executeQuery() ) {
                     while (rs.next())  {
 
@@ -434,7 +125,7 @@ public class JDBCHandler extends AbstractDSHandler {
                         int i =0;
 
                         // ORIGINAL FIELD ORDER MUST BE PRESERVED
-                        for (DSField dsf: sqlExecutionContext.getRequestedFields()) {
+                        for (DSField dsf: sqlFetchContext.getRequestedFields()) {
                             Object v = rs.getObject(i + 1);
                             if (rs.wasNull()) {
                                 v = null;
@@ -442,19 +133,18 @@ public class JDBCHandler extends AbstractDSHandler {
                             r[i++] = v;
 
                             if (dsf.isPrimaryKey()) {
-                                pkValues.put(dsf.getName(), v);
+                                rowPkValues.put(dsf.getName(), v);
                             }
                         }
 
-                        for(int j=0; j<sqlExecutionContext.getRequestedFields().size(); ++j) {
-                            final DSField dsf = sqlExecutionContext.getRequestedFields().get(j);
-
-                            r[j] = postProcessFieldValue(sqlExecutionContext, dsf, r[j]);
+                        for(int j = 0; j< sqlFetchContext.getRequestedFields().size(); ++j) {
+                            final DSField dsf = sqlFetchContext.getRequestedFields().get(j);
+                            r[j] = postProcessFieldValue(sqlFetchContext, rowPkValues, dsf, r[j]);
                         }
 
-                        pkValues.clear();
+                        rowPkValues.clear();
 
-                        final Object[] postProcessed = postProcessRow(sqlExecutionContext, r);
+                        final Object[] postProcessed = postProcessRow(sqlFetchContext, r);
 
                         assert postProcessed.length == r.length;
                         data.add(postProcessed);
@@ -464,21 +154,21 @@ public class JDBCHandler extends AbstractDSHandler {
                     if (t instanceof ContextualRuntimeException) {
                         throw t;
                     }
-                    throw new ContextualRuntimeException("SQL fetch query execution failed.", t, sqlExecutionContext);
+                    throw new ContextualRuntimeException("SQL fetch query execution failed.", t, sqlFetchContext);
                 }
             }
         });
 
         return DSResponse.success(request.getStartRow(), request.getStartRow() + data.size(), totalRows[0],
-                sqlExecutionContext.getRequestedFields(),
+                sqlFetchContext.getRequestedFields(),
                 data);
     }
 
-    protected Object[] postProcessRow(SQLExecutionContext ctxt, Object[] row) {
+    protected Object[] postProcessRow(SQLFetchContext<JDBCHandler> ctx, Object[] row) {
         return row;
     }
 
-    protected Object postProcessFieldValue(SQLExecutionContext ctxt, DSField dsf, Object value) {
+    protected Object postProcessFieldValue(SQLFetchContext<JDBCHandler> ctx, Map<String, Object> rowPkValues, DSField dsf, Object value) {
 
         if (!isSubEntityFetchRequired(dsf)) {
             return value;
@@ -491,7 +181,7 @@ public class JDBCHandler extends AbstractDSHandler {
         logger.trace("Processing multi-value and/or Entity relations for data source '%s', requested fields '%s'..."
                 .formatted(
                         getDataSource().getId(),
-                        ctxt.getRequestedFields()
+                        ctx.getRequestedFields()
                 )
         );
 
@@ -508,20 +198,20 @@ public class JDBCHandler extends AbstractDSHandler {
             foreignKeyRelation = describeForeignKey(dsf);
         }
 
-        final List<ForeignRelation> ffs = ctxt.getAdditionalOutputs().get(dsf);
+        final List<ForeignRelation> ffs = ctx.getAdditionalOutputs().get(dsf);
         final String entityOutputs = ffs == null ? null : ffs.stream()
                 .map(ForeignRelation::fieldName)
                 .collect(Collectors.joining(", "));
 
         final DSResponse response;
         try {
-            response = fetchForeignEntity(foreignKeyRelation, entityOutputs, ctxt.getPkValues());
+            response = fetchForeignEntity(foreignKeyRelation, entityOutputs, rowPkValues);
             assert response != null;
         } catch ( Throwable t) {
             throw new RuntimeException("Subsequent entity fetch failed: %s, filters: %s"
                     .formatted(
                             foreignKeyRelation,
-                            ctxt.getPkValues().entrySet().stream()
+                            rowPkValues.entrySet().stream()
                                     .map( e -> "'%s': %s"
                                             .formatted(
                                                     e.getKey(),
@@ -539,7 +229,7 @@ public class JDBCHandler extends AbstractDSHandler {
                     .formatted(
                             response.getData().getGeneralFailureMessage(),
                             foreignKeyRelation,
-                            ctxt.getPkValues().entrySet().stream()
+                            rowPkValues.entrySet().stream()
                                     .map( e -> "'%s': %s"
                                             .formatted(
                                                     e.getKey(),
@@ -662,6 +352,14 @@ public class JDBCHandler extends AbstractDSHandler {
         }
     }
 
+    protected static String formatColumnNameToAvoidAnyPotentialDuplication(DataSource ds, DSField field) {
+        return "%s_%s"
+                .formatted(
+                        field.getDbName(),
+                        ds.getTableName()
+                );
+    }
+
     protected interface IFilterData {
         String sql();
         String sql(String aliasOrTable);
@@ -711,7 +409,7 @@ public class JDBCHandler extends AbstractDSHandler {
             return sqlTemplate.formatted(
                     "%s.%s".formatted(
                             aliasOrTable,
-                            formatColumnNameToAvoidAnyPotentionalDuplication(
+                            formatColumnNameToAvoidAnyPotentialDuplication(
                                     getDsFieldPair().dataSource(),
                                     getDsFieldPair().field()
                             )
@@ -741,52 +439,52 @@ public class JDBCHandler extends AbstractDSHandler {
         }
     }
 
-    public static class FetchContext {
-        private List<DSField> requestedFields = new LinkedList<>();
-        private Map<DSField, List<ForeignRelation>> additionalOutputs = new HashMap<>();
-        private List<IFilterData> filterData = new LinkedList<>();
+    public static abstract class AbstractSQLContext<H extends JDBCHandler> {
+        private final H dsHandler;
+        private final DSRequest request;
+        private final OperationBinding operationBinding;
 
-        private Map<String, Object> pkValues = new HashMap<>();
+//        private Map<String, Object> pkValues = new HashMap<>();
 
-        public List<DSField> getRequestedFields() {
-            return requestedFields;
+
+        public AbstractSQLContext(H dsHandler, DSRequest request, OperationBinding operationBinding) throws Exception {
+            this.request = request;
+            this.operationBinding = operationBinding;
+            this.dsHandler = dsHandler;
         }
 
-        public Map<DSField, List<ForeignRelation>> getAdditionalOutputs() {
-            return additionalOutputs;
+        protected DataSource dataSource() {
+            assert dsHandler != null;
+            return dsHandler.dataSource();
         }
 
-        public Map<String, Object> getPkValues() {
-            return pkValues;
+        protected H dsHandler() {
+            assert dsHandler != null;
+            return dsHandler;
         }
 
-        public void setPkValue(Map<String, Object> pkValues) {
-            this.pkValues = pkValues;
+        public OperationBinding operationBinding() {
+            return operationBinding;
         }
 
-        public List<IFilterData> getFilterData() {
-            return filterData;
-        }
-    }
-
-    public static class SQLExecutionContext extends FetchContext {
-        private Map<String, Object> templateContext;
-        private String effectiveSQL;
-
-        public String getEffectiveSQL() {
-            return effectiveSQL;
+        protected DSRequest request() {
+            assert request != null;
+            return request;
         }
 
-        public void setEffectiveSQL(String effectiveSQL) {
-            this.effectiveSQL = effectiveSQL;
-        }
+        public static Map<String, Object> convertFilterDataToMap(Collection<IFilterData> ifds) {
+            final Map<String, Object> m = new HashMap<>();
 
-        public Map<String, Object> getTemplateContext() {
-            return templateContext;
-        }
+            ifds.forEach(
+                    ifd -> {
+                        assert ifd instanceof FilterData;
+                        final FilterData fd = (FilterData) ifd;
 
-        public void setTemplateContext(Map<String, Object> templateContext) {
-            this.templateContext = templateContext;
+                        m.put(fd.field().getName(), fd.value);
+                    }
+            );
+
+            return m;
         }
     }
 }

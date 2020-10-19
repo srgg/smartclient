@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-public class JDBCHandlerTest extends AbstractJDBCHandlerTest<JDBCHandler> {
+public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
 
     @Override
     protected Class<JDBCHandler> getHandlerClass() {

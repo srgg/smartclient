@@ -19,6 +19,11 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
         this.datasource = datasource;
     }
 
+    protected static boolean isSubEntityFetchRequired(DSField dsf){
+        return dsf.isMultiple()
+                || DSField.FieldType.ENTITY.equals(dsf.getType());
+    }
+
     protected Map<String, DSField> getFieldMap() {
         if (fieldMap == null) {
             final Map<String, DSField> m = new LinkedHashMap<>();
@@ -84,6 +89,10 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
         return failureDueToUnsupportedOperation(request);
     }
 
+    protected DSResponse handleUpdate(DSRequest request) throws Exception {
+        return failureDueToUnsupportedOperation(request);
+    }
+
     @Override
     final public DSResponse handle(DSRequest request) throws Exception {
         if (!getDataSource().getId().equalsIgnoreCase(request.getDataSource())) {
@@ -100,6 +109,8 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
             case FETCH:
                 return handleFetch(request);
 
+            case UPDATE:
+                return handleUpdate(request);
             default:
                 return failureDueToUnsupportedOperation(request);
         }
