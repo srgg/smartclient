@@ -71,7 +71,8 @@ public class JDBCHandlerUpdateTest extends AbstractJDBCHandlerTest<JDBCHandler> 
                      data:[
                          {
                              id:2,
-                             email:'updated-developer@acme.org'
+                             email:'updated-developer@acme.org',
+                             name:'developer'
                          }
                      ]
                 }""", response);

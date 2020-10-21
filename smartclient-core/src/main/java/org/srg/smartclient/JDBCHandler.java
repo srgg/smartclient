@@ -92,8 +92,8 @@ public class JDBCHandler extends AbstractDSHandler {
         fr.setComponentId(request.getComponentId());
         fr.wrapAndSetData(sqlUpdateContext.getPkValues());
 
-        // return the only fields that was provided within request
-        fr.setOutputs( String.join(", ", ((Map)request.getData()).keySet()));
+        // return the only fields that was provided within the request
+        fr.setOutputs( String.join(", ", ((Map)request.getOldValues()).keySet()));
 
         return handleFetch(fr);
     }
