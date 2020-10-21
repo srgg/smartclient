@@ -174,6 +174,8 @@ public class DSDispatcher implements IDSDispatcher {
                     """);
 
                 crte.dumpContext_ifAny(contextWriter, "    ", objectWriter);
+
+                contextWriter.append("\n\n  -------");
             }
 
             String strRequest;
@@ -195,13 +197,12 @@ public class DSDispatcher implements IDSDispatcher {
                   Request:
                     %s
                 
-                  -------%s                                 
-                  Stack Trace:                         
+                  -------%s  Stack Trace:                         
                     %s
                 -------------------------------------------------
                 """.formatted(
                         strRequest,
-                        contextWriter == null ? "" : "%s\n".formatted(contextWriter),
+                        contextWriter == null ? "" : "%s".formatted(contextWriter),
                         sw
                     )
             );

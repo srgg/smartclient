@@ -1,9 +1,14 @@
 package org.srg.smartclient;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
+import org.srg.smartclient.utils.ContextualRuntimeException;
+import org.srg.smartclient.utils.JsonSerde;
+
+import java.io.StringWriter;
 
 
 public class JDBCHandlerUpdateTest extends AbstractJDBCHandlerTest<JDBCHandler> {
@@ -38,7 +43,23 @@ public class JDBCHandlerUpdateTest extends AbstractJDBCHandlerTest<JDBCHandler> 
                }                
             """);
 
-        final DSResponse response = handler.handleUpdate(request);
+        final DSResponse response;
+        try {
+            response = handler.handleUpdate(request);
+        } catch (ContextualRuntimeException e) {
+            /*
+             * This exception handler can be used  to check and adjust
+             * ContextualRuntimeException.dumpContext_ifAny().
+             *
+             * Other than that it does not have any sense
+             */
+            final StringWriter sw = new StringWriter();
+            final ObjectMapper mapper = JsonSerde.createMapper();
+
+            e.dumpContext_ifAny(sw, "  ", mapper.writerWithDefaultPrettyPrinter());
+            System.out.println( sw.toString());
+            throw new RuntimeException(e);
+        }
 
         JsonTestSupport.assertJsonEquals("""
                  {
