@@ -6,7 +6,7 @@ import java.util.List;
 // http://gitlab.cserver.com.cn/cserverSoftware/smartclient/blob/abc2d32263e41c2429a7e4d31521524181836f95/WebContent/isomorphic/system/schema/SmartClientOperations.wsdl
 public class DSResponse {
     // https://www.smartclient.com/smartgwt-3.0/javadoc/constant-values.html#com.smartgwt.client.rpc.RPCResponse.STATUS_SERVER_TIMEOUT
-    private static final int STATUS_SUCCESS = 0;
+    public static final int STATUS_SUCCESS = 0;
     private static final int STATUS_FAILURE = -1;
     private static final int STATUS_VALIDATION_ERROR = -4;
     private static final int STATUS_LOGIN_INCORRECT = -5;

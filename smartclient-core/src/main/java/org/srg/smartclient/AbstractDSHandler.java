@@ -7,6 +7,7 @@ import org.srg.smartclient.isomorphic.*;
 import java.util.*;
 
 public abstract class AbstractDSHandler extends RelationSupport implements DSHandler {
+    private static final String META_DATA_PREFIX = "_";
     private static Logger logger = LoggerFactory.getLogger(AbstractDSHandler.class);
 
     private final IDSRegistry dsRegistry;
@@ -17,6 +18,14 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
     public AbstractDSHandler(IDSRegistry dsRegistry, DataSource datasource) {
         this.dsRegistry = dsRegistry;
         this.datasource = datasource;
+    }
+
+    /**
+     *
+     * https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/data/RestDataSource.html#getMetaDataPrefix--
+     */
+    protected String getMetaDataPrefix() {
+        return META_DATA_PREFIX;
     }
 
     protected static boolean isSubEntityFetchRequired(DSField dsf){

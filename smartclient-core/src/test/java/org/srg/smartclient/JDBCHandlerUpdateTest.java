@@ -2,6 +2,7 @@ package org.srg.smartclient;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
@@ -19,7 +20,7 @@ public class JDBCHandlerUpdateTest extends AbstractJDBCHandlerTest<JDBCHandler> 
 
 
     @Test
-    public void update() throws Exception {
+    public void simpleUpdate() throws Exception {
         withExtraFields(ExtraField.Email);
 
         final DSRequest request = JsonTestSupport.fromJSON(new TypeReference<>(){}, """
@@ -78,4 +79,75 @@ public class JDBCHandlerUpdateTest extends AbstractJDBCHandlerTest<JDBCHandler> 
                 }""", response);
     }
 
+    @Test
+    public void updateMustIgnoreMetaDataInOldValues() throws Exception {
+        withExtraFields(ExtraField.Email);
+
+        final DSRequest request = JsonTestSupport.fromJSON(new TypeReference<>(){}, """
+               {
+                 useStrictJSON : true,
+                 dataSource : "EmployeeDS",
+                 operationType : "UPDATE",
+                 data : {                   
+                   id : 2,
+                   email: 'updated-developer@acme.org'
+                 },
+                 oldValues : {
+                   id : 2,
+                   name : 'developer',
+                   email: 'developer@acme.org',
+                   _theMetadata: 'yes-it-is-a-meta-data'
+                 }
+               }                
+            """);
+
+        final DSResponse response = handler.handleUpdate(request);
+
+        JsonTestSupport.assertJsonEquals("""
+                 {
+                     status: 0,
+                     queueStatus:0,
+                     startRow: 0,
+                     endRow: 1,
+                     totalRows: 1,
+                     data:[
+                         {
+                             id:2,
+                             email:'updated-developer@acme.org',
+                             name:'developer'
+                         }
+                     ]
+                }""", response);
+    }
+
+    @Test
+    public void updateMustFails_if_subsequentFetchFails() throws Exception {
+        withExtraFields(ExtraField.Email);
+
+        final DSRequest request = JsonTestSupport.fromJSON(new TypeReference<>(){}, """
+               {
+                 useStrictJSON : true,
+                 dataSource : "EmployeeDS",
+                 operationType : "UPDATE",
+                 textMatchStyle : "EXACT",
+                 data : {                   
+                   id : 2,
+                   email: 'updated-developer@acme.org'
+                 },
+                 oldValues : {
+                   id : 2,
+                   unexisted_field : 'developer',
+                   email: 'developer@acme.org'
+                 }
+               }                
+            """);
+
+
+        final Exception ex = Assertions.assertThrows(Exception.class, () -> {
+            handler.handleUpdate(request);
+        });
+
+
+        Assertions.assertTrue( ex.getMessage().contains("unexisted_field"));
+    }
 }

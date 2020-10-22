@@ -127,6 +127,10 @@ public class RelationSupport {
         }
 
         public String formatAsSQL(String aliasOrTable) {
+            if (aliasOrTable == null || aliasOrTable.isBlank()) {
+                return field().getDbName();
+            }
+
             return "%s.%s".formatted(
                     aliasOrTable,
                     getSqlFieldAlias() != null ? getSqlFieldAlias() : field().getDbName()

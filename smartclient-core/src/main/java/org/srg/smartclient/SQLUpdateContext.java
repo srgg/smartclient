@@ -31,8 +31,12 @@ public class SQLUpdateContext<H extends JDBCHandler> extends JDBCHandler.Abstrac
                 .map(fd -> fd.sql())
                 .collect(Collectors.joining("\n\t\t AND "));
 
+        /*
+         * Column names within the SET clause must not be prefixed with either table alias nor table name.
+         * Otherwise it will cause an error.
+         */
         final String setSQL = modifiedData.stream()
-                .map(fd -> fd.sql())
+                .map(fd -> fd.sql(null))
                 .collect(Collectors.joining("\n\t\t AND "));
 
         this.updateSQL = """

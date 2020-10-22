@@ -41,6 +41,8 @@ public class JDBCHandler extends AbstractDSHandler {
 
 
         // --
+        final DSResponse response[] = {null};
+
         policy.withConnectionDo(this.getDataSource().getDbName(), conn-> {
 
             try (PreparedStatement st = conn.prepareStatement(sqlUpdateContext.getUpdateSQL(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
@@ -63,43 +65,58 @@ public class JDBCHandler extends AbstractDSHandler {
                     // There is no updated/affected records
                     throw new RuntimeException("Zero rows were updated.");
                 }
-
-                conn.commit();
             } catch (Throwable t) {
                 conn.rollback();
                 throw new ContextualRuntimeException("SQL update query execution failed.", t, sqlUpdateContext);
             }
 
+            /*
+             * It is required to return modified row back to the client.
+             *
+             * This can be done either by:
+             *  1) comprehensive fetch from DB
+             *  2) by modifying "old values" sent from client w/o real  retch.
+             *
+             * The first option is more durable, since it will handle all side effects like calculated fields? operation bindings
+             * with respect of security rules tat can be affected by side effects.
+             */
+
+
+            final DSRequest fr = new DSRequest();
+            fr.setDataSource(request.getDataSource());
+            fr.setOperationType(DSRequest.OperationType.FETCH);
+            fr.setOperationId(request.getOperationId());
+            fr.setComponentId(request.getComponentId());
+            fr.wrapAndSetData(sqlUpdateContext.getPkValues());
+
+            // return the only fields that were provided within the request, except metadata
+            fr.setOutputs(
+                request.getOldValues().keySet().stream()
+                    .filter( s -> !s.startsWith(getMetaDataPrefix()))
+                    .collect(Collectors.joining(", "))
+            );
+
+            final DSResponse r =  handleFetch(fr);
+
+            if (r.getStatus() == DSResponse.STATUS_SUCCESS ) {
+                conn.commit();
+            } else {
+                conn.rollback();
+            }
+
+            response[0] = r;
             return null;
         });
 
-        /*
-         * It is required to return modified row back to the client.
-         *
-         * This can be done either by:
-         *  1) comprehensive fetch from DB
-         *  2) by modifying "old values" sent from client w/o real  retch.
-         *
-         * The first option is more durable, since it will handle all side effects like calculated fields? operation bindings
-         * with respect of security rules tat can be affected by side effects.
-         */
-
-
-        final DSRequest fr = new DSRequest();
-        fr.setDataSource(request.getDataSource());
-        fr.setOperationType(DSRequest.OperationType.FETCH);
-        fr.setOperationId(request.getOperationId());
-        fr.setComponentId(request.getComponentId());
-        fr.wrapAndSetData(sqlUpdateContext.getPkValues());
-
-        // return the only fields that was provided within the request
-        fr.setOutputs( String.join(", ", ((Map)request.getOldValues()).keySet()));
-
-        return handleFetch(fr);
+        return response[0];
     }
 
     @Override
     protected DSResponse handleFetch(DSRequest request) throws Exception {
+        return doHandleFetch(request, null, true);
+    }
+
+    protected DSResponse doHandleFetch(DSRequest request, Connection connection, boolean calculateTotal) throws Exception {
         final OperationBinding operationBinding = getEffectiveOperationBinding(DSRequest.OperationType.FETCH);
         final SQLFetchContext<JDBCHandler> sqlFetchContext = new SQLFetchContext<>(this, request, operationBinding);
 
