@@ -27,7 +27,7 @@ public class DSResponseSerializationTest {
 
     @Test
     public void deserializeSuccessfulEmptyResponse() throws IOException {
-        final DSResponse response = DSResponse.success(0, 0, 0,
+        final DSResponse response = DSResponse.successFetch(0, 0, 0,
                 Arrays.asList(
                         new DSField()
                                 .setName("name")
@@ -50,23 +50,20 @@ public class DSResponseSerializationTest {
         );
 
         JsonAssert.assertJsonEquals("""
-            [
-                {                
-                    response:{
-                        status:0,
-                        queueStatus:0,
-                        startRow:0,
-                        endRow:0,
-                        totalRows:0,
-                        data:[]
-                    }
+            {                
+                response:{
+                    status:0,
+                    startRow:0,
+                    endRow:0,
+                    totalRows:0,
+                    data:[]
                 }
-            ]""", serializeResponse(response));
+            }""", serializeResponse(response));
     }
 
     @Test
     public void deserializeSuccessfulResponse() throws IOException {
-        final DSResponse response = DSResponse.success(0,1,
+        final DSResponse response = DSResponse.successFetch(0,1,
                 Arrays.asList(
                         new DSField()
                             .setName("field1")
@@ -85,27 +82,24 @@ public class DSResponseSerializationTest {
 
 
         JsonAssert.assertJsonEquals("""
-            [
-                {
-                    "response":{
-                       "status":0,
-                       "queueStatus":0,
-                       "startRow":0,
-                       "endRow":1,
-                       "totalRows":-1,
-                       "data":[
-                          {
-                             "field1":24,
-                             "field2":"24"
-                          },
-                          {
-                             "field1":42,
-                             "field2":"42"
-                          }
-                       ]
-                    }
+            {
+                "response":{
+                   "status":0,
+                   "startRow":0,
+                   "endRow":1,
+                   "totalRows":-1,
+                   "data":[
+                      {
+                         "field1":24,
+                         "field2":"24"
+                      },
+                      {
+                         "field1":42,
+                         "field2":"42"
+                      }
+                   ]
                 }
-            ]""", serializeResponse(response));
+            }""", serializeResponse(response));
     }
 
     @Test
@@ -122,7 +116,7 @@ public class DSResponseSerializationTest {
                                 .setType(DSField.FieldType.TEXT)
                 );
 
-        final DSResponse response = DSResponse.success(0,2,
+        final DSResponse response = DSResponse.successFetch(0,2,
                 Arrays.asList(
                         new DSField()
                                 .setName("countryId")
@@ -157,43 +151,40 @@ public class DSResponseSerializationTest {
         );
 
         JsonAssert.assertJsonEquals("""
-            [
-                {
-                    response:{
-                        status:0,
-                        queueStatus:0,
-                        startRow:0,
-                        endRow:2,
-                        totalRows:-1,
-                        data:[
-                            {
-                                countryName:'Lithuania',
-                                countryId:1,
-                                cities:[
-                                    {
-                                        cityId:1,
-                                        cityName:'Vilnius'
-                                    },
-                                    {
-                                        cityId:4,
-                                        cityName:'Kaunas'
-                                    }
-                                ]
-                            },
-                            {
-                                countryName:'Latvia',
-                                countryId:2,
-                                cities:[
-                                    {
-                                        cityId:2,
-                                        cityName:'Riga'
-                                    }
-                                ]
-                            }
-                        ]
-                    }
+            {
+                response:{
+                    status:0,
+                    startRow:0,
+                    endRow:2,
+                    totalRows:-1,
+                    data:[
+                        {
+                            countryName:'Lithuania',
+                            countryId:1,
+                            cities:[
+                                {
+                                    cityId:1,
+                                    cityName:'Vilnius'
+                                },
+                                {
+                                    cityId:4,
+                                    cityName:'Kaunas'
+                                }
+                            ]
+                        },
+                        {
+                            countryName:'Latvia',
+                            countryId:2,
+                            cities:[
+                                {
+                                    cityId:2,
+                                    cityName:'Riga'
+                                }
+                            ]
+                        }
+                    ]
                 }
-            ]""", serializeResponse(response));
+            }""", serializeResponse(response));
 
     }
 }

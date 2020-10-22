@@ -17,13 +17,13 @@ public class DSResponse {
     private static final int STATUS_SERVER_TIMEOUT = -100;
 
     private int status;
-    private int startRow;
-    private int endRow;
-    private int totalRows;
+    private Integer startRow;
+    private Integer endRow;
+    private Integer totalRows;
 
     private String operationId;
     private DSRequest.OperationType operationType;
-    private int queueStatus = 0;
+    private Integer queueStatus;
     private Integer transactionNum;
 
     private DSResponseDataContainer data;
@@ -37,7 +37,7 @@ public class DSResponse {
         this.status = status;
     }
 
-    public int getStartRow() {
+    public Integer getStartRow() {
         return startRow;
     }
 
@@ -45,7 +45,7 @@ public class DSResponse {
         this.startRow = startRow;
     }
 
-    public int getEndRow() {
+    public Integer getEndRow() {
         return endRow;
     }
 
@@ -53,7 +53,7 @@ public class DSResponse {
         this.endRow = endRow;
     }
 
-    public int getTotalRows() {
+    public Integer getTotalRows() {
         return totalRows;
     }
 
@@ -88,17 +88,25 @@ public class DSResponse {
         return retVal;
     }
 
-    public static DSResponse success(int startRow, int endRow,  Iterable<DSField> fields, Iterable<Object[]> data) {
-        return success(startRow, endRow, -1, fields, data);
+    public static DSResponse successFetch(int startRow, int endRow, Iterable<DSField> fields, Iterable<Object[]> data) {
+        return successFetch(startRow, endRow, -1, fields, data);
     }
 
-    public static DSResponse success(int startRow, int endRow, int totalRows, Iterable<DSField> fields, Iterable<Object[]> data) {
+    public static DSResponse successFetch(int startRow, int endRow, int totalRows, Iterable<DSField> fields, Iterable<Object[]> data) {
         final DSResponse retVal = new DSResponse();
         retVal.setStartRow(startRow);
         retVal.setEndRow(endRow);
         retVal.setTotalRows(totalRows);
         retVal.data = DSResponseDataContainer.createRaw(fields, data);
         retVal.setStatus(DSResponse.STATUS_SUCCESS);
+        return retVal;
+    }
+
+    public static DSResponse successUpdate(DSResponseDataContainer dsResponseDataContainer){
+        final DSResponse retVal = new DSResponse();
+//        retVal.setOperationType(DSRequest.OperationType.UPDATE);
+        retVal.setStatus(DSResponse.STATUS_SUCCESS);
+        retVal.data = dsResponseDataContainer;
         return retVal;
     }
 
@@ -126,7 +134,7 @@ public class DSResponse {
         this.transactionNum = transactionNum;
     }
 
-    public int getQueueStatus() {
+    public Integer getQueueStatus() {
         return queueStatus;
     }
 

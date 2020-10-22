@@ -65,10 +65,6 @@ public class JDBCHandlerUpdateTest extends AbstractJDBCHandlerTest<JDBCHandler> 
         JsonTestSupport.assertJsonEquals("""
                  {
                      status: 0,
-                     queueStatus:0,
-                     startRow: 0,
-                     endRow: 1,
-                     totalRows: 1,
                      data:[
                          {
                              id:2,
@@ -102,14 +98,14 @@ public class JDBCHandlerUpdateTest extends AbstractJDBCHandlerTest<JDBCHandler> 
             """);
 
         final DSResponse response = handler.handleUpdate(request);
+//        queueStatus:0,
+//                startRow: 0,
+//                endRow: 1,
+//                totalRows: 1,
 
         JsonTestSupport.assertJsonEquals("""
                  {
                      status: 0,
-                     queueStatus:0,
-                     startRow: 0,
-                     endRow: 1,
-                     totalRows: 1,
                      data:[
                          {
                              id:2,

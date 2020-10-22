@@ -108,7 +108,15 @@ public class JDBCHandler extends AbstractDSHandler {
             return null;
         });
 
-        return response[0];
+        final DSResponse fetchRespone = response[0];
+
+        if (fetchRespone.getStatus() != DSResponse.STATUS_SUCCESS) {
+            return fetchRespone;
+        }
+
+        DSResponse r = DSResponse.successUpdate(fetchRespone.getData());
+
+        return r;
     }
 
     @Override
@@ -248,7 +256,7 @@ public class JDBCHandler extends AbstractDSHandler {
             }
         });
 
-        return DSResponse.success(request.getStartRow(), request.getStartRow() + data.size(), totalRows[0],
+        return DSResponse.successFetch(request.getStartRow(), request.getStartRow() + data.size(), totalRows[0],
                 sqlFetchContext.getRequestedFields(),
                 data);
     }

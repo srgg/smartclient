@@ -40,39 +40,45 @@ public class JsonSerde {
     }
 
     public static void serializeResponse(Writer writer, Integer transactionNum, Collection<DSResponse> responses) throws IOException {
+
+        final boolean isQueue = responses.size() >1;
+
         final ObjectWriter objectWriter = createMapper()
                 .writerWithDefaultPrettyPrinter()
                 .withRootName("response");
 
-        writer.append("[");
+        int queueStatus = 0;
+        if (isQueue) {
+            writer.append("[");
 
-        int status = 0;
-        for (DSResponse r:responses) {
-            if (r.getStatus() != 0) {
-                status = -1;
-                break;
+            for (DSResponse r : responses) {
+                if (r.getStatus() != 0) {
+                    queueStatus = -1;
+                    break;
+                }
             }
         }
 
         boolean isFirst = true;
 
         for (DSResponse r:responses) {
-            r.setQueueStatus(status);
-            r.setTransactionNum(transactionNum);
-
             if (!isFirst) {
                 writer.append(",\n");
             } else {
                 isFirst = false;
             }
 
-            r.setQueueStatus(status);
-            r.setTransactionNum(transactionNum);
+            if (isQueue) {
+                r.setQueueStatus(queueStatus);
+                r.setTransactionNum(transactionNum);
+            }
 
             objectWriter.writeValue(writer, r);
         }
 
-        writer.append("]");
+        if (isQueue) {
+            writer.append("]");
+        }
     }
 
     private static class DSRequestDeserializer extends JsonDeserializer<IDSRequestData> {

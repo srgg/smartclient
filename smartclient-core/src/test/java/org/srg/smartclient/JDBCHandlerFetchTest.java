@@ -23,7 +23,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
                  {
                      status: 0,
-                     queueStatus:0,
                      startRow: 0,
                      endRow: 6,
                      totalRows: 6,
@@ -67,7 +66,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
             {
               status:0,
-              queueStatus:0,
               startRow:0,
               endRow:6,
               totalRows:6,
@@ -113,7 +111,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
                 {
                     status: 0,
-                    queueStatus:0,
                     startRow: 0,
                     endRow: 2,
                     totalRows: 6,
@@ -136,7 +133,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
                 {
                     status: 0,
-                    queueStatus:0,
                     startRow: 2,
                     endRow: 4,
                     totalRows: 6,
@@ -160,7 +156,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
                 {
                     status: 0,
-                    queueStatus:0,
                     startRow: 4,
                     endRow: 6,
                     totalRows: 6,
@@ -190,7 +185,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
                  {
                      status: 0,
-                     queueStatus:0,
                      startRow: 0,
                      endRow: 6,
                      totalRows: 6,
@@ -248,7 +242,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
             {
                 status: 0,
-                queueStatus:0,
                 startRow: 0,
                 endRow: 2,
                 totalRows: 6,
@@ -271,7 +264,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
             {
                 status: 0,
-                queueStatus:0,
                 startRow: 0,
                 endRow: 2,
                 totalRows: 6,
@@ -293,7 +285,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
             {
                 status: 0,
-                queueStatus:0,
                 startRow: 0,
                 endRow: 2,
                 totalRows: 6,
@@ -325,7 +316,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
             {
                 status: 0,
-                queueStatus:0,
                 startRow: 0,
                 endRow: 1,
                 totalRows: 1,
@@ -355,7 +345,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
             {
                 status: 0,
-                queueStatus:0,
                 startRow: 0,
                 endRow: 2,
                 totalRows: 2,
@@ -388,7 +377,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
             {
                 status:0,
-                queueStatus:0,
                 startRow:0,
                 endRow:2,
                 totalRows:6,
@@ -421,7 +409,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
             {
               status:0,
-              queueStatus:0,
               startRow:0,
               endRow:5,
               totalRows:5,
@@ -470,7 +457,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
                 {
                   status:0,
-                  queueStatus:0,
                   startRow:0,
                   endRow:6,
                   totalRows:6,
@@ -557,7 +543,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
             {
               status:0,
-              queueStatus:0,
               startRow:0,
               endRow:6,
               totalRows:6,
@@ -636,7 +621,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals_WithOrder("""
             {
               status:0,
-              queueStatus:0,
               startRow:0,
               endRow:6,
               totalRows:6,
@@ -682,7 +666,6 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         JsonTestSupport.assertJsonEquals("""
             {
                status:0,
-               queueStatus:0,
                startRow:0,
                endRow:5,
                totalRows:5,
