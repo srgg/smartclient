@@ -91,7 +91,12 @@ public class AutomaticDSHandlerRegistrar implements Ordered, SmartLifecycle, App
             if (running) {
                 return;
             }
-            dsDispatcher.loadFromResource( properties.getSharedDirectory() );
+            try {
+                dsDispatcher.loadFromResource(properties.getSharedDirectory());
+            } catch ( Exception ex) {
+                throw new RuntimeException("SmartClient handler loading has been failed", ex);
+            }
+
             try {
                 register((ListableBeanFactory) applicationContext.getAutowireCapableBeanFactory());
             } catch (Throwable t) {
