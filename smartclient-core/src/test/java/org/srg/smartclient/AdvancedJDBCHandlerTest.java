@@ -25,7 +25,9 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                 ,iStartsWithCriteria()
                 ,startsWithCriteria()
                 ,betweenInclusiveCriteria()
-                , betweenCriteria()
+                ,betweenCriteria()
+                ,greaterOrEqualCriteria()
+                ,lessOrEqualCriteria()
         );
     }
 
@@ -555,6 +557,75 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             startRow:0,
                             status:0,
                             totalRows:1
+                        }"""
+        );
+    }
+
+    private static Arguments greaterOrEqualCriteria() {
+        return Arguments.of(
+                "greaterOrEqual condition",
+                """
+                        {
+                            "operator" : "and",
+                            "_constructor" : "AdvancedCriteria",
+                            "criteria" : [
+                                {
+                                    "fieldName":"firedAt",
+                                    "operator":"greaterOrEqual",
+                                    "value":"2000-05-04T00:02:01.000+00:00"
+                                }
+                            ]
+                        }""",
+                """
+                        {
+                            data:[
+                                {
+                                    id:5,
+                                    name:'manager2',
+                                    firedAt: '2000-05-04T00:02:01.000+00:00'
+                                }
+                            ],
+                            endRow:1,
+                            startRow:0,
+                            status:0,
+                            totalRows:1
+                        }"""
+        );
+    }
+
+    private static Arguments lessOrEqualCriteria() {
+        return Arguments.of(
+                "lessOrEqual condition",
+                """
+                        {
+                            "operator" : "and",
+                            "_constructor" : "AdvancedCriteria",
+                            "criteria" : [
+                                {
+                                    "fieldName":"firedAt",
+                                    "operator":"lessOrEqual",
+                                    "value":"2000-05-04T00:02:01.000+00:00"
+                                }
+                            ]
+                        }""",
+                """
+                        {
+                            data:[
+                                {
+                                    id:1,
+                                    name:'admin',
+                                    firedAt: "2000-01-02T01:04:05.000+00:00"
+                                },
+                                {
+                                    id:5,
+                                    name:'manager2',
+                                    firedAt: '2000-05-04T00:02:01.000+00:00'
+                                }
+                            ],
+                            endRow:2,
+                            startRow:0,
+                            status:0,
+                            totalRows:2
                         }"""
         );
     }

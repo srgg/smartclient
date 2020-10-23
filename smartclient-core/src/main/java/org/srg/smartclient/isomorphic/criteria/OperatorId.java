@@ -94,10 +94,10 @@ public enum OperatorId {
 //     * matches another field (match case, specify fieldName as criterion.value)
 //      */
 //    EQUALS_FIELD,
-//    /**
-//     * Greater than or equal to
-//     */
-//    GREATER_OR_EQUAL,
+    /**
+     * Greater than or equal to
+     */
+    GREATER_OR_EQUAL("greaterOrEqual"),
 //    /**
 //     * Greater than or equal to another field (specify fieldName as criterion.value)
 //     */
@@ -194,10 +194,10 @@ public enum OperatorId {
 //     */
 //    ISTARTS_WITH_FIELD,
 //
-//    /**
-//     * Less than or equal to
-//     */
-//    LESS_OR_EQUAL,
+    /**
+     * Less than or equal to
+     */
+    LESS_OR_EQUAL("lessOrEqual"),
 //
 //    /**
 //     * Less than or equal to another field (specify fieldName as criterion.value)
