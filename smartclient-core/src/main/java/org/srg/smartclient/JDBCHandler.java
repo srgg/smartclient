@@ -96,7 +96,7 @@ public class JDBCHandler extends AbstractDSHandler {
                     .collect(Collectors.joining(", "))
             );
 
-            final DSResponse r =  handleFetch(fr);
+            final DSResponse r =  doHandleFetch(fr, conn, false);
 
             if (r.getStatus() == DSResponse.STATUS_SUCCESS ) {
                 conn.commit();
@@ -121,7 +121,13 @@ public class JDBCHandler extends AbstractDSHandler {
 
     @Override
     protected DSResponse handleFetch(DSRequest request) throws Exception {
-        return doHandleFetch(request, null, true);
+        final DSResponse r[] = {null};
+        policy.withConnectionDo(this.getDataSource().getDbName(), conn-> {
+            r[0] = doHandleFetch(request, conn, true);
+            return null;
+        });
+
+        return r[0];
     }
 
     protected DSResponse doHandleFetch(DSRequest request, Connection connection, boolean calculateTotal) throws Exception {
@@ -137,14 +143,13 @@ public class JDBCHandler extends AbstractDSHandler {
 
         final int[] totalRows = new int[] {-1};
 
-        policy.withConnectionDo(this.getDataSource().getDbName(), conn-> {
-            // -- calculate total
+        // -- calculate total
+        if (calculateTotal) {
             /*
              * Opaque query is required for a proper filtering by calculated fields
              */
-            @SuppressWarnings("SqlNoDataSourceInspection")
-            final String countQuery = "SELECT count(*) FROM %s"
-                    .formatted( sqlFetchContext.getGenericQuery());
+            @SuppressWarnings("SqlNoDataSourceInspection") final String countQuery = "SELECT count(*) FROM %s"
+                    .formatted(sqlFetchContext.getGenericQuery());
 
             if (logger.isTraceEnabled()) {
                 logger.trace("DataSource %s fetch count(*) query:\n%s\n\nparams:\n%s"
@@ -161,10 +166,10 @@ public class JDBCHandler extends AbstractDSHandler {
 
             sqlFetchContext.setEffectiveSQL(countQuery);
 
-            try (PreparedStatement st = conn.prepareStatement(countQuery, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
-                int idx =0;
+            try (PreparedStatement st = connection.prepareStatement(countQuery, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
+                int idx = 0;
 
-                for (IFilterData fd: sqlFetchContext.getFilterData()) {
+                for (IFilterData fd : sqlFetchContext.getFilterData()) {
                     idx = fd.setStatementParameters(idx, st);
                 }
 
@@ -175,86 +180,86 @@ public class JDBCHandler extends AbstractDSHandler {
             } catch (Throwable t) {
                 throw new ContextualRuntimeException("SQL count query execution failed.", t, sqlFetchContext);
             }
+        }
 
-            // -- fetch data
-            /*
-             * Opaque query is required for a proper filtering by calculated fields
-             */
-            @SuppressWarnings("SqlNoDataSourceInspection")
-            final String opaqueFetchQuery = """
-                 SELECT * FROM %s
-                    %s
-                    %s
-            """.formatted(sqlFetchContext.getGenericQuery(), sqlFetchContext.getOrderClause(), sqlFetchContext.getPaginationClause());
+        // -- fetch data
+        /*
+         * Opaque query is required for a proper filtering by calculated fields
+         */
+        @SuppressWarnings("SqlNoDataSourceInspection")
+        final String opaqueFetchQuery = """
+             SELECT * FROM %s
+                %s
+                %s
+        """.formatted(sqlFetchContext.getGenericQuery(), sqlFetchContext.getOrderClause(), sqlFetchContext.getPaginationClause());
 
-            if (logger.isTraceEnabled()) {
-                logger.trace("DataSource %s fetch query:\n%s\n\nparams:\n%s"
-                    .formatted(
-                        getDataSource().getId(),
-                        opaqueFetchQuery,
-                        sqlFetchContext.getFilterData().stream()
-                                .flatMap(fd -> sqlFetchContext.getFilterData().stream())
-                                .flatMap(fd -> StreamSupport.stream(fd.values().spliterator(), false))
-                                .map("%s"::formatted)
-                                .collect(Collectors.joining(", "))
-                    )
-                );
+        if (logger.isTraceEnabled()) {
+            logger.trace("DataSource %s fetch query:\n%s\n\nparams:\n%s"
+                .formatted(
+                    getDataSource().getId(),
+                    opaqueFetchQuery,
+                    sqlFetchContext.getFilterData().stream()
+                            .flatMap(fd -> sqlFetchContext.getFilterData().stream())
+                            .flatMap(fd -> StreamSupport.stream(fd.values().spliterator(), false))
+                            .map("%s"::formatted)
+                            .collect(Collectors.joining(", "))
+                )
+            );
+        }
+
+        sqlFetchContext.setEffectiveSQL(opaqueFetchQuery);
+
+        try(PreparedStatement st = connection.prepareStatement(opaqueFetchQuery, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)){
+            st.setFetchSize(sqlFetchContext.getPageSize());
+            st.setMaxRows(sqlFetchContext.getPageSize());
+            st.setFetchDirection(ResultSet.FETCH_FORWARD);
+
+            int idx =0;
+            for (IFilterData fd: sqlFetchContext.getFilterData()) {
+                idx = fd.setStatementParameters(idx, st);
             }
 
-            sqlFetchContext.setEffectiveSQL(opaqueFetchQuery);
+            final Map<String, Object> rowPkValues =  new HashMap<>();
+            try (ResultSet rs = st.executeQuery() ) {
+                while (rs.next())  {
 
-            try(PreparedStatement st = conn.prepareStatement(opaqueFetchQuery, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)){
-                st.setFetchSize(sqlFetchContext.getPageSize());
-                st.setMaxRows(sqlFetchContext.getPageSize());
-                st.setFetchDirection(ResultSet.FETCH_FORWARD);
+                    final Object[] r = new Object[getFields().size()];
 
-                int idx =0;
-                for (IFilterData fd: sqlFetchContext.getFilterData()) {
-                    idx = fd.setStatementParameters(idx, st);
-                }
+                    int i =0;
 
-                final Map<String, Object> rowPkValues =  new HashMap<>();
-                try (ResultSet rs = st.executeQuery() ) {
-                    while (rs.next())  {
-
-                        final Object[] r = new Object[getFields().size()];
-
-                        int i =0;
-
-                        // ORIGINAL FIELD ORDER MUST BE PRESERVED
-                        for (DSField dsf: sqlFetchContext.getRequestedFields()) {
-                            Object v = rs.getObject(i + 1);
-                            if (rs.wasNull()) {
-                                v = null;
-                            }
-                            r[i++] = v;
-
-                            if (dsf.isPrimaryKey()) {
-                                rowPkValues.put(dsf.getName(), v);
-                            }
+                    // ORIGINAL FIELD ORDER MUST BE PRESERVED
+                    for (DSField dsf: sqlFetchContext.getRequestedFields()) {
+                        Object v = rs.getObject(i + 1);
+                        if (rs.wasNull()) {
+                            v = null;
                         }
+                        r[i++] = v;
 
-                        for(int j = 0; j< sqlFetchContext.getRequestedFields().size(); ++j) {
-                            final DSField dsf = sqlFetchContext.getRequestedFields().get(j);
-                            r[j] = postProcessFieldValue(sqlFetchContext, rowPkValues, dsf, r[j]);
+                        if (dsf.isPrimaryKey()) {
+                            rowPkValues.put(dsf.getName(), v);
                         }
-
-                        rowPkValues.clear();
-
-                        final Object[] postProcessed = postProcessRow(sqlFetchContext, r);
-
-                        assert postProcessed.length == r.length;
-                        data.add(postProcessed);
                     }
-                    return null;
-                } catch (Throwable t) {
-                    if (t instanceof ContextualRuntimeException) {
-                        throw t;
+
+                    for(int j = 0; j< sqlFetchContext.getRequestedFields().size(); ++j) {
+                        final DSField dsf = sqlFetchContext.getRequestedFields().get(j);
+                        r[j] = postProcessFieldValue(sqlFetchContext, rowPkValues, dsf, r[j]);
                     }
-                    throw new ContextualRuntimeException("SQL fetch query execution failed.", t, sqlFetchContext);
+
+                    rowPkValues.clear();
+
+                    final Object[] postProcessed = postProcessRow(sqlFetchContext, r);
+
+                    assert postProcessed.length == r.length;
+                    data.add(postProcessed);
                 }
+            } catch (Throwable t) {
+                if (t instanceof ContextualRuntimeException) {
+                    throw t;
+                }
+                throw new ContextualRuntimeException("SQL fetch query execution failed.", t, sqlFetchContext);
             }
-        });
+        }
+
 
         return DSResponse.successFetch(request.getStartRow(), request.getStartRow() + data.size(), totalRows[0],
                 sqlFetchContext.getRequestedFields(),
