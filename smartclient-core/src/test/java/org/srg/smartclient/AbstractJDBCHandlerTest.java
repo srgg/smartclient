@@ -298,7 +298,7 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
 
     @BeforeEach
     public void setupDataSources() throws Exception {
-        jdbcDataSource.setURL("jdbc:h2:mem:test:˜/test;database_to_lower=true");
+        jdbcDataSource.setURL("jdbc:h2:mem:test:˜/test;DB_CLOSE_DELAY=0;AUTOCOMMIT=OFF;database_to_lower=true");
         jdbcDataSource.setUser("sa");
         jdbcDataSource.setPassword("sa");
 
@@ -307,7 +307,9 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
         connection.commit();
 
         jdbcPolicy = (db, callback) -> {
-                callback.apply(connection);
+            try(Connection conn = jdbcDataSource.getConnection() ) {
+                callback.apply(conn);
+            }
         };
 
         dsRegistry =  Mockito.mock(IDSRegistry.class);
