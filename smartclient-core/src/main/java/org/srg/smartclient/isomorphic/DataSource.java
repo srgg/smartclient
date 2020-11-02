@@ -143,7 +143,7 @@ public class DataSource {
     }
 
     public void setOperationBindings(List<OperationBinding> operationBindings) {
-        final List<OperationBinding> b = new ArrayList<>(operationBindings.size());
+        final List<OperationBinding> b = new ArrayList<>(operationBindings);
         this.operationBindings = Collections.unmodifiableList(b);
     }
 

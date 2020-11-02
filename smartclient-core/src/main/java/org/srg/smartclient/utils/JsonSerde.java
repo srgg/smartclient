@@ -2,6 +2,7 @@ package org.srg.smartclient.utils;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.*;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.deser.BeanDeserializerFactory;
 import com.fasterxml.jackson.databind.deser.ResolvableDeserializer;
@@ -431,8 +432,9 @@ public class JsonSerde {
         module.addDeserializer(DSField.class, new DSFieldDeserializer(DSField.class));
 
         mapper.registerModule(module);
+
         mapper
-            .enable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+                .enable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
                 .setSerializationInclusion(JsonInclude.Include.NON_NULL)
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
 //                .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
@@ -440,8 +442,8 @@ public class JsonSerde {
 //                .enable(JsonParser.Feature.ALLOW_SINGLE_QUOTES)
 //                .enable(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES)
 //                .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
-                .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
-
+                .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
+                .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature());
         return mapper;
     }
 }

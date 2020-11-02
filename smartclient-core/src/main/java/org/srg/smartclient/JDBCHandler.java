@@ -8,6 +8,7 @@ import org.srg.smartclient.utils.Utils;
 
 import java.sql.*;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -36,7 +37,7 @@ public class JDBCHandler extends AbstractDSHandler {
                     "must be provided in the  'data' field.");
         }
 
-        final OperationBinding operationBinding = getEffectiveOperationBinding(DSRequest.OperationType.FETCH);
+        final OperationBinding operationBinding = getEffectiveOperationBinding(DSRequest.OperationType.FETCH, request.getOperationId());
         final SQLUpdateContext<JDBCHandler> sqlUpdateContext = new SQLUpdateContext<>(this, request, operationBinding);
 
 
@@ -131,7 +132,7 @@ public class JDBCHandler extends AbstractDSHandler {
     }
 
     protected DSResponse doHandleFetch(DSRequest request, Connection connection, boolean calculateTotal) throws Exception {
-        final OperationBinding operationBinding = getEffectiveOperationBinding(DSRequest.OperationType.FETCH);
+        final OperationBinding operationBinding = getEffectiveOperationBinding(DSRequest.OperationType.FETCH, request.getOperationId());
         final SQLFetchContext<JDBCHandler> sqlFetchContext = new SQLFetchContext<>(this, request, operationBinding);
 
         final List<Object[]> data;
@@ -403,10 +404,15 @@ public class JDBCHandler extends AbstractDSHandler {
         return dsHandler.handle(fetchEntity);
     }
 
-    protected  List<IFilterData> generateFilterData(DSRequest.OperationType operationType, DSRequest.TextMatchStyle textMatchStyle, IDSRequestData data ) {
+    protected  List<IFilterData> generateFilterData(
+            DSRequest.OperationType operationType,
+            DSRequest.TextMatchStyle textMatchStyle,
+            IDSRequestData data,
+            Predicate<String> exclusionPredicate ) {
         if (data instanceof Map) {
             return ((Map<String, Object>) data).entrySet()
                     .stream()
+                    .filter( e -> !exclusionPredicate.test(e.getKey()) )
                     .map(e -> {
                         final DSField dsf = getField(e.getKey());
 
@@ -575,6 +581,22 @@ public class JDBCHandler extends AbstractDSHandler {
         protected DSRequest request() {
             assert request != null;
             return request;
+        }
+
+        protected static Predicate<String> createCriteriaExclusionPredicate(String excludeCriteriaFields) {
+            final String splitted [] = excludeCriteriaFields == null ? null : excludeCriteriaFields.split("\\s*,\\s*");
+            if ( splitted == null || splitted.length == 0 ) {
+                return s -> false;
+            } else {
+                return new Predicate<String>() {
+                    final private Set<String> exclusions = new HashSet<>(Arrays.asList(splitted));
+
+                    @Override
+                    public boolean test(String s) {
+                        return exclusions.contains(s);
+                    }
+                };
+            }
         }
 
         public static Map<String, Object> convertFilterDataToMap(Collection<IFilterData> ifds) {

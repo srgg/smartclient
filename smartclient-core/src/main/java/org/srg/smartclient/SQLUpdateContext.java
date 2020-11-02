@@ -5,6 +5,7 @@ import org.srg.smartclient.isomorphic.OperationBinding;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class SQLUpdateContext<H extends JDBCHandler> extends JDBCHandler.AbstractSQLContext {
@@ -19,7 +20,16 @@ public class SQLUpdateContext<H extends JDBCHandler> extends JDBCHandler.Abstrac
     }
 
     protected void init() {
-        final List<JDBCHandler.IFilterData> filterData = dsHandler().generateFilterData(DSRequest.OperationType.UPDATE, DSRequest.TextMatchStyle.EXACT, request().getData());
+        final Predicate<String> exclusionPredicate = createCriteriaExclusionPredicate(
+                operationBinding() != null? operationBinding().getExcludeCriteriaFields() : null);
+
+        final List<JDBCHandler.IFilterData> filterData = dsHandler().generateFilterData(
+                DSRequest.OperationType.UPDATE,
+                DSRequest.TextMatchStyle.EXACT,
+                request().getData(),
+                exclusionPredicate
+            );
+
         final Map<Boolean, List<JDBCHandler.IFilterData>> m = filterData.stream()
                 .collect(Collectors.groupingBy( (JDBCHandler.IFilterData fd) -> ((JDBCHandler.FilterData)fd).field().isPrimaryKey()));
 

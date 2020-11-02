@@ -9,6 +9,7 @@ import org.srg.smartclient.isomorphic.OperationBinding;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -316,7 +317,14 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
 
 
         // -- WHERE
-        this.filterData = dsHandler().generateFilterData(DSRequest.OperationType.FETCH, request().getTextMatchStyle(), request().getData());
+        final Predicate<String> exclusionPredicate = createCriteriaExclusionPredicate(
+                operationBinding() != null? operationBinding().getExcludeCriteriaFields() : null);
+
+        this.filterData = dsHandler().generateFilterData(DSRequest.OperationType.FETCH,
+                request().getTextMatchStyle(),
+                request().getData(),
+                exclusionPredicate
+            );
 
 
         final String whereClause = this.getFilterData().isEmpty() ?  "" : this.getFilterData().stream()
@@ -348,7 +356,8 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                     ? joinClause : operationBinding().getAnsiJoinClause();
             templateContext.put("effectiveAnsiJoinClause", effectiveJoin);
 
-            this.genericQuery = SQLTemplateEngine.processSQL(templateContext,"""
+
+            final String defaultQuery = """
                     (
                         SELECT ${effectiveSelectClause}
                             FROM ${effectiveTableClause}
@@ -359,8 +368,25 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                     <#if effectiveWhereClause?has_content>
                         WHERE ${effectiveWhereClause}
                     </#if>                                                                                                              
-                    """
-            );
+                    """;
+
+            final String effectiveQuery = operationBinding() == null
+                    || operationBinding().getCustomSQL() == null
+                    || operationBinding().getCustomSQL().isBlank()
+                    ? defaultQuery : """
+                    (
+                        %s
+                    ) a
+                    """.formatted(operationBinding().getCustomSQL());
+
+            this.genericQuery = SQLTemplateEngine.processSQL(templateContext, effectiveQuery);
+
+            /**
+             *  It seems that FreeMarker does not support recursive interpolations, therefore, as temporary workaround,
+             *  it is required to re-process  Query to do interpolations for the placeholders that
+             *  was introduced during the first interpolation.
+             */
+            this.genericQuery = SQLTemplateEngine.processSQL(templateContext,this.genericQuery);
         }
     }
 }

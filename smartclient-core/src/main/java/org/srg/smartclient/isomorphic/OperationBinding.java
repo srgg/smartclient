@@ -45,6 +45,25 @@ public class OperationBinding {
      */
     private String ansiJoinClause = "";
 
+    /**
+     *
+     * Indicates that the listed fields should be excluded from the default whereClause generated for this operationBinding.
+     * This enables you to use these fields in a custom query while still allowing the $defaultWhereClause to be generated for all other fields. For example, you might take a particular field and apply it in the WHERE clause of a subquery.
+     *
+     * You can specify this property as a comma-separated list (eg, "foo, bar, baz") or by just repeating the <customCriteriaFields> tag multiple times with one field each. Note that if a field is included in both excludeCriteriaFields and customCriteriaFields, customCriteriaFields wins.
+     *
+     * This property is only applicable to DataSources of "sql".
+     *
+     * See the documentation for <a href="https://www.smartclient.com/smartclient-release/isomorphic/system/reference/?id=attr..OperationBinding.excludeCriteriaFields">customSQL</a> for usage examples
+     */
+    private String excludeCriteriaFields = "";
+
+    /**
+     *
+     * See the documentation for <a href="https://www.smartclient.com/smartclient-release/isomorphic/system/reference/?id=attr..OperationBinding.customSQL">customSQL</a> for usage examples
+     */
+    private String customSQL = "";
+
     public DSRequest.OperationType getOperationType() {
         return operationType;
     }
@@ -83,5 +102,21 @@ public class OperationBinding {
 
     public void setAnsiJoinClause(String ansiJoinClause) {
         this.ansiJoinClause = ansiJoinClause;
+    }
+
+    public String getExcludeCriteriaFields() {
+        return excludeCriteriaFields;
+    }
+
+    public void setExcludeCriteriaFields(String excludeCriteriaFields) {
+        this.excludeCriteriaFields = excludeCriteriaFields;
+    }
+
+    public String getCustomSQL() {
+        return customSQL;
+    }
+
+    public void setCustomSQL(String customSQL) {
+        this.customSQL = customSQL;
     }
 }

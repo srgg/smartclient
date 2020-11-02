@@ -8,6 +8,7 @@ package org.srg.smartclient;
 import com.fasterxml.jackson.annotation.JsonFilter;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.core.util.DefaultIndenter;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.*;
@@ -252,7 +253,8 @@ public class DSDispatcher implements IDSDispatcher {
 //        final Datasource ds = xmlMapper.readValue(file, Datasource.class);
 
         final ObjectMapper mapper = new ObjectMapper()
-                .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
+                .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
+                .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature());
 
         logger.debug("trying to load DataSource from '%s'...".formatted(file));
 

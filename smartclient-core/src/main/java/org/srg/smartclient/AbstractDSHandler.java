@@ -182,7 +182,7 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
         return new ForeignRelation(effectiveDS.getId(), effectiveDS, effectiveField.getName(), effectiveField);
     }
 
-    public OperationBinding getEffectiveOperationBinding(DSRequest.OperationType operationType) {
+    protected OperationBinding getEffectiveOperationBinding(DSRequest.OperationType operationType, String operationId) {
         final Map<DSRequest.OperationType, List<OperationBinding>> bm = getBindingsMap();
 
         if (bm == null) {
@@ -195,18 +195,21 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
             return null;
         }
 
-        final OperationBinding b;
-        if (bindings.size() >1) {
-            throw new IllegalStateException("Data source '%s': multiple bindings have not been supported yet, operation type '%s'."
-                    .formatted(
-                            dataSource().getId(),
-                            operationType
-                    )
-            );
-        } else {
-            b = bindings.get(0);
-        }
+        final String effectiveOperationId = operationId == null ? "" : operationId;
 
-        return b;
+        // Search correspondent operation binding by operationId
+        final OperationBinding effectiveBinding = bindings.stream()
+                .filter( b -> b.getOperationId().equals(effectiveOperationId) )
+                .reduce( (d1, d2) -> {
+                    throw new RuntimeException( "Can't determine effective operation binding: Data source '%s' " +
+                            "has  multiple bindings for operation '%s', it seems that operationId '%s' is not unique."
+                                    .formatted(
+                                            dataSource().getId(),
+                                            operationType,
+                                            operationId
+                                    ));
+                        }).orElse(null);
+
+        return effectiveBinding;
     }
 }

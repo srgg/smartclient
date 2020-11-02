@@ -1,9 +1,10 @@
 CREATE TABLE simpleentity
 (
     id      INT AUTO_INCREMENT,
-    name VARCHAR(40),
+    name    VARCHAR(40),
 
-    CONSTRAINT pk_simple_entity PRIMARY KEY (id)
+    CONSTRAINT pkSimpleEntity
+        PRIMARY KEY (id)
 );
 
 CREATE TABLE locations(
@@ -11,7 +12,8 @@ CREATE TABLE locations(
     country     VARCHAR(40),
     city        VARCHAR(100),
 
-    CONSTRAINT pk_locations PRIMARY KEY (id)
+    CONSTRAINT pkLocations
+        PRIMARY KEY (id)
 );
 
 CREATE TABLE employee (
@@ -21,39 +23,46 @@ CREATE TABLE employee (
     location_id     INT,
     firedAt         TIMESTAMP(6),
 
-    CONSTRAINT pk_employee PRIMARY KEY (id),
-    CONSTRAINT fkEmployeeLocations foreign key (location_id) REFERENCES locations(id)
+    CONSTRAINT pkEmployee
+        PRIMARY KEY (id),
+
+    CONSTRAINT fkEmployee_Locations
+        FOREIGN KEY (location_id) REFERENCES locations(id)
 );
 
 CREATE TABLE employee_role
 (
-    employee_id int NOT NULL,
-    role ENUM ('EMPLOYEE', 'PM', 'AM', 'C-Level', 'FM', 'Admin', 'Developer') NOT NULL,
+    employee_id     INT NOT NULL,
+    role            ENUM ('EMPLOYEE', 'PM', 'AM', 'C-Level', 'FM', 'Admin', 'Developer') NOT NULL,
 
-    CONSTRAINT pkEmployeeRole PRIMARY KEY  (employee_id, role),
+    CONSTRAINT pkEmployeeRole
+        PRIMARY KEY  (employee_id, role),
 
     CONSTRAINT fkEmployeeId
         FOREIGN KEY (employee_id) REFERENCES employee (id),
 
-    CONSTRAINT uqUserRole UNIQUE (employee_id, role)
+    CONSTRAINT uqUserRole
+        UNIQUE (employee_id, role)
 );
 
 
 CREATE TABLE client
 (
-    id int not null,
-    name varchar(255) not null,
+    id              INT not null,
+    name            VARCHAR(255) NOT NULL,
 
-    CONSTRAINT pk_clients PRIMARY KEY (id)
+    CONSTRAINT pkClients
+        PRIMARY KEY (id)
 );
 
 CREATE TABLE client_data
 (
-    id int not null,
-    data varchar(255) not null,
-    client_id int NOT NULL,
+    id              INT NOT NULL,
+    data            VARCHAR(255) NOT NULL,
+    client_id       INT NOT NULL,
 
-    CONSTRAINT pk_client_data PRIMARY KEY (id),
+    CONSTRAINT pk_client_data
+        PRIMARY KEY (id),
 
     CONSTRAINT fkClientData_ClientId
         FOREIGN KEY (client_id) REFERENCES CLIENT (id)
@@ -61,12 +70,13 @@ CREATE TABLE client_data
 
 CREATE TABLE project
 (
-    id INT NOT NULL,
-    client_id INT,
-    manager_id int null,
-    name VARCHAR(255) NOT NULL,
+    id              INT NOT NULL,
+    client_id       INT,
+    manager_id      INT NULL,
+    name            VARCHAR(255) NOT NULL,
 
-    CONSTRAINT pk_projects PRIMARY KEY (id),
+    CONSTRAINT pkProjects
+        PRIMARY KEY (id),
 
     CONSTRAINT fkProject_ClientId
         FOREIGN KEY (client_id) REFERENCES client (id),
@@ -77,33 +87,56 @@ CREATE TABLE project
 
 CREATE TABLE project_team
 (
-    project_id INT NOT NULL,
-    employee_id INT NOT NULL,
+    project_id      INT NOT NULL,
+    employee_id     INT NOT NULL,
 
-    primary key (project_id, employee_id),
+    CONSTRAINT pkProjectTeam
+        PRIMARY KEY (project_id, employee_id),
 
-    constraint fkProjectTeamProject
-        foreign key (project_id) references project (id),
+    CONSTRAINT fkProjectTeam_Project
+        FOREIGN KEY (project_id) REFERENCES project (id),
 
-    constraint fkProjectTeamEmployee
-        foreign key (employee_id) references employee (id)
+    CONSTRAINT fkProjectTeam_Employee
+        FOREIGN KEY (employee_id) REFERENCES employee (id)
 );
 
-create table employee_status
+CREATE TABLE employee_status
 (
-    id int auto_increment primary key,
-    employee_id int not null,
-    status varchar(255) null,
+    id              INT auto_increment,
+    employee_id     INT NOT NULL,
+    status          VARCHAR(255) NULL,
 
-    start_date date not null,
-    end_date date null,
+    start_date      DATE NOT NULL,
+    end_date        DATE NULL,
 
-    constraint unqEmployeeStatus
-        unique (employee_id, start_date),
-    constraint fkEmployeeStatus_Employee
-        foreign key (employee_id) references employee (id)
+    CONSTRAINT pkEmployeeStatus
+        PRIMARY KEY (id),
+
+    CONSTRAINT unqEmployee_Status
+        UNIQUE (employee_id, start_date),
+
+    CONSTRAINT fkEmployeeStatus_Employee
+        FOREIGN KEY (employee_id) REFERENCES employee (id)
 );
 
+
+CREATE TABLE time_log_entry
+(
+    employee_id     INT NOT NULL,
+    project_id      INT NOT NULL,
+
+    work_date       DATE NOT NULL,
+    minutes         INT NOT NULL,
+
+    CONSTRAINT pkTimeLogEntry
+        PRIMARY KEY (project_id, employee_id, work_date),
+
+    CONSTRAINT fkTimeLogEntry_Project
+        FOREIGN KEY (project_id) REFERENCES project (id),
+
+    CONSTRAINT fkTimeLogEntry_Employee
+        FOREIGN KEY (employee_id) REFERENCES employee (id)
+);
 
 INSERT INTO locations VALUES (1, 'Ukraine', 'Kharkiv');
 INSERT INTO locations VALUES (2, 'Ukraine', 'Lviv');
@@ -148,3 +181,20 @@ INSERT INTO project_team VALUES (3, 5);
 INSERT INTO employee_status VALUES (1, 1, 'status 1', '2000-05-04', '2000-06-04');
 INSERT INTO employee_status VALUES (2, 1, 'status 2', '2000-06-05', '2000-07-05');
 INSERT INTO employee_status VALUES (3, 1, 'status 3', '2000-07-06', null);
+
+
+INSERT INTO time_log_entry VALUES (2, 1, '2020-03-06', 111);
+INSERT INTO time_log_entry VALUES (2, 3, '2020-03-06', 222);
+INSERT INTO time_log_entry VALUES (1, 1, '2020-03-07', 111);
+INSERT INTO time_log_entry VALUES (1, 3, '2020-03-07', 222);
+
+
+INSERT INTO time_log_entry VALUES ( 2, 1, '2020-03-11', 11);
+INSERT INTO time_log_entry VALUES (2, 3, '2020-03-11', 22);
+INSERT INTO time_log_entry VALUES (1, 1, '2020-03-12', 11);
+INSERT INTO time_log_entry VALUES (1, 3, '2020-03-12', 22);
+
+INSERT INTO time_log_entry VALUES (2, 1, '2020-03-12', 1);
+INSERT INTO time_log_entry VALUES (2, 3, '2020-03-12', 2);
+INSERT INTO time_log_entry VALUES (1, 1, '2020-03-13', 1);
+INSERT INTO time_log_entry VALUES (1, 3, '2020-03-13', 2);

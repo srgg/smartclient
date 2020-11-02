@@ -8,6 +8,7 @@ import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
 import org.srg.smartclient.isomorphic.criteria.Criteria;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -196,12 +197,16 @@ public class AdvancedJDBCHandler extends JDBCHandler {
 
 
     @Override
-    protected List<IFilterData> generateFilterData(DSRequest.OperationType operationType, DSRequest.TextMatchStyle textMatchStyle, IDSRequestData data) {
+    protected List<IFilterData> generateFilterData(
+            DSRequest.OperationType operationType,
+            DSRequest.TextMatchStyle textMatchStyle,
+            IDSRequestData data,
+            Predicate<String> exclusionPredicate) {
         if (data instanceof AdvancedCriteria ac) {
             return Collections.singletonList(generateFD(ac));
 
         } else {
-            return super.generateFilterData(operationType, textMatchStyle, data);
+            return super.generateFilterData(operationType, textMatchStyle, data, exclusionPredicate);
         }
     }
 

@@ -22,122 +22,122 @@ import java.util.List;
 public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
     protected enum ExtraField {
         ManyToMany("""
-             [
-                 {
-                     name:"teamMembers"
-                     ,tableName:"project_team"
-                     ,type:"integer"
-                     ,foreignKey:"EmployeeDS.id"
-                     ,multiple:true
-                 }
-             ]
-         """),
+                    [
+                        {
+                            name:"teamMembers"
+                            ,tableName:"project_team"
+                            ,type:"integer"
+                            ,foreignKey:"EmployeeDS.id"
+                            ,multiple:true
+                        }
+                    ]
+                """),
 
         OneToMany_FetchEntireEntities("""
-            [
-                {
-                    name:"roles"
-                    ,foreignKey:"EmployeeRoleDS.employee"
-                    ,type:"EmployeeRoleDS"
-                    ,foreignDisplayField:"role"
-                    ,multiple:true
-                }
-            ]"""
+                [
+                    {
+                        name:"roles"
+                        ,foreignKey:"EmployeeRoleDS.employee"
+                        ,type:"EmployeeRoleDS"
+                        ,foreignDisplayField:"role"
+                        ,multiple:true
+                    }
+                ]"""
         ),
 
         OneToMany_FetchOnlyIds("""
-            [
-                {
-                    name:"roles"
-                    ,foreignKey:"EmployeeRoleDS.employee"
-                    ,multiple:true
-                }
-            ]"""
+                [
+                    {
+                        name:"roles"
+                        ,foreignKey:"EmployeeRoleDS.employee"
+                        ,multiple:true
+                    }
+                ]"""
         ),
 
         Project_IncludeFromEmployee(""" 
-           [
-                {
-                    name:"manager"
-                    ,foreignKey:"EmployeeDS.id"
-                    ,displayField:"employeeFullName"
-                    ,foreignDisplayField:"fullName"
-                    ,dbName:"manager_id"
-                    ,canEdit:false
-                },
-                {
-                    name:"employeeFullName"
-                    ,type:"TEXT"
-                    ,includeFrom:"EmployeeDS.calculated"
-                    ,includeVia:"manager"
-                    ,canEdit:false
-                    ,hidden:true
-                }
-           
-           ]"""),
+                [
+                     {
+                         name:"manager"
+                         ,foreignKey:"EmployeeDS.id"
+                         ,displayField:"employeeFullName"
+                         ,foreignDisplayField:"fullName"
+                         ,dbName:"manager_id"
+                         ,canEdit:false
+                     },
+                     {
+                         name:"employeeFullName"
+                         ,type:"TEXT"
+                         ,includeFrom:"EmployeeDS.calculated"
+                         ,includeVia:"manager"
+                         ,canEdit:false
+                         ,hidden:true
+                     }
+                           
+                ]"""),
 
         Project_IncludeFromClient("""
-            [            
-                {
-                    name:"client"
-                    ,foreignKey:"ClientDS.id"
-                    ,displayField:"clientName"
-                    ,foreignDisplayField:"name"
-                    ,dbName:"client_id"
-                    ,canEdit:false
-                },
-                {
-                    name:"clientName"
-                    ,type:"TEXT"
-                    ,includeFrom:"ClientDS.name"
-                    ,includeVia:"client"
-                    ,canEdit:false
-                    ,hidden:true
-                }   
-            ]"""),
+                [            
+                    {
+                        name:"client"
+                        ,foreignKey:"ClientDS.id"
+                        ,displayField:"clientName"
+                        ,foreignDisplayField:"name"
+                        ,dbName:"client_id"
+                        ,canEdit:false
+                    },
+                    {
+                        name:"clientName"
+                        ,type:"TEXT"
+                        ,includeFrom:"ClientDS.name"
+                        ,includeVia:"client"
+                        ,canEdit:false
+                        ,hidden:true
+                    }   
+                ]"""),
 
         IncludeFromLocation("""
-            [
-                {
-                    name: 'location'
-                    ,dbName: 'location_id'
-                    ,type: "INTEGER"
-                    ,foreignKey:"LocationDS.id"
-                    ,displayField:"locationCity"
-                },
-                {
-                    name:"locationCity"
-                    ,type:"TEXT"
-                    ,includeFrom:"LocationDS.city"
-                }
-            ]"""),
+                [
+                    {
+                        name: 'location'
+                        ,dbName: 'location_id'
+                        ,type: "INTEGER"
+                        ,foreignKey:"LocationDS.id"
+                        ,displayField:"locationCity"
+                    },
+                    {
+                        name:"locationCity"
+                        ,type:"TEXT"
+                        ,includeFrom:"LocationDS.city"
+                    }
+                ]"""),
 
         Email("""
-            [
-                {
-                    name: "email",
-                    type: "text"
-                }
-            ]
-            """),
+                [
+                    {
+                        name: "email",
+                        type: "text"
+                    }
+                ]
+                """),
 
         FiredAt("""
-            [
-                {
-                    name: "firedAt",
-                    type: "datetime"
-                }
-            ]"""),
+                [
+                    {
+                        name: "firedAt",
+                        type: "datetime"
+                    }
+                ]"""),
 
         SqlCalculated("""
-            [
-                {
-                    name: "calculated",
-                    type: "text",
-                    customSelectExpression: "CONCAT(employee.id, '_', employee.name)"                    
-                }
-            ]
-            """);
+                [
+                    {
+                        name: "calculated",
+                        type: "text",
+                        customSelectExpression: "CONCAT(employee.id, '_', employee.name)"                    
+                    }
+                ]
+                """);
 
         final String fieldDefinition;
 
@@ -207,7 +207,7 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                    ]
                 }"""),
 
-            EmployeeRole("""
+        EmployeeRole("""
                 {
                     id: 'EmployeeRoleDS',
                     tableName: 'employee_role',
@@ -240,25 +240,25 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                     ]
                 }"""),
 
-                Project(""" 
-                    {                        
-                        id: 'ProjectDS',
-                        tableName: 'project',
-                        fields:[
-                            {
-                                name:"id"
-                                ,type:"INTEGER"
-                                ,primaryKey:true
-                                ,canEdit:false
-                                ,hidden:true
-                            },
-                            {
-                                name:"name"
-                                ,type:"TEXT"
-                                ,canEdit:false
-                            }
-                        ]
-                    }""");
+        Project(""" 
+                {                        
+                    id: 'ProjectDS',
+                    tableName: 'project',
+                    fields:[
+                        {
+                            name:"id"
+                            ,type:"INTEGER"
+                            ,primaryKey:true
+                            ,canEdit:false
+                            ,hidden:true
+                        },
+                        {
+                            name:"name"
+                            ,type:"TEXT"
+                            ,canEdit:false
+                        }
+                    ]
+                }""");
 
         final String dsDefinition;
 
@@ -286,7 +286,7 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
     protected Void initDB() {
         Flyway flyway = new Flyway(
                 new FluentConfiguration()
-                        .dataSource( jdbcDataSource )
+                        .dataSource(jdbcDataSource)
                         .locations("classpath:db")
         );
 
@@ -307,12 +307,12 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
         connection.commit();
 
         jdbcPolicy = (db, callback) -> {
-            try(Connection conn = jdbcDataSource.getConnection() ) {
+            try (Connection conn = jdbcDataSource.getConnection()) {
                 callback.apply(conn);
             }
         };
 
-        dsRegistry =  Mockito.mock(IDSRegistry.class);
+        dsRegistry = Mockito.mock(IDSRegistry.class);
         handler = withHandlers(Handler.Employee);
     }
 
@@ -351,9 +351,10 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
     abstract protected Class<H> getHandlerClass();
 
     protected static <H extends JDBCHandler> H withExtraFields(H h, ExtraField... extraFields) {
-        for (ExtraField ef: extraFields) {
+        for (ExtraField ef : extraFields) {
             final List<DSField> ofs = new LinkedList<>(h.getDataSource().getFields());
-            final List<DSField> efs = JsonTestSupport.fromJSON(new TypeReference<>() {}, ef.fieldDefinition);
+            final List<DSField> efs = JsonTestSupport.fromJSON(new TypeReference<>() {
+            }, ef.fieldDefinition);
             ofs.addAll(efs);
 
             h.getDataSource().setFields(ofs);
@@ -365,11 +366,15 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
         withExtraFields(handler, extraFields);
     }
 
+    protected H withHandler(String dataSourceDefinition) throws Exception {
+        final DataSource ds = JsonTestSupport.fromJSON(DataSource.class, dataSourceDefinition);
+        return doInitHandler(ds);
+    }
+
     protected H withHandlers(Handler... handlers) throws Exception {
         H handler = null;
         for (Handler h:handlers) {
-            final DataSource ds = JsonTestSupport.fromJSON(DataSource.class, h.dsDefinition);
-            handler = doInitHandler(ds);
+            handler = withHandler(h.dsDefinition);
         }
         return handler;
     }
