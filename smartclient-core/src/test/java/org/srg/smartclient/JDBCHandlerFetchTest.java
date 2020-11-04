@@ -658,7 +658,7 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
     public void fetchWithMultipleJoin() throws Exception {
         final JDBCHandler projectHandler =  withHandlers(Handler.Client, Handler.Project);
         withExtraFields(ExtraField.SqlCalculated);
-        withExtraFields(projectHandler, ExtraField.Project_IncludeFromClient, ExtraField.Project_IncludeFromEmployee);
+        withExtraFields(projectHandler, ExtraField.Project_IncludeFromClient, ExtraField.Project_IncludeManagerFromEmployee);
 
         DSRequest request = new DSRequest();
         final DSResponse response = projectHandler.handleFetch(request);
@@ -711,6 +711,68 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                      employeeFullName:'5_manager2'
                   }
                ]                
+            }""", response);
+    }
+
+    @Test
+    @Regression("Requests with multiple 'includeFrom' for the same foreign data source fails due to improper JOIN clause generation" +
+            " dublicating join is generated for the same table.")
+    public void fetchWithMultipleIncludeFromToTheSameJoin() throws Exception {
+        final JDBCHandler projectHandler =  withHandlers(Handler.Client, Handler.Project);
+
+        withExtraFields(ExtraField.SqlCalculated, ExtraField.Email);
+
+        withExtraFields(projectHandler,
+                ExtraField.Project_IncludeManagerFromEmployee,
+                ExtraField.Project_IncludeManagerEmailFromEmployee
+        );
+
+        DSRequest request = new DSRequest();
+        final DSResponse response = projectHandler.handleFetch(request);
+
+        JsonTestSupport.assertJsonEquals("""
+            {
+               status:0,
+               startRow:0,
+               endRow:5,
+               totalRows:5,
+               data:[
+                  {
+                    id:1,
+                    name:'Project 1 for client 1',
+                    manager:4,
+                    employeeFullName:'4_manager1',
+                    manager_email:'pm1@acmE.org'
+                  },
+                  {
+                    id:2,
+                    name:'Project 2 for client 1',
+                    manager:4,
+                    employeeFullName:'4_manager1',
+                    manager_email:'pm1@acmE.org'
+                  },
+                  {
+                    id:3,
+                    name:'Project 1 for client 2',
+                    manager:5,
+                    employeeFullName:'5_manager2',
+                    manager_email:'pm2@acme.org'
+                  },
+                  {
+                    id:4,
+                    name:'Project 2 for client 2',
+                    manager:5,
+                    employeeFullName:'5_manager2',
+                    manager_email:'pm2@acme.org'
+                  },
+                  {
+                    id:5,
+                    name:'Project 3 for client 2',
+                    manager:5,
+                    employeeFullName:'5_manager2',
+                    manager_email:'pm2@acme.org'
+                  }               
+               ]
             }""", response);
     }
 }

@@ -55,7 +55,7 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                 ]"""
         ),
 
-        Project_IncludeFromEmployee(""" 
+        Project_IncludeManagerFromEmployee(""" 
                 [
                      {
                          name:"manager"
@@ -74,6 +74,18 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                          ,hidden:true
                      }
                            
+                ]"""),
+
+        Project_IncludeManagerEmailFromEmployee(""" 
+                [
+                     {
+                         name:"manager_email"
+                         ,type:"TEXT"
+                         ,includeFrom:"EmployeeDS.email"
+                         ,includeVia:"manager"
+                         ,canEdit:false
+                         ,hidden:false
+                     }
                 ]"""),
 
         Project_IncludeFromClient("""

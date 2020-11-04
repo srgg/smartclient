@@ -308,6 +308,25 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                          * therefore exclude this field from the sql join.
                          */
                         && !DSField.FieldType.ENTITY.equals(dsf.getType()))
+
+                /* It is required to generate one join per unique includeVia value */
+                .filter(new Predicate<>() {
+                    final Set<String> uniqueVia = new HashSet<>();
+
+                    @Override
+                    public boolean test(DSField dsField) {
+                        final String includeVia = dsField.getIncludeVia();
+                        if (includeVia != null && !includeVia.isBlank() && uniqueVia.contains( includeVia)) {
+                            return false;
+                        }
+
+                        if (includeVia != null && !includeVia.isBlank()) {
+                            uniqueVia.add(includeVia);
+                        }
+
+                        return true;
+                    }
+                })
                 .map(dsf -> {
 
                     final RelationSupport.ImportFromRelation relation = dsHandler().describeImportFrom(dsf);
@@ -387,7 +406,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
 
             this.genericQuery = SQLTemplateEngine.processSQL(templateContext, effectiveQuery);
 
-            /**
+            /*
              *  It seems that FreeMarker does not support recursive interpolations, therefore, as temporary workaround,
              *  it is required to re-process  Query to do interpolations for the placeholders that
              *  was introduced during the first interpolation.

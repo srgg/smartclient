@@ -168,6 +168,19 @@ public class RelationSupport {
                             )
                     );
                 })
+                .or( () -> dataSource.getFields().stream()
+                            .filter(f -> f.getName().equals(importFromField.getIncludeVia()))
+                            .reduce((d1, d2) -> {
+                                throw new IllegalStateException("DataSource '%s' can't determine a sourceField for importFromField  '%s' with include via '%s'."
+                                        .formatted(
+                                                foreignRelation.dataSourceId,
+                                                importFromField.getName(),
+                                                importFromField.getIncludeVia()
+                                        )
+                                );
+                            })
+
+                )
                 /*
                  * It is possible that 'includeFrom' will be used w/o a related 'displayField'
                  */
