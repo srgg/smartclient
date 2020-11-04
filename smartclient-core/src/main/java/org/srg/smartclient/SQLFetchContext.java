@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.OperationBinding;
+import org.srg.smartclient.utils.ContextualRuntimeException;
 
 import java.io.IOException;
 import java.util.*;
@@ -168,8 +169,8 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                                 default:
                                     final DSField dsf = dsHandler().getField(s);
                                     if (dsf == null) {
-                                        throw new RuntimeException("Data source '%s': nothing known about field '%s' listed in order by clause."
-                                                .formatted(dataSource().getId(), s));
+                                        throw new ContextualRuntimeException("Data source '%s': nothing known about field '%s' listed in order by clause."
+                                                .formatted(dataSource().getId(), s), this);
                                     }
 
                                     return "%s.%s%s"
@@ -193,8 +194,8 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                 if (!fn.isBlank()) {
                     final DSField dsf = dsHandler().getField(fn);
                     if (dsf == null) {
-                        throw new RuntimeException("%s: nothing known about requested field '%s', data source: %s."
-                                .formatted(getClass().getSimpleName(), fn, dataSource().getId()));
+                        throw new ContextualRuntimeException("%s: nothing known about requested field '%s', data source: %s."
+                                .formatted(getClass().getSimpleName(), fn, dataSource().getId()), this);
                     }
 
                     this.requestedFields.add(dsf);
@@ -211,11 +212,12 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                         final String[] parsed = descr.split("!");
 
                         if (parsed.length != 2) {
-                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', valid format is 'localFieldName!relatedDataSourceID.relatedDataSourceFieldName'."
+                            throw new ContextualRuntimeException("Data source '%s': Invalid additionalOutputs value '%s', valid format is 'localFieldName!relatedDataSourceID.relatedDataSourceFieldName'."
                                     .formatted(
                                             dataSource().getId(),
                                             descr
-                                    )
+                                    ),
+                                    this
                             );
                         }
 
@@ -223,12 +225,13 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
 
                         final DSField sourceField = dsHandler().getField(sourceFieldName);
                         if (sourceField == null) {
-                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', nothing known about field '%s'."
+                            throw new ContextualRuntimeException("Data source '%s': Invalid additionalOutputs value '%s', nothing known about field '%s'."
                                     .formatted(
                                             dataSource().getId(),
                                             descr,
                                             sourceFieldName
-                                    )
+                                    ),
+                                    this
                             );
                         }
 
@@ -237,12 +240,13 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                         try {
                             fkRelation = dsHandler().describeForeignKey(sourceField);
                         } catch (Throwable t) {
-                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
+                            throw new ContextualRuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
                                     .formatted(
                                             dataSource().getId(),
                                             descr
                                     ),
-                                    t
+                                    t,
+                                    this
                             );
                         }
 
@@ -251,21 +255,23 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                         try {
                             fRelation = dsHandler().describeForeignRelation(parsed[1].trim());
                         } catch (Throwable t) {
-                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
+                            throw new ContextualRuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
                                     .formatted(
                                             dataSource().getId(),
                                             descr
                                     ),
-                                    t
+                                    t,
+                                    this
                             );
                         }
 
                         if (!fkRelation.foreign().dataSourceId().equals(fRelation.dataSourceId())) {
-                            throw new RuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
+                            throw new ContextualRuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
                                     .formatted(
                                             dataSource().getId(),
                                             descr
-                                    )
+                                    ),
+                                    this
                             );
                         }
 

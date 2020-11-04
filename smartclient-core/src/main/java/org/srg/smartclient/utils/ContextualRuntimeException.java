@@ -16,6 +16,11 @@ public class ContextualRuntimeException extends RuntimeException {
         this.context = context;
     }
 
+    public ContextualRuntimeException(String message, Object context) {
+        super(message);
+        this.context = context;
+    }
+
     public Object getContext() {
         return context;
     }
