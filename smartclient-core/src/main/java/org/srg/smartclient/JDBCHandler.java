@@ -445,8 +445,8 @@ public class JDBCHandler extends AbstractDSHandler {
                             filterStr = "%s = ?";
                         };
 
-                        final ForeignRelation effectiveField = determineEffectiveField(dsf);
-                        effectiveField.setSqlFieldAlias(
+                        ForeignRelation effectiveField = determineEffectiveField(dsf);
+                        effectiveField = effectiveField.createWithSqlFieldAlias(
                             operationType == DSRequest.OperationType.FETCH ?
                                 formatColumnNameToAvoidAnyPotentialDuplication(
                                         effectiveField.dataSource(),

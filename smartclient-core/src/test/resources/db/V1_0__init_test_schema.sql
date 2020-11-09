@@ -7,13 +7,26 @@ CREATE TABLE simpleentity
         PRIMARY KEY (id)
 );
 
-CREATE TABLE locations(
+CREATE TABLE countries(
     id          INT AUTO_INCREMENT,
     country     VARCHAR(40),
+
+    CONSTRAINT pkCountries
+        PRIMARY KEY (id)
+);
+
+
+CREATE TABLE locations(
+    id          INT AUTO_INCREMENT,
+    country_id  INT NOT NULL,
     city        VARCHAR(100),
 
     CONSTRAINT pkLocations
-        PRIMARY KEY (id)
+        PRIMARY KEY (id),
+
+    CONSTRAINT fkLocations_Countries
+        FOREIGN KEY (country_id) REFERENCES countries(id)
+
 );
 
 CREATE TABLE employee (
@@ -138,9 +151,12 @@ CREATE TABLE time_log_entry
         FOREIGN KEY (employee_id) REFERENCES employee (id)
 );
 
-INSERT INTO locations VALUES (1, 'Ukraine', 'Kharkiv');
-INSERT INTO locations VALUES (2, 'Ukraine', 'Lviv');
-INSERT INTO locations VALUES (3, 'USA', 'USA');
+INSERT INTO countries VALUES (1, 'Ukraine');
+INSERT INTO countries VALUES (2, 'USA');
+
+INSERT INTO locations VALUES (1, 1, 'Kharkiv');
+INSERT INTO locations VALUES (2, 1, 'Lviv');
+INSERT INTO locations VALUES (3, 2, 'USA');
 
 
 INSERT INTO employee VALUES (1, 'admin', 'admin@acmE.org', 1, '2000-01-02 03:04:05');

@@ -20,8 +20,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
-    protected enum ExtraField {
-        ManyToMany("""
+    protected static class ExtraField {
+        public static String ManyToMany = """
                     [
                         {
                             name:"teamMembers"
@@ -31,9 +31,9 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                             ,multiple:true
                         }
                     ]
-                """),
+                """;
 
-        OneToMany_FetchEntireEntities("""
+        public static String OneToMany_FetchEntireEntities = """
                 [
                     {
                         name:"roles"
@@ -42,20 +42,18 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                         ,foreignDisplayField:"role"
                         ,multiple:true
                     }
-                ]"""
-        ),
+                ]""";
 
-        OneToMany_FetchOnlyIds("""
+        public static String OneToMany_FetchOnlyIds = """
                 [
                     {
                         name:"roles"
                         ,foreignKey:"EmployeeRoleDS.employee"
                         ,multiple:true
                     }
-                ]"""
-        ),
+                ]""";
 
-        Project_IncludeManagerFromEmployee(""" 
+        public static String Project_IncludeManagerFromEmployee = """
                 [
                      {
                          name:"manager"
@@ -73,10 +71,10 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                          ,canEdit:false
                          ,hidden:true
                      }
-                           
-                ]"""),
 
-        Project_IncludeManagerEmailFromEmployee(""" 
+                ]""";
+
+        public static String Project_IncludeManagerEmailFromEmployee = """
                 [
                      {
                          name:"manager_email"
@@ -86,10 +84,10 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                          ,canEdit:false
                          ,hidden:false
                      }
-                ]"""),
+                ]""";
 
-        Project_IncludeFromClient("""
-                [            
+        public static String Project_IncludeFromClient = """
+                [
                     {
                         name:"client"
                         ,foreignKey:"ClientDS.id"
@@ -105,10 +103,10 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                         ,includeVia:"client"
                         ,canEdit:false
                         ,hidden:true
-                    }   
-                ]"""),
+                    }
+                ]""";
 
-        IncludeFromLocation("""
+        public static String IncludeFromLocation = """
                 [
                     {
                         name: 'location'
@@ -122,45 +120,58 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                         ,type:"TEXT"
                         ,includeFrom:"LocationDS.city"
                     }
-                ]"""),
+                ]""";
 
-        Email("""
+        public static String Email = """
                 [
                     {
                         name: "email",
                         type: "text"
                     }
                 ]
-                """),
+                """;
 
-        FiredAt("""
+        public static String FiredAt = """
                 [
                     {
                         name: "firedAt",
                         type: "datetime"
                     }
-                ]"""),
+                ]""";
 
-        SqlCalculated("""
+        public static String SqlCalculated = """
                 [
                     {
                         name: "calculated",
                         type: "text",
-                        customSelectExpression: "CONCAT(employee.id, '_', employee.name)"                    
+                        customSelectExpression: "CONCAT(employee.id, '_', employee.name)"
                     }
                 ]
-                """);
+                """;
 
-        final String fieldDefinition;
-
-
-        ExtraField(String fieldDefinition) {
-            this.fieldDefinition = fieldDefinition;
-        }
+        private ExtraField(){}
     }
 
-    protected enum Handler {
-        Location("""
+    protected static class Handler {
+        public static String Country = """
+                {
+                  id: "CountryDS",
+                  tableName: "countries",
+                  fields: [
+                    {
+                      name: "id",
+                      type: "integer",
+                      required: true,
+                      primaryKey: true
+                    },
+                    {
+                      name: "name",
+                      type: "text"
+                    }
+                  ]
+                }""";
+
+        public static String Location = """
                 {
                   id: "LocationDS",
                   tableName: "locations",
@@ -172,17 +183,13 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                       primaryKey: true
                     },
                     {
-                      name: "country",
-                      type: "text"
-                    },
-                    {
                       name: "city",
                       type: "text"
                     }
                   ]
-                }"""),
+                }""";
 
-        Client("""
+        public static String Client = """
                 {
                   id: "ClientDS",
                   tableName: "client",
@@ -198,9 +205,9 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                       type: "text"
                     }
                   ]
-                }"""),
+                }""";
 
-        Employee("""
+        public static String Employee = """
                 {
                    id: 'EmployeeDS',
                    serverType: 'sql',
@@ -217,9 +224,9 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                            required: true
                        }
                    ]
-                }"""),
+                }""";
 
-        EmployeeRole("""
+        public static String EmployeeRole = """
                 {
                     id: 'EmployeeRoleDS',
                     tableName: 'employee_role',
@@ -236,7 +243,7 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                             ,foreignKey:"EmployeeDS.id"
                             ,type: "integer"
                             ,displayField:"employeeCalculated"
-                            ,foreignDisplayField:"calculated"                            
+                            ,foreignDisplayField:"calculated"
                             ,primaryKey:true
                             ,canEdit:false
                             ,hidden:true
@@ -250,10 +257,10 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                             ,hidden:true
                         }
                     ]
-                }"""),
+                }""";
 
-        Project(""" 
-                {                        
+        public static String Project = """
+                {
                     id: 'ProjectDS',
                     tableName: 'project',
                     fields:[
@@ -270,13 +277,9 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
                             ,canEdit:false
                         }
                     ]
-                }""");
+                }""";
 
-        final String dsDefinition;
-
-        Handler(String dsDefinition) {
-            this.dsDefinition = dsDefinition;
-        }
+        private Handler() {}
     }
 
     protected JdbcDataSource jdbcDataSource = new JdbcDataSource();
@@ -362,20 +365,32 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
 
     abstract protected Class<H> getHandlerClass();
 
-    protected static <H extends JDBCHandler> H withExtraFields(H h, ExtraField... extraFields) {
-        for (ExtraField ef : extraFields) {
+    protected static <H extends JDBCHandler> H withExtraFields(H h, String... extraFields) {
+        for (String ef : extraFields) {
             final List<DSField> ofs = new LinkedList<>(h.getDataSource().getFields());
-            final List<DSField> efs = JsonTestSupport.fromJSON(new TypeReference<>() {
-            }, ef.fieldDefinition);
+            final List<DSField> efs = JsonTestSupport.fromJSON(new TypeReference<>() {}, ef);
             ofs.addAll(efs);
 
             h.getDataSource().setFields(ofs);
         }
+
         return h;
     }
 
-    protected void withExtraFields(ExtraField... extraFields) {
-        withExtraFields(handler, extraFields);
+//    protected static <H extends JDBCHandler> H withExtraFields(H h, ExtraField... extraFields) {
+//        for (ExtraField ef : extraFields) {
+//            final List<DSField> efs = JsonTestSupport.fromJSON(new TypeReference<>() {}, ef.fieldDefinition);
+//            withExtraFields(h, efs.toArray(new String[]{}));
+//        }
+//        return h;
+//    }
+
+//    protected H withExtraFields(ExtraField... extraFields) {
+//        return withExtraFields(handler, extraFields);
+//    }
+
+    protected H withExtraFields(String... extraFields) {
+        return withExtraFields(handler, extraFields);
     }
 
     protected H withHandler(String dataSourceDefinition) throws Exception {
@@ -383,10 +398,10 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
         return doInitHandler(ds);
     }
 
-    protected H withHandlers(Handler... handlers) throws Exception {
+    protected H withHandlers(String... handlers) throws Exception {
         H handler = null;
-        for (Handler h:handlers) {
-            handler = withHandler(h.dsDefinition);
+        for (String h:handlers) {
+            handler = withHandler(h);
         }
         return handler;
     }

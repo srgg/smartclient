@@ -253,7 +253,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                         final RelationSupport.ForeignRelation fRelation;
 
                         try {
-                            fRelation = dsHandler().describeForeignRelation(parsed[1].trim());
+                            fRelation = dsHandler().describeForeignRelation(dataSource(), sourceField, parsed[1].trim());
                         } catch (Throwable t) {
                             throw new ContextualRuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
                                     .formatted(

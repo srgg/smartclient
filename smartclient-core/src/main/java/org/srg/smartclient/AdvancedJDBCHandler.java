@@ -164,8 +164,9 @@ public class AdvancedJDBCHandler extends JDBCHandler {
                     );
             }
 
-            final ForeignRelation effectiveField = determineEffectiveField(dsf);
-            effectiveField.setSqlFieldAlias(
+            ForeignRelation effectiveField = determineEffectiveField(dsf);
+
+            effectiveField = effectiveField.createWithSqlFieldAlias(
                 formatColumnNameToAvoidAnyPotentialDuplication(
                     effectiveField.dataSource(),
                     effectiveField.field()

@@ -89,6 +89,11 @@ public class DSField {
      */
     private String tableName;
 
+    /*
+     * https://www.smartclient.com/smartclient-release/isomorphic/system/reference/?id=attr..DataSourceField.relatedTableAlias
+     */
+    private String relatedTableAlias;
+
     /**
      * Indicates that this field should always be Array-valued.  If the value derived from
      *  {@link com.smartgwt.client.data.DataSource#getDataFormat XML or JSON data} is singular, it will be wrapped in an Array.
@@ -406,5 +411,13 @@ public class DSField {
 
     public boolean isIncludeField() {
         return getIncludeFrom() != null && !getIncludeFrom().isBlank();
+    }
+
+    public String getRelatedTableAlias() {
+        return relatedTableAlias;
+    }
+
+    public void setRelatedTableAlias(String relatedTableAlias) {
+        this.relatedTableAlias = relatedTableAlias;
     }
 }

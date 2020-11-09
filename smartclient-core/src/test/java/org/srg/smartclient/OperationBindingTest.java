@@ -434,17 +434,14 @@ public class OperationBindingTest extends AbstractJDBCHandlerTest {
               data:[
                 {
                    "id":1,
-                   "country":"Ukraine",
                    "city":"Kharkiv"
                 },
                 {
                    "id":2,
-                   "country":"Ukraine",
                    "city":"Lviv"
                 },
                 {
                    "id":3,
-                   "country":"USA",
                    "city":"USA"
                 }                
               ]
