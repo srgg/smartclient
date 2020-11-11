@@ -156,6 +156,13 @@ public class DataSource {
     }
 
     @Override
+    public String toString() {
+        return "DataSource{" +
+                "id='" + id + '\'' +
+                '}';
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof DataSource)) return false;

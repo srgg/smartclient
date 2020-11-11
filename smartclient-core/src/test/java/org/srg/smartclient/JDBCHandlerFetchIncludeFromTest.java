@@ -70,7 +70,7 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
     @Disabled
     @Test
     public void indirectIncludeFrom() throws Exception {
-        final JDBCHandler locationHandler = withHandlers(Handler.Location);
+        final JDBCHandler locationHandler = withHandlers(Handler.Country, Handler.Location);
         withExtraFields(locationHandler, """
             [
                 {
@@ -85,14 +85,15 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
                 """                
                     [
                         {
-                            name:"location"
-                            , foreignKey:"LocationDS.id"
-                            , dbName:"location_id"
+                            name:'location'
+                            , foreignKey:'LocationDS.id'
+                            , dbName:'location_id'
+                            , displayField: 'location_country'
                         },
                         {
-                            name:"location_country"
-                            , type:"TEXT"
-                            , includeFrom:"LocationDS.country.CountryDS.name"
+                            name:'location_country'
+                            , type:'TEXT'
+                            , includeFrom:'LocationDS.country.CountryDS.name'
                         }
                     ]
                 """);

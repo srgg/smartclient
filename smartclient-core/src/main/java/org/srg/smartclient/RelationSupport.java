@@ -1,12 +1,10 @@
 package org.srg.smartclient;
 
 import org.srg.smartclient.isomorphic.DSField;
-import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DataSource;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,13 +38,18 @@ public class RelationSupport {
     ){
         @Override
         public String toString() {
-            return "ImportFromRelation{" +
-                    "dataSource=" + dataSource.getId() +
-                    ", sourceField=" + sourceField.getName() +
-                    ", foreignDataSource=" + foreignDataSource.getId() +
-                    ", foreignKey=" + foreignKey.getName() +
-                    ", foreignDisplay=" + foreignDisplay.getName() +
+            return "ImportFromRelation{ " +
+                    "FOREIGN KEY " + dataSource.getId() +"(" + sourceField.getName() + ") \n" +
+                    "  REFERENCES " +foreignDataSource.getId() +"(" +  foreignKey.getName() + ")\n" +
+                    "  DISPLAYS (" + foreignDisplay.getName() + ")" +
                     '}';
+//            return "ImportFromRelation{" +
+//                    "dataSource=" + dataSource.getId() +
+//                    ", sourceField=" + sourceField.getName() +
+//                    ", foreignDataSource=" + foreignDataSource.getId() +
+//                    ", foreignKey=" + foreignKey.getName() +
+//                    ", foreignDisplay=" + foreignDisplay.getName() +
+//                    '}';
         }
 
         /**
@@ -87,55 +90,198 @@ public class RelationSupport {
         }
     }
 
+//    protected static class ForeignRelation {
+//        private static record FRlData(
+//            String dataSourceId,
+//            DataSource dataSource,
+//            String fieldName,
+//            DSField field,
+//            String sqlFieldAlias
+//        ) {};
+//
+//        private final List<FRlData> foreignRelations;
+//
+//        private ForeignRelation(List<FRlData> foreignRelations) {
+//            if (foreignRelations == null || foreignRelations.isEmpty()) {
+//                throw new IllegalStateException("Can't instantiate ForeignRelation: foreignRelations can't be null or empty");
+//            }
+//            this.foreignRelations = foreignRelations;
+//        }
+//
+//        protected ForeignRelation(String dataSourceId, DataSource dataSource, String fieldName, DSField field) {
+//            this(dataSourceId, dataSource, fieldName, field, null);
+//        }
+//
+//        protected ForeignRelation(String dataSourceId, DataSource dataSource, String fieldName, DSField field, String sqlFieldAlias) {
+//            this(Collections.singletonList(new FRlData(dataSourceId, dataSource, fieldName, field, sqlFieldAlias)));
+//        }
+//
+//        private FRlData get1st() {
+//            final FRlData fRlData = foreignRelations.get(0);
+//            return fRlData;
+//        }
+//
+//        public String dataSourceId() {
+//            return get1st().dataSourceId;
+//        }
+//
+//        public DataSource dataSource() {
+//            return get1st().dataSource;
+//        }
+//
+//        public String fieldName() {
+//            return get1st().fieldName;
+//        }
+//
+//        public DSField field() {
+//            return get1st().field;
+//        }
+//
+//        public String getSqlFieldAlias() {
+//            return get1st().sqlFieldAlias();
+//        }
+//
+//        public ForeignRelation createWithSqlFieldAlias(String sqlFieldAlias) {
+//            final ForeignRelation effective = new ForeignRelation(
+//                    this.dataSourceId(),
+//                    this.dataSource(),
+//                    this.fieldName(),
+//                    this.field(),
+//                    sqlFieldAlias
+//            );
+//
+//            return effective;
+//        }
+//
+//        public String formatAsSQL() {
+//            return formatAsSQL(dataSource().getTableName());
+//        }
+//
+//        public String formatAsSQL(String aliasOrTable) {
+//            if (aliasOrTable == null || aliasOrTable.isBlank()) {
+//                return field().getDbName();
+//            }
+//
+//            return "%s.%s".formatted(
+//                    aliasOrTable,
+//                    getSqlFieldAlias() != null ? getSqlFieldAlias() : field().getDbName()
+//            );
+//
+//        }
+//
+//        @Override
+//        public String toString() {
+//            return "ForeignRelation{" +
+//                    "dataSourceId='" + dataSourceId() + '\'' +
+//                    ", fieldName='" + fieldName() + '\'' +
+//                    '}';
+//        }
+//
+//        public static ForeignRelation describeForeignRelation(DataSource ds, DSField field, IDSLookup dsRegistry, String relation) {
+//            final String parsedIncludeFrom[] = relation.trim().split("\\.");
+//
+//            if (parsedIncludeFrom.length % 2 != 0) {
+//                throw new IllegalStateException(
+//                        ("Can't determine ForeignRelation for relation  '%s.%s': '%s', " +
+//                                "'foreignKey' field MUST be prefixed with a DataSource ID."
+//                        ).formatted(ds.getId(), field.getName(), relation)
+//                );
+//            }
+//
+////        if (parsedIncludeFrom.length != 2) {
+////            throw new RuntimeException(
+////                    ("Can't determine ForeignRelation for relation '%s': " +
+////                        "'foreignKey' field MUST be prefixed with a DataSource ID."
+////                    ).formatted(relation)
+////            );
+////        }
+//
+//            final int depth = parsedIncludeFrom.length / 2;
+//            final List<FRlData> foreignRelations = new ArrayList<>(depth);
+//
+//
+//            for(int i=0; i<parsedIncludeFrom.length; i = i +2) {
+//                final String foreignDsId = parsedIncludeFrom[i].trim();
+//                final String foreignDsFieldName = parsedIncludeFrom[i+1].trim();
+//
+//                final DataSource foreignDS = dsRegistry.getDataSourceById(foreignDsId);
+//
+//                final DSField foreignField;
+//                if (foreignDS != null) {
+//                    // -- foreign field
+//                    foreignField = foreignDS.getFields().stream()
+//                            .filter(f -> f.getName().equals(foreignDsFieldName))
+//                            .reduce((d1, d2) -> {
+//                                throw new IllegalStateException(("Can't determine ForeignRelation for relation '%s': " +
+//                                        "foreign datasource '%s' does not have unique field name '%s'.")
+//                                        .formatted(
+//                                                relation,
+//                                                foreignDsId,
+//                                                foreignDsFieldName
+//                                        )
+//                                );
+//                            })
+//                            .orElseThrow(() -> {
+//                                throw new IllegalStateException(("Can't determine ForeignRelation for relation '%s': " +
+//                                        "foreign datasource '%s' nothing known about the field with name '%s'.")
+//                                        .formatted(
+//                                                relation,
+//                                                foreignDsId,
+//                                                foreignDsFieldName
+//                                        )
+//                                );
+//                            });
+//
+//                } else {
+//                    foreignField = null;
+//                }
+//
+//                final FRlData frlData = new FRlData(foreignDsId, foreignDS, foreignDsFieldName, foreignField, null);
+//                foreignRelations.add(frlData);
+//            }
+//
+//            return new ForeignRelation(foreignRelations);
+//        }
+//    }
+
     protected static class ForeignRelation {
-        private static record FRlData(
-            String dataSourceId,
-            DataSource dataSource,
-            String fieldName,
-            DSField field,
-            String sqlFieldAlias
-        ) {};
+        private final String dataSourceId;
+        private final DataSource dataSource;
+        private final String fieldName;
+        private final DSField field;
 
-        private final List<FRlData> foreignRelations;
-
-        private ForeignRelation(List<FRlData> foreignRelations) {
-            if (foreignRelations == null || foreignRelations.isEmpty()) {
-                throw new IllegalStateException("Can't instantiate ForeignRelation: foreignRelations can't be null or empty");
-            }
-            this.foreignRelations = foreignRelations;
-        }
+        private String sqlFieldAlias;
 
         protected ForeignRelation(String dataSourceId, DataSource dataSource, String fieldName, DSField field) {
             this(dataSourceId, dataSource, fieldName, field, null);
         }
 
         protected ForeignRelation(String dataSourceId, DataSource dataSource, String fieldName, DSField field, String sqlFieldAlias) {
-            this(Collections.singletonList(new FRlData(dataSourceId, dataSource, fieldName, field, sqlFieldAlias)));
-        }
-
-        private FRlData get1st() {
-            final FRlData fRlData = foreignRelations.get(0);
-            return fRlData;
+            this.dataSourceId = dataSourceId;
+            this.dataSource = dataSource;
+            this.fieldName = fieldName;
+            this.field = field;
+            this.sqlFieldAlias = sqlFieldAlias;
         }
 
         public String dataSourceId() {
-            return get1st().dataSourceId;
+            return dataSourceId;
         }
 
         public DataSource dataSource() {
-            return get1st().dataSource;
+            return dataSource;
         }
 
         public String fieldName() {
-            return get1st().fieldName;
+            return fieldName;
         }
 
         public DSField field() {
-            return get1st().field;
+            return field;
         }
 
         public String getSqlFieldAlias() {
-            return get1st().sqlFieldAlias();
+            return sqlFieldAlias;
         }
 
         public ForeignRelation createWithSqlFieldAlias(String sqlFieldAlias) {
@@ -169,15 +315,15 @@ public class RelationSupport {
         @Override
         public String toString() {
             return "ForeignRelation{" +
-                    "dataSourceId='" + dataSourceId() + '\'' +
-                    ", fieldName='" + fieldName() + '\'' +
+                    "dataSourceId='" + dataSourceId + '\'' +
+                    ", fieldName='" + fieldName + '\'' +
                     '}';
         }
 
         public static ForeignRelation describeForeignRelation(DataSource ds, DSField field, IDSLookup dsRegistry, String relation) {
             final String parsedIncludeFrom[] = relation.trim().split("\\.");
 
-            if (parsedIncludeFrom.length % 2 != 0) {
+            if (parsedIncludeFrom.length != 2) {
                 throw new IllegalStateException(
                         ("Can't determine ForeignRelation for relation  '%s.%s': '%s', " +
                                 "'foreignKey' field MUST be prefixed with a DataSource ID."
@@ -185,68 +331,51 @@ public class RelationSupport {
                 );
             }
 
-//        if (parsedIncludeFrom.length != 2) {
-//            throw new RuntimeException(
-//                    ("Can't determine ForeignRelation for relation '%s': " +
-//                        "'foreignKey' field MUST be prefixed with a DataSource ID."
-//                    ).formatted(relation)
-//            );
-//        }
+            final String foreignDsId = parsedIncludeFrom[0].trim();
+            final String foreignDsFieldName = parsedIncludeFrom[1].trim();
 
-            final int depth = parsedIncludeFrom.length / 2;
-            final List<FRlData> foreignRelations = new ArrayList<>(depth);
+            final DataSource foreignDS = dsRegistry.getDataSourceById(foreignDsId);
 
+            final DSField foreignField;
+            if (foreignDS != null) {
+                // -- foreign field
+                foreignField = foreignDS.getFields().stream()
+                        .filter(f -> f.getName().equals(foreignDsFieldName))
+                        .reduce((d1, d2) -> {
+                            throw new IllegalStateException(("Can't determine ForeignRelation for relation '%s': " +
+                                    "foreign datasource '%s' does not have unique field name '%s'.")
+                                    .formatted(
+                                            relation,
+                                            foreignDsId,
+                                            foreignDsFieldName
+                                    )
+                            );
+                        })
+                        .orElseThrow(() -> {
+                            throw new IllegalStateException(("Can't determine ForeignRelation for relation '%s': " +
+                                    "foreign datasource '%s' nothing known about field with name '%s'.")
+                                    .formatted(
+                                            relation,
+                                            foreignDsId,
+                                            foreignDsFieldName
+                                    )
+                            );
+                        });
 
-            for(int i=0; i<depth; ++i) {
-                final String foreignDsId = parsedIncludeFrom[i].trim();
-                final String foreignDsFieldName = parsedIncludeFrom[i+1].trim();
-
-                final DataSource foreignDS = dsRegistry.getDataSourceById(foreignDsId);
-
-                final DSField foreignField;
-                if (foreignDS != null) {
-                    // -- foreign field
-                    foreignField = foreignDS.getFields().stream()
-                            .filter(f -> f.getName().equals(foreignDsFieldName))
-                            .reduce((d1, d2) -> {
-                                throw new IllegalStateException(("Can't determine ForeignRelation for relation '%s': " +
-                                        "foreign datasource '%s' does not have unique field name '%s'.")
-                                        .formatted(
-                                                relation,
-                                                foreignDsId,
-                                                foreignDsFieldName
-                                        )
-                                );
-                            })
-                            .orElseThrow(() -> {
-                                throw new IllegalStateException(("Can't determine ForeignRelation for relation '%s': " +
-                                        "foreign datasource '%s' nothing known about the field with name '%s'.")
-                                        .formatted(
-                                                relation,
-                                                foreignDsId,
-                                                foreignDsFieldName
-                                        )
-                                );
-                            });
-
-                } else {
-                    foreignField = null;
-                }
-
-                final FRlData frlData = new FRlData(foreignDsId, foreignDS, foreignDsFieldName, foreignField, null);
-                foreignRelations.add(frlData);
+            } else {
+                foreignField = null;
             }
 
-            return new ForeignRelation(foreignRelations);
+            return new ForeignRelation(foreignDsId, foreignDS, foreignDsFieldName, foreignField);
         }
     }
 
-    private static DSField  determineSourceField(DataSource dataSource, DSField importFromField, ForeignRelation foreignRelation) {
-        DSField sourceField = null;
+    private static DSField determineForeignKeyField(DataSource dataSource, DSField importFromField, ForeignRelation foreignRelation) {
+        DSField fkField = null;
 
         if ( importFromField.getIncludeVia() != null && !importFromField.getIncludeVia().isBlank() ) {
             // Lookup source field by "IncludeVia"
-            sourceField = dataSource.getFields().stream()
+            fkField = dataSource.getFields().stream()
                     .filter(f -> f.getName().equals(importFromField.getIncludeVia()))
                     .reduce((d1, d2) -> {
                         throw new IllegalStateException(("DataSource '%s' can't determine a sourceField for importFromField  '%s' by IncludeVia '%s': " +
@@ -272,7 +401,7 @@ public class RelationSupport {
                     });
         } else {
             // Lookup source field by "DisplayField"
-            sourceField = dataSource.getFields().stream()
+            fkField = dataSource.getFields().stream()
                     .filter( f -> f.getDisplayField() != null
                             && f.getDisplayField().equals(importFromField.getName())
                     )
@@ -288,7 +417,7 @@ public class RelationSupport {
                     .orElse(null);
         }
 
-        if (sourceField == null) {
+        if (fkField == null) {
             // Search for any field with foreignKey pointed to the foreign data source
 
             final List<DSField> foreignFields =  dataSource.getFields().stream()
@@ -299,7 +428,7 @@ public class RelationSupport {
             final int size = foreignFields.size();
 
             switch (size) {
-                case 1: sourceField = foreignFields.get(0);
+                case 1: fkField = foreignFields.get(0);
 
                 case 0: new IllegalStateException(("DataSource '%s' can't determine a sourceField for importFromField  '%s' by foreign relation: " +
                         "there is no fields with foreignKey pointed out to the foreignDataSource '%s'.")
@@ -320,7 +449,7 @@ public class RelationSupport {
             }
         }
 
-        return sourceField;
+        return fkField;
     }
 
     public static ImportFromRelation describeImportFrom(IDSLookup idsRegistry, DataSource dataSource, DSField importFromField) {
@@ -328,12 +457,46 @@ public class RelationSupport {
             throw new IllegalStateException();
         }
 
-        // -- foreign DS
-        final ForeignRelation foreignRelation = ForeignRelation.describeForeignRelation(dataSource, importFromField, idsRegistry, importFromField.getIncludeFrom());
 
-        // -- source field that linked to the foreign datasource
-        final DSField sourceField = determineSourceField(dataSource, importFromField, foreignRelation);
+        final String parsedIncludeFrom[] = importFromField.getIncludeFrom().trim().split("\\.");
 
+        if (parsedIncludeFrom.length % 2 != 0) {
+            throw new IllegalStateException(
+                    ("Can't determine ForeignRelation for relation  '%s.%s': '%s', " +
+                            "'foreignKey' field MUST be prefixed with a DataSource ID."
+                    ).formatted(dataSource.getId(), importFromField.getName(), importFromField.getIncludeFrom())
+            );
+        }
+
+        final int depth = parsedIncludeFrom.length / 2;
+        final List<ImportFromRelation> importFromRelations = new ArrayList<>(depth);
+        final List<ForeignKeyRelation> foreignKeyRelations = new ArrayList<>(depth);
+
+        DataSource currentDataSource = dataSource;
+
+        for(int i=0; i<parsedIncludeFrom.length; i = i +2) {
+            final DataSource ds = currentDataSource;
+            final String foreignDsId = parsedIncludeFrom[i].trim();
+            final String foreignDsFieldName = parsedIncludeFrom[i + 1].trim();
+
+            final ForeignRelation foreignRelation = ForeignRelation.describeForeignRelation(
+                    ds,
+                    importFromField,
+                    idsRegistry,
+                    "%s.%s".formatted(foreignDsId, foreignDsFieldName)
+            );
+
+            // -- source field that linked to the foreign datasource
+            final DSField fkField = determineForeignKeyField(ds, importFromField, foreignRelation);
+
+//            foreignRelations.add(foreignRelation);
+//        }
+//
+//        // -- foreign DS
+//        final ForeignRelation foreignRelation = foreignRelations.get(0);
+//
+//        // -- source field that linked to the foreign datasource
+//        final DSField fkField = determineForeignKeyField(dataSource, importFromField, foreignRelation);
 
 
 //        // by srg: this part must be re-written after ManyToMany will be implemented
@@ -358,71 +521,104 @@ public class RelationSupport {
 //            effectiveSourceField = sourceField;
 //        }
 
-        // -- foreign key
-        final String parsedForeignKey[] = sourceField.getForeignKey().split("\\.");
-        if (parsedForeignKey.length != 2) {
-            throw new RuntimeException(("Can't determine ImportFromRelation for '%s.%s': " +
-                    "invalid foreignKey value '%s'; 'foreignKey' field MUST be prefixed with a DataSource ID.")
-                    .formatted(
-                            dataSource.getId(),
-                            sourceField.getName(),
-                            sourceField.getForeignKey()
-                    )
-            );
-        }
+            // -- foreign key
+            final String parsedForeignKey[] = fkField.getForeignKey().split("\\.");
+            if (parsedForeignKey.length != 2) {
+                throw new RuntimeException(("Can't determine ImportFromRelation for '%s.%s': " +
+                        "invalid foreignKey value '%s'; 'foreignKey' field MUST be prefixed with a DataSource ID.")
+                        .formatted(
+                                ds.getId(),
+                                fkField.getName(),
+                                fkField.getForeignKey()
+                        )
+                );
+            }
 
-        if (!foreignRelation.dataSourceId().equals( parsedForeignKey[0])) {
-            throw new IllegalStateException("");
-        }
+            if (!foreignRelation.dataSourceId().equals(parsedForeignKey[0])) {
+                throw new IllegalStateException("");
+            }
 
-        if (foreignRelation.dataSource() == null) {
-            throw new RuntimeException(
-                    ("Can't determine ImportFromRelation for '%s.%s': " +
-                        "nothing known about a foreign data source '%s'."
-                    ).formatted(
-                            dataSource.getId(),
-                            sourceField.getName(),
-                            foreignRelation.dataSourceId()
-                    )
-            );
-        }
+            if (foreignRelation.dataSource() == null) {
+                throw new RuntimeException(
+                        ("Can't determine ImportFromRelation for '%s.%s': " +
+                                "nothing known about a foreign data source '%s'."
+                        ).formatted(
+                                ds.getId(),
+                                fkField.getName(),
+                                foreignRelation.dataSourceId()
+                        )
+                );
+            }
 
-        final DSField foreignKey = foreignRelation.dataSource().getFields().stream()
-                .filter( f -> f.getName().equals( parsedForeignKey[1] ))
-                .reduce( (d1, d2) -> {
-                    throw new RuntimeException("Can't determine ImportFromRelation for '%s.%s': " +
-                            "foreign key field name '%s.%s' is not unique within  the data source."
-                            .formatted(
-                                    dataSource.getId(),
+            final DSField foreignKey = foreignRelation.dataSource().getFields().stream()
+                    .filter(f -> f.getName().equals(parsedForeignKey[1]))
+                    .reduce((d1, d2) -> {
+                        throw new RuntimeException("Can't determine ImportFromRelation for '%s.%s': " +
+                                "foreign key field name '%s.%s' is not unique within  the data source."
+                                        .formatted(
+                                                ds.getId(),
 //                                    effectiveSourceField.getName(),
-                                    sourceField.getName(),
-                                    foreignRelation.dataSourceId(),
-                                    parsedForeignKey[1]
-                            )
-                    );
-                })
-                .orElseThrow( () -> {
-                    throw new IllegalStateException(("Can't determine ImportFromRelation for '%s.%s': " +
-                            "foreign datasource '%s' nothing known about field name '%s'.")
-                            .formatted(
-                                    dataSource.getId(),
+                                                fkField.getName(),
+                                                foreignRelation.dataSourceId(),
+                                                parsedForeignKey[1]
+                                        )
+                        );
+                    })
+                    .orElseThrow(() -> {
+                        throw new IllegalStateException(("Can't determine ImportFromRelation for '%s.%s': " +
+                                "foreign datasource '%s' nothing known about field name '%s'.")
+                                .formatted(
+                                        ds.getId(),
 //                                    effectiveSourceField.getName(),
-                                    sourceField.getName(),
-                                    foreignRelation.dataSourceId(),
-                                    parsedForeignKey[1]
-                            )
-                    );
-                });
+                                        fkField.getName(),
+                                        foreignRelation.dataSourceId(),
+                                        parsedForeignKey[1]
+                                )
+                        );
+                    });
 
+            final ForeignKeyRelation frl = new ForeignKeyRelation(
+                    ds,
+                    fkField,
+                    false,
+                    foreignRelation
+            );
 
-        return new ImportFromRelation(dataSource,
+            foreignKeyRelations.add(frl);
+
+            final  ImportFromRelation ifr = new ImportFromRelation(ds,
 //                effectiveSourceField,
 //                isReverse,
-                sourceField,
-                foreignRelation.dataSource(),
-                foreignKey,
-                foreignRelation.field()
+                    fkField,
+                    foreignRelation.dataSource(),
+                    foreignKey,
+                    foreignRelation.field()
+            );
+
+            importFromRelations.add(ifr);
+            currentDataSource = foreignRelation.dataSource();
+        }
+
+        final ForeignKeyRelation frl1 = foreignKeyRelations.get(0);
+        final ForeignKeyRelation frlLast = foreignKeyRelations.get(depth -1);
+        final ImportFromRelation ifrl = new ImportFromRelation(dataSource,
+//                effectiveSourceField,
+//                isReverse,
+                frl1.sourceField,
+                frlLast.foreign.dataSource,
+                frlLast.foreign.field,
+                frlLast.foreign.field
         );
+
+//        return new ImportFromRelation(dataSource,
+////                effectiveSourceField,
+////                isReverse,
+//                fkField,
+//                foreignRelation.dataSource(),
+//                foreignKey,
+//                foreignRelation.field()
+//        );
+        return importFromRelations.get(0);
     }
 
 //    protected static ForeignRelation describeForeignRelation(DataSource ds, DSField field, IDSLookup dsRegistry, String relation) {
