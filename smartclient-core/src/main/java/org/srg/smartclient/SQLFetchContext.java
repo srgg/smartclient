@@ -328,15 +328,8 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                     }
                 })
                 .map(dsf -> {
-
                     final RelationSupport.ImportFromRelation relation = dsHandler().describeImportFrom(dsf);
-
-                    return " JOIN %s ON %s.%s = %s.%s"
-                            .formatted(
-                                    relation.foreignDataSource().getTableName(),
-                                    dataSource().getTableName(), relation.sourceField().getDbName(),
-                                    relation.foreignDataSource().getTableName(), relation.foreignKey().getDbName()
-                            );
+                    return JDBCHandler.AbstractSQLContext.generateSQLJoin(relation);
                 })
                 .collect(Collectors.joining(" \n "));
 

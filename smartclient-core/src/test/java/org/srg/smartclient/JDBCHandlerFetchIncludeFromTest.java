@@ -1,11 +1,16 @@
 package org.srg.smartclient;
 
 import net.javacrumbs.jsonunit.core.Option;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
+
+import static org.hamcrest.Matchers.equalToCompressingWhiteSpace;
+import static org.hamcrest.Matchers.equalToIgnoringWhiteSpace;
 
 public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDBCHandler> {
 
@@ -64,6 +69,16 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
                 }""",
                 ifrl,
                 Option.IGNORING_EXTRA_FIELDS
+        );
+
+        // -- Check generated SQL join clause
+        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifrl);
+
+        MatcherAssert.assertThat( sqlJoin,
+                equalToCompressingWhiteSpace("""
+                        JOIN locations ON employee.location_id = locations.id        
+                    """
+                )
         );
 
         // --

@@ -613,5 +613,15 @@ public class JDBCHandler extends AbstractDSHandler {
 
             return m;
         }
+
+        public static String generateSQLJoin(RelationSupport.ImportFromRelation ifrl) {
+            return " JOIN %s ON %s.%s = %s.%s"
+                    .formatted(
+                            ifrl.foreignDataSource().getTableName(),
+                            ifrl.dataSource().getTableName(), ifrl.sourceField().getDbName(),
+                            ifrl.foreignDataSource().getTableName(), ifrl.foreignKey().getDbName()
+                    );
+        }
+
     }
 }
