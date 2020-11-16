@@ -1,14 +1,15 @@
 package org.srg.smartclient;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class RelationSupport {
+    @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
     public static record ForeignKeyRelation(
             DataSource dataSource,
             DSField sourceField,
@@ -28,6 +29,7 @@ public class RelationSupport {
     }
 
 
+    @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
     public static record ImportFromRelation(
             DataSource dataSource,
             DSField sourceField,
@@ -244,7 +246,8 @@ public class RelationSupport {
 //        }
 //    }
 
-    protected static class ForeignRelation {
+    @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+    public static class ForeignRelation {
         private final String dataSourceId;
         private final DataSource dataSource;
         private final String fieldName;
@@ -489,38 +492,6 @@ public class RelationSupport {
             // -- source field that linked to the foreign datasource
             final DSField fkField = determineForeignKeyField(ds, importFromField, foreignRelation);
 
-//            foreignRelations.add(foreignRelation);
-//        }
-//
-//        // -- foreign DS
-//        final ForeignRelation foreignRelation = foreignRelations.get(0);
-//
-//        // -- source field that linked to the foreign datasource
-//        final DSField fkField = determineForeignKeyField(dataSource, importFromField, foreignRelation);
-
-
-//        // by srg: this part must be re-written after ManyToMany will be implemented
-//        final boolean isReverse;
-//        final DSField effectiveSourceField;
-//        if (DSField.FieldType.ENTITY.equals(sourceField.getType())
-//            && sourceField.isMultiple()) {
-//            isReverse = true;
-//
-//            // -- find PKs
-//            final List<DSField> pks = dataSource.getFields().stream()
-//                    .filter(dsf -> dsf.isPrimaryKey())
-//                    .collect(Collectors.toList());
-//
-//            switch (pks.size()) {
-//                case 0 -> throw new RuntimeException();
-//                case 1 -> effectiveSourceField = pks.get(0);
-//                default -> throw new RuntimeException();
-//            }
-//        } else {
-//            isReverse = false;
-//            effectiveSourceField = sourceField;
-//        }
-
             // -- foreign key
             final String parsedForeignKey[] = fkField.getForeignKey().split("\\.");
             if (parsedForeignKey.length != 2) {
@@ -550,32 +521,20 @@ public class RelationSupport {
                 );
             }
 
-            final DSField foreignKey = foreignRelation.dataSource().getFields().stream()
-                    .filter(f -> f.getName().equals(parsedForeignKey[1]))
-                    .reduce((d1, d2) -> {
-                        throw new RuntimeException("Can't determine ImportFromRelation for '%s.%s': " +
-                                "foreign key field name '%s.%s' is not unique within  the data source."
-                                        .formatted(
-                                                ds.getId(),
+            final DSField foreignKey = foreignRelation.dataSource().getField(parsedForeignKey[1]);
+            if (foreignKey == null) {
+                throw new IllegalStateException(("Can't determine ImportFromRelation for '%s.%s': " +
+                        "foreign datasource '%s' nothing known about field name '%s'.")
+                        .formatted(
+                                ds.getId(),
 //                                    effectiveSourceField.getName(),
-                                                fkField.getName(),
-                                                foreignRelation.dataSourceId(),
-                                                parsedForeignKey[1]
-                                        )
-                        );
-                    })
-                    .orElseThrow(() -> {
-                        throw new IllegalStateException(("Can't determine ImportFromRelation for '%s.%s': " +
-                                "foreign datasource '%s' nothing known about field name '%s'.")
-                                .formatted(
-                                        ds.getId(),
-//                                    effectiveSourceField.getName(),
-                                        fkField.getName(),
-                                        foreignRelation.dataSourceId(),
-                                        parsedForeignKey[1]
-                                )
-                        );
-                    });
+                                fkField.getName(),
+                                foreignRelation.dataSourceId(),
+                                parsedForeignKey[1]
+                        )
+                );
+
+            }
 
             final ForeignKeyRelation frl = new ForeignKeyRelation(
                     ds,

@@ -12,7 +12,6 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
 
     private final IDSRegistry dsRegistry;
     private final DataSource datasource;
-    private transient Map<String, DSField> fieldMap;
     private transient Map<DSRequest.OperationType, List<OperationBinding>> bindingsMap;
 
     public AbstractDSHandler(IDSRegistry dsRegistry, DataSource datasource) {
@@ -31,20 +30,6 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
     protected static boolean isSubEntityFetchRequired(DSField dsf){
         return dsf.isMultiple()
                 || DSField.FieldType.ENTITY.equals(dsf.getType());
-    }
-
-    protected Map<String, DSField> getFieldMap() {
-        if (fieldMap == null) {
-            final Map<String, DSField> m = new LinkedHashMap<>();
-
-            for (DSField f: getDataSource().getFields()) {
-                m.put(f.getName(), f);
-            }
-
-            fieldMap = Collections.unmodifiableMap(m);
-        }
-
-        return fieldMap;
     }
 
     protected Map<DSRequest.OperationType, List<OperationBinding>> getBindingsMap() {
@@ -71,8 +56,9 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
 
         return bindingsMap;
     }
+
     protected DSField getField(String fieldName) {
-        return getFieldMap().get(fieldName);
+        return this.dataSource().getField(fieldName);
     }
 
     public List<DSField> getFields() {

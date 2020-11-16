@@ -1,9 +1,6 @@
 package org.srg.smartclient.isomorphic;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 // https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/serverds/DataSource.html
 //https://www.smartclient.com/isomorphic/system/reference/?id=class..DataSource
@@ -26,6 +23,8 @@ public class DataSource {
 
     private String fileName;
     private List<DSField> fields;
+
+    private transient Map<String, DSField> fieldMap;
 
     private String tableName;
 
@@ -86,7 +85,13 @@ public class DataSource {
         return fields;
     }
 
+    public DSField getField(String fieldName) {
+        return getFieldMap().get(fieldName);
+    }
+
     public void setFields(List<DSField> fields) {
+        fieldMap = null;
+
         /**
          * It is highly imported:
          *      PKs fields MUST BE teh first ones in the field list
@@ -153,6 +158,20 @@ public class DataSource {
 
     public void setServerConstructor(String serverConstructor) {
         this.serverConstructor = serverConstructor;
+    }
+
+    protected Map<String, DSField> getFieldMap() {
+        if (fieldMap == null) {
+            final Map<String, DSField> m = new LinkedHashMap<>();
+
+            for (DSField f: this.getFields()) {
+                m.put(f.getName(), f);
+            }
+
+            fieldMap = Collections.unmodifiableMap(m);
+        }
+
+        return fieldMap;
     }
 
     @Override
