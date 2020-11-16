@@ -1,6 +1,8 @@
 package org.srg.smartclient;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -8,10 +10,8 @@ import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
 import net.javacrumbs.jsonunit.JsonAssert;
 import net.javacrumbs.jsonunit.core.Configuration;
 import net.javacrumbs.jsonunit.core.Option;
-import org.srg.smartclient.jpa.Project;
 
 import java.io.IOException;
-import java.util.List;
 
 public class JsonTestSupport {
 
@@ -34,6 +34,13 @@ public class JsonTestSupport {
                     .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
                     .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
                     .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+            final SimpleModule module = new SimpleModule("DSResponse-Serialization", Version.unknownVersion());
+            module.addSerializer(RelationSupport.ForeignRelation.class, new JsonTestSupport.ForeignRelationSerializer());
+            module.addSerializer(RelationSupport.ImportFromRelation.class, new JsonTestSupport.ImportFromRelationSerializer());
+
+            tolerantMapper.registerModule(module);
+
         }
         return tolerantMapper;
     }
@@ -115,4 +122,46 @@ public class JsonTestSupport {
             throw new RuntimeException(e);
         }
     }
+
+    private static class ForeignRelationSerializer extends JsonSerializer<RelationSupport.ForeignRelation> {
+        @Override
+        public void serialize(RelationSupport.ForeignRelation value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+
+            gen.writeStartObject();
+
+            if (value.dataSource() != null) {
+                gen.writeStringField("dataSource", value.dataSource().getId());
+            } else {
+                gen.writeStringField("dataSourceId", value.dataSourceId());
+            }
+
+            if (value.field() != null) {
+                gen.writeObjectField("field", value.field());
+            } else {
+                gen.writeStringField("fieldName", value.fieldName());
+            }
+
+            gen.writeStringField("sqlFieldAlias", value.getSqlFieldAlias());
+
+            gen.writeEndObject();
+        }
+    }
+
+    private static class ImportFromRelationSerializer extends JsonSerializer<RelationSupport.ImportFromRelation> {
+
+        @Override
+        public void serialize(RelationSupport.ImportFromRelation value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            gen.writeStartObject();
+
+            gen.writeStringField("dataSource", value.dataSource().getId());
+            gen.writeObjectField("field", value.sourceField());
+
+            gen.writeStringField("foreignDataSource", value.foreignDataSource().getId());
+            gen.writeObjectField("foreignKey", value.foreignKey());
+            gen.writeObjectField("foreignDisplay", value.foreignDisplay());
+
+            gen.writeEndObject();
+        }
+    }
+
 }

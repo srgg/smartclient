@@ -1,7 +1,9 @@
 package org.srg.smartclient;
 
+import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
 
@@ -13,13 +15,14 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
     }
 
     @Test
-    public void includeFrom_Without_Via() throws Exception {
-        final String extra = """                
+    public void directIncludeFrom_Without_Via() throws Exception {
+        final String extra = """
                 [
                     {
                         name:"location"
                         , foreignKey:"LocationDS.id"
                         , dbName:"location_id"
+                        , displayField: 'location_city'                        
                     },
                     {
                         name:"location_city"
@@ -31,10 +34,42 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
         withHandlers(Handler.Location);
         final JDBCHandler employeeHandler = withExtraFields(extra);
 
+        // -- Check validity ImportFromRelation
+        final DSField includeFrom = employeeHandler.getField("location_city");
+        final RelationSupport.ImportFromRelation ifrl = RelationSupport.describeImportFrom(dsId -> employeeHandler.getDataSourceHandlerById(dsId), employeeHandler.dataSource(), includeFrom);
+        JsonTestSupport.assertJsonEquals("""
+                {
+                   dataSource:'EmployeeDS',
+                   field:{
+                      name:'location',
+                      foreignKey:'LocationDS.id',
+                      displayField:'location_city',
+                      dbName:'location_id',
+                      includeField:false
+                   },
+                   foreignDataSource:'LocationDS',
+                   foreignKey:{
+                      name:'id',
+                      required:true,
+                      primaryKey:true,
+                      dbName:'id'
+                   },
+                   foreignDisplay:{
+                      name:'city',
+                      dbName:'city',
+                      type: 'TEXT',
+                      foreignKey: null,                      
+                      includeField:false
+                   }
+                }""",
+                ifrl,
+                Option.IGNORING_EXTRA_FIELDS
+        );
+
+        // --
         DSRequest request = new DSRequest();
         request.setStartRow(0);
         request.setEndRow(3);
-//        request.setSortBy(Arrays.asList("+id"));
 
         final DSResponse response = employeeHandler.handleFetch(request);
 
@@ -78,11 +113,11 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
                   dbName: "country_id",
                   type: "integer",
                   foreignKey:"CountryDS.id"
-                }                        
+                }
             ]""");
 
         final JDBCHandler employeeHandler = withExtraFields(
-                """                
+                """
                     [
                         {
                             name:'location'
@@ -101,7 +136,52 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
         DSRequest request = new DSRequest();
         request.setStartRow(0);
         request.setEndRow(3);
-//        request.setSortBy(Arrays.asList("+id"));
+
+        final DSField includeFrom = employeeHandler.getField("location_country");
+
+        final RelationSupport.ForeignRelation frl = employeeHandler.determineEffectiveField(includeFrom);
+        JsonTestSupport.assertJsonEquals("""
+                {
+                    dataSource:'LocationDS',
+                    field:{
+                       name:'country',
+                       foreignKey:'CountryDS.id',
+                       includeField:false
+                    },
+                    "sqlFieldAlias":null
+                }""",
+                frl,
+                Option.IGNORING_EXTRA_FIELDS
+        );
+
+
+        final RelationSupport.ImportFromRelation ifrl = employeeHandler.describeImportFrom(includeFrom);
+        JsonTestSupport.assertJsonEquals("""
+                {
+                   dataSource:'EmployeeDS',
+                   field:{
+                      name:'location',
+                      foreignKey:'LocationDS.id',
+                      displayField:'location_country',
+                      includeField:false
+                   },
+                   foreignDataSource:'LocationDS',
+                   foreignKey:{
+                      name:'id',
+                      required:true,
+                      primaryKey:true
+                   },
+                   foreignDisplay:{
+                      name:'country',
+                      type:'INTEGER',
+                      foreignKey:'CountryDS.id',
+                      dbName:'country_id',
+                      includeField:false
+                   }
+                }""",
+                ifrl,
+                Option.IGNORING_EXTRA_FIELDS
+        );
 
         final DSResponse response = employeeHandler.handleFetch(request);
 
