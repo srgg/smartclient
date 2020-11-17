@@ -611,13 +611,13 @@ public class JDBCHandler extends AbstractDSHandler {
             return m;
         }
 
-        public static String generateSQLJoin(RelationSupport.ImportFromRelation ifrl) {
+        public static String generateSQLJoin(List<ForeignKeyRelation> frls) {
 
             // -- generate relation chain
-            DataSource srcDataSource = ifrl.dataSource();
             final StringBuilder sbld = new StringBuilder();
 
-            for (ForeignKeyRelation foreignKeyRelation : ifrl.foreignKeyRelations()) {
+            for (ForeignKeyRelation foreignKeyRelation : frls) {
+                DataSource srcDataSource = foreignKeyRelation.dataSource();
                 DataSource fkDataSource = foreignKeyRelation.foreign().dataSource();
                 DSField fkField = foreignKeyRelation.foreign().field();
                 DSField srcField = foreignKeyRelation.sourceField();
@@ -628,8 +628,6 @@ public class JDBCHandler extends AbstractDSHandler {
                                 fkDataSource.getTableName(), fkField.getDbName()
                         )
                 );
-
-                srcDataSource = fkDataSource;
             }
             return sbld.toString();
         }

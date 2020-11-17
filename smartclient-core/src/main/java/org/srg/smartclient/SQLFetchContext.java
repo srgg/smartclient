@@ -329,7 +329,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                 })
                 .map(dsf -> {
                     final RelationSupport.ImportFromRelation relation = dsHandler().describeImportFrom(dsf);
-                    return JDBCHandler.AbstractSQLContext.generateSQLJoin(relation);
+                    return JDBCHandler.AbstractSQLContext.generateSQLJoin(relation.foreignKeyRelations());
                 })
                 .collect(Collectors.joining(" \n "));
 

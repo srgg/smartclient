@@ -101,7 +101,7 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
         );
 
         // -- Check generated SQL join clause
-        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifrl);
+        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifrl.foreignKeyRelations());
 
         MatcherAssert.assertThat( sqlJoin,
                 equalToCompressingWhiteSpace("""
@@ -202,7 +202,7 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
         final RelationSupport.ImportFromRelation ifrl = employeeHandler.describeImportFrom(includeFrom);
 
         // -- Check generated SQL join clause
-        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifrl);
+        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifrl.foreignKeyRelations());
 
         MatcherAssert.assertThat( sqlJoin,
                 equalToCompressingWhiteSpace("""
@@ -366,7 +366,7 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
         final RelationSupport.ImportFromRelation ifrl = employeeHandler.describeImportFrom(includeFrom);
 
         // -- Check generated SQL join clause
-        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifrl);
+        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifrl.foreignKeyRelations());
 
         MatcherAssert.assertThat( sqlJoin,
                 equalToCompressingWhiteSpace("""

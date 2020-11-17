@@ -191,6 +191,6 @@ public class DataSource {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId());
+        return getId().hashCode();
     }
 }
