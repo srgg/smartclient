@@ -300,7 +300,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
         final String fromClause = dataSource().getTableName();
 
         // -- JOIN ON
-        final String joinClause = dsHandler().getFields()
+        final List<RelationSupport.ForeignKeyRelation> foreignKeyRelations = dsHandler().getFields()
                 .stream()
                 .filter(dsf -> dsf.isIncludeField()
                         /*
@@ -308,30 +308,36 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                          * therefore exclude this field from the sql join.
                          */
                         && !DSField.FieldType.ENTITY.equals(dsf.getType()))
+                .map(dsf -> {
+                    final RelationSupport.ImportFromRelation relation = dsHandler().describeImportFrom(dsf);
+                    return relation.foreignKeyRelations();
+                })
+                .flatMap( Collection::stream /*fkrls -> fkrls.stream()*/ )
 
-                /* It is required to generate one join per unique includeVia value */
+                /* It is required to generate one join per unique ForeignKeyRelation value */
                 .filter(new Predicate<>() {
-                    final Set<String> uniqueVia = new HashSet<>();
+                    final List<RelationSupport.ForeignKeyRelation> unique = new LinkedList<>();
 
                     @Override
-                    public boolean test(DSField dsField) {
-                        final String includeVia = dsField.getIncludeVia();
-                        if (includeVia != null && !includeVia.isBlank() && uniqueVia.contains( includeVia)) {
-                            return false;
-                        }
+                    public boolean test(RelationSupport.ForeignKeyRelation fkrl) {
 
-                        if (includeVia != null && !includeVia.isBlank()) {
-                            uniqueVia.add(includeVia);
+                        for (RelationSupport.ForeignKeyRelation f :unique) {
+                            if (
+                                    f.dataSource().equals(fkrl.dataSource())
+                                    && f.sourceField().equals(fkrl.sourceField())
+                                    && f.foreign().dataSource().equals(fkrl.foreign().dataSource())
+                                    && f.foreign().field().equals(fkrl.foreign().field())
+                            ) {
+                                return false;
+                            }
                         }
-
+                        unique.add(fkrl);
                         return true;
                     }
                 })
-                .map(dsf -> {
-                    final RelationSupport.ImportFromRelation relation = dsHandler().describeImportFrom(dsf);
-                    return JDBCHandler.AbstractSQLContext.generateSQLJoin(relation.foreignKeyRelations());
-                })
-                .collect(Collectors.joining(" \n "));
+                .collect(Collectors.toList());
+
+        final String joinClause = JDBCHandler.AbstractSQLContext.generateSQLJoin(foreignKeyRelations);
 
 
         // -- WHERE

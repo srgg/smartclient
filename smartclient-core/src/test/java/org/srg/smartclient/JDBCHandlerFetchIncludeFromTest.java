@@ -473,4 +473,79 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
                ]
             }""", response);
     }
+
+    @Regression("org.h2.jdbc.JdbcSQLSyntaxErrorException: Column 'countries.name' not found. Caused by improper SQL JOIN  Clause generation")
+    @Test
+    public void multipleIndirectIncludeFrom_with_the_same_includeVia() throws Exception {
+        final JDBCHandler locationHandler = withHandlers(Handler.Country, Handler.Location);
+        withExtraFields(locationHandler, """
+            [
+                {
+                  name: "country",
+                  dbName: "country_id",
+                  type: "integer",
+                  foreignKey:"CountryDS.id"
+                }
+            ]""");
+
+        final JDBCHandler employeeHandler = withExtraFields(
+                """
+                    [
+                        {
+                            name:'location'
+                            , foreignKey:'LocationDS.id'
+                            , dbName:'location_id'
+                            , displayField: 'location_country'
+                        },
+                        {
+                            name:'location_city'
+                            , type:'TEXT'
+                            , includeFrom:'LocationDS.city'
+                            , includeVia:'location'
+                        },
+                        {
+                            name:'location_country'
+                            , type:'TEXT'
+                            , includeFrom:'LocationDS.country.CountryDS.name'
+                            , includeVia:'location'
+                        }
+                    ]
+                """);
+        DSRequest request = new DSRequest();
+        request.setStartRow(0);
+        request.setEndRow(3);
+
+        final DSResponse response = employeeHandler.handleFetch(request);
+
+        JsonTestSupport.assertJsonEquals("""
+            {
+               status:0,
+               startRow:0,
+               endRow:3,
+               totalRows:6,
+               data:[
+                   {
+                      id:1,
+                      location:1,
+                      location_country:'Ukraine',
+                      location_city:'Kharkiv',
+                      name:'admin'
+                   },
+                   {
+                      id:2,
+                      location:2,
+                      location_country:'Ukraine',
+                      location_city:'Lviv',                      
+                      name:'developer'
+                   },
+                   {
+                      id:3,
+                      location:3,
+                      location_country:'USA',
+                      location_city:'USA',                      
+                      name:'UseR3'
+                   }               
+               ]
+            }""", response);
+    }
 }
