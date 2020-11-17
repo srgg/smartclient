@@ -555,9 +555,6 @@ public class JDBCHandler extends AbstractDSHandler {
         private final DSRequest request;
         private final OperationBinding operationBinding;
 
-//        private Map<String, Object> pkValues = new HashMap<>();
-
-
         public AbstractSQLContext(H dsHandler, DSRequest request, OperationBinding operationBinding) throws Exception {
             this.request = request;
             this.operationBinding = operationBinding;
@@ -615,13 +612,26 @@ public class JDBCHandler extends AbstractDSHandler {
         }
 
         public static String generateSQLJoin(RelationSupport.ImportFromRelation ifrl) {
-            return " JOIN %s ON %s.%s = %s.%s"
-                    .formatted(
-                            ifrl.foreignDataSource().getTableName(),
-                            ifrl.dataSource().getTableName(), ifrl.sourceField().getDbName(),
-                            ifrl.foreignDataSource().getTableName(), ifrl.foreignKey().getDbName()
-                    );
-        }
 
+            // -- generate relation chain
+            DataSource srcDataSource = ifrl.dataSource();
+            final StringBuilder sbld = new StringBuilder();
+
+            for (ForeignKeyRelation foreignKeyRelation : ifrl.foreignKeyRelations()) {
+                DataSource fkDataSource = foreignKeyRelation.foreign().dataSource();
+                DSField fkField = foreignKeyRelation.foreign().field();
+                DSField srcField = foreignKeyRelation.sourceField();
+                sbld.append(" JOIN %s ON %s.%s = %s.%s\n"
+                        .formatted(
+                                fkDataSource.getTableName(),
+                                srcDataSource.getTableName(), srcField.getDbName(),
+                                fkDataSource.getTableName(), fkField.getDbName()
+                        )
+                );
+
+                srcDataSource = fkDataSource;
+            }
+            return sbld.toString();
+        }
     }
 }

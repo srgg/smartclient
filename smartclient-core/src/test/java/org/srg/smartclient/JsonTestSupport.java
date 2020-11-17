@@ -38,6 +38,8 @@ public class JsonTestSupport {
             final SimpleModule module = new SimpleModule("DSResponse-Serialization", Version.unknownVersion());
             module.addSerializer(RelationSupport.ForeignRelation.class, new JsonTestSupport.ForeignRelationSerializer());
             module.addSerializer(RelationSupport.ImportFromRelation.class, new JsonTestSupport.ImportFromRelationSerializer());
+            module.addSerializer(RelationSupport.ForeignKeyRelation.class, new JsonTestSupport.ForeignKeyRelationSerializer());
+
 
             tolerantMapper.registerModule(module);
 
@@ -60,7 +62,7 @@ public class JsonTestSupport {
 
     public static Configuration defaultConfiguration = Configuration.empty().withOptions(Option.IGNORING_ARRAY_ORDER);
 
-    public static void assertJsonEquals(Object expected, Object actual, Option...options) {
+    public static void assertJsonEquals(Object expected, Object actual, Option... options) {
         assertEqualsUsingJSONImpl(expected, actual, defaultConfiguration.withOptions(Option.IGNORING_ARRAY_ORDER, options), null);
     }
 
@@ -156,12 +158,34 @@ public class JsonTestSupport {
             gen.writeStringField("dataSource", value.dataSource().getId());
             gen.writeObjectField("field", value.sourceField());
 
-            gen.writeStringField("foreignDataSource", value.foreignDataSource().getId());
-            gen.writeObjectField("foreignKey", value.foreignKey());
+            gen.writeObjectField("foreignKeyRelations", value.foreignKeyRelations());
+
             gen.writeObjectField("foreignDisplay", value.foreignDisplay());
 
             gen.writeEndObject();
         }
     }
 
+    private static class ForeignKeyRelationSerializer extends JsonSerializer<RelationSupport.ForeignKeyRelation> {
+
+
+        @Override
+        public void serialize(RelationSupport.ForeignKeyRelation value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            gen.writeStartObject();
+
+            if (value.dataSource() != null) {
+                gen.writeStringField("dataSource", value.dataSource().getId());
+            } else {
+                gen.writeNullField("dataSource");
+            }
+
+
+            gen.writeObjectField("sourceField", value.sourceField());
+            gen.writeBooleanField("isInverse", value.isInverse());
+
+            gen.writeObjectField("foreign", value.foreign());
+
+            gen.writeEndObject();
+        }
+    }
 }

@@ -34,15 +34,30 @@ public class RelationSupport {
             DataSource dataSource,
             DSField sourceField,
 
-            DataSource foreignDataSource,
-            DSField foreignKey,
+            List<ForeignKeyRelation> foreignKeyRelations,
             DSField foreignDisplay
     ){
+        protected ForeignKeyRelation getLast() {
+            if (foreignKeyRelations.isEmpty()) {
+                throw new IllegalStateException();
+            }
+
+            return foreignKeyRelations.get(foreignKeyRelations.size() -1);
+        }
+
+        protected ForeignKeyRelation get1st() {
+            if (foreignKeyRelations.isEmpty()) {
+                throw new IllegalStateException();
+            }
+
+            return foreignKeyRelations.get(0);
+        }
+
         @Override
         public String toString() {
             return "ImportFromRelation{ " +
                     "FOREIGN KEY " + dataSource.getId() +"(" + sourceField.getName() + ") \n" +
-                    "  REFERENCES " +foreignDataSource.getId() +"(" +  foreignKey.getName() + ")\n" +
+                    "  REFERENCES " +foreignKeyRelations.toString()  + ")\n" +
                     "  DISPLAYS (" + foreignDisplay.getName() + ")" +
                     '}';
         }
@@ -51,15 +66,17 @@ public class RelationSupport {
          * Converts {@code ImportFromRelation} to {@code ForeignKeyRelation} as is.
          */
         public ForeignKeyRelation toForeignKeyRelation() {
+            final ForeignKeyRelation fkrl = get1st();
+
             return new ForeignKeyRelation(
                     this.dataSource,
                     this.sourceField,
                     false, // no chance to determine this at this point/level
                     new ForeignRelation(
-                            this.foreignDataSource.getId(),
-                            this.foreignDataSource,
-                            this.foreignKey.getName(),
-                            this.foreignKey
+                            fkrl.foreign.dataSource().getId(),
+                            fkrl.foreign.dataSource(),
+                            fkrl.foreign.field().getName(),
+                            fkrl.foreign.field()
                     )
             );
         }
@@ -70,14 +87,15 @@ public class RelationSupport {
          */
         public ForeignKeyRelation toForeignDisplayKeyRelation() {
             assert foreignDisplay != null;
+            final ForeignKeyRelation fkrl = get1st();
 
             return new ForeignKeyRelation(
                     this.dataSource,
                     this.sourceField,
                     false, // no chance to determine this at this point/level
                     new ForeignRelation(
-                            this.foreignDataSource.getId(),
-                            this.foreignDataSource,
+                            fkrl.foreign.dataSource().getId(),
+                            fkrl.foreign.dataSource(),
                             this.foreignDisplay.getName(),
                             this.foreignDisplay
                     )
@@ -311,11 +329,12 @@ public class RelationSupport {
         }
 
         final int depth = parsedIncludeFrom.length / 2;
-        final List<ImportFromRelation> importFromRelations = new ArrayList<>(depth);
         final List<ForeignKeyRelation> foreignKeyRelations = new ArrayList<>(depth);
 
         DataSource currentDataSource = dataSource;
 
+        DSField displayField = null;
+        DSField currentSourceField = importFromField;
         for(int i=0; i<parsedIncludeFrom.length; i = i +2) {
             final DataSource ds = currentDataSource;
             final String foreignDsId = parsedIncludeFrom[i].trim();
@@ -323,13 +342,15 @@ public class RelationSupport {
 
             final ForeignRelation foreignRelation = ForeignRelation.describeForeignRelation(
                     ds,
-                    importFromField,
+                    currentSourceField,
                     idsRegistry,
                     "%s.%s".formatted(foreignDsId, foreignDsFieldName)
             );
 
+            displayField = foreignRelation.field;
+
             // -- source field that linked to the foreign datasource
-            final DSField fkField = determineForeignKeyField(ds, importFromField, foreignRelation);
+            final DSField fkField = determineForeignKeyField(ds, currentSourceField, foreignRelation);
 
             // -- foreign key
             final String parsedForeignKey[] = fkField.getForeignKey().split("\\.");
@@ -372,39 +393,27 @@ public class RelationSupport {
                                 parsedForeignKey[1]
                         )
                 );
-
             }
 
             final ForeignKeyRelation frl = new ForeignKeyRelation(
                     ds,
                     fkField,
                     false,
-                    foreignRelation
+                    new ForeignRelation(foreignRelation.dataSource.getId(), foreignRelation.dataSource, foreignKey.getName(), foreignKey)
             );
 
             foreignKeyRelations.add(frl);
-
-            final  ImportFromRelation ifr = new ImportFromRelation(ds,
-                    fkField,
-                    foreignRelation.dataSource(),
-                    foreignKey,
-                    foreignRelation.field()
-            );
-
-            importFromRelations.add(ifr);
             currentDataSource = foreignRelation.dataSource();
+            currentSourceField = foreignRelation.field();
         }
 
         final ForeignKeyRelation frl1 = foreignKeyRelations.get(0);
-        final ForeignKeyRelation frlLast = foreignKeyRelations.get(depth -1);
-        final ImportFromRelation ifrl = new ImportFromRelation(dataSource,
-                frl1.sourceField,
-                frlLast.foreign.dataSource,
-                frlLast.foreign.field,
-                frlLast.foreign.field
+        return new ImportFromRelation(
+                frl1.dataSource(),
+                frl1.sourceField(),
+                foreignKeyRelations,
+                displayField
         );
-
-        return importFromRelations.get(0);
     }
 
     static public ForeignKeyRelation describeForeignKey(IDSLookup dsRegistry, DataSource dataSource, DSField foreignKeyField) {
@@ -413,7 +422,7 @@ public class RelationSupport {
                     .formatted(
                             dataSource.getId(),
                             foreignKeyField.getName()
-                ));
+                    ));
         }
 
         final ForeignRelation foreignKeyRelation = ForeignRelation.describeForeignRelation( dataSource, foreignKeyField, dsRegistry, foreignKeyField.getForeignKey());

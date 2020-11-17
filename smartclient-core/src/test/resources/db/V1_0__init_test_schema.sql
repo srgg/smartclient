@@ -9,7 +9,7 @@ CREATE TABLE simpleentity
 
 CREATE TABLE countries(
     id          INT AUTO_INCREMENT,
-    country     VARCHAR(40),
+    name     VARCHAR(40),
 
     CONSTRAINT pkCountries
         PRIMARY KEY (id)

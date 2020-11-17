@@ -158,7 +158,7 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
 
         if (dsf.isIncludeField()) {
             final ImportFromRelation relation = describeImportFrom(dsf);
-            effectiveDS = relation.foreignDataSource();
+            effectiveDS = relation.getLast().foreign().dataSource();
             effectiveField = relation.foreignDisplay();
         } else {
             effectiveDS = getDataSource();
