@@ -25,8 +25,11 @@ public class AdvancedJDBCHandler extends JDBCHandler {
         return true;
     }
 
-    private IFilterData generateFD(Criteria ac) {
+    private IFilterData generateFD(Criteria ac, Predicate<String> exclusionPredicate ) {
         if (ac.getFieldName() != null && !ac.getFieldName().isBlank()) {
+            if (exclusionPredicate.test(ac.getFieldName())){
+                return null;
+            }
 
             if (ac.getCriteria() != null && !ac.getCriteria().isEmpty()) {
                 throw new IllegalStateException(
@@ -189,10 +192,14 @@ public class AdvancedJDBCHandler extends JDBCHandler {
             }
 
             final List<IFilterData> fds = ac.getCriteria().stream()
-                    .map(this::generateFD)
+                    .map(criteria -> this.generateFD(criteria, exclusionPredicate))
+                    .filter( fd -> fd != null)
                     .collect(Collectors.toList());
-
-            return new CompositeFilterData(ac.getOperator().name(), fds);
+            if (fds.isEmpty()) {
+                return null;
+            } else {
+                return new CompositeFilterData(ac.getOperator().name(), fds);
+            }
         }
     }
 
@@ -204,8 +211,13 @@ public class AdvancedJDBCHandler extends JDBCHandler {
             IDSRequestData data,
             Predicate<String> exclusionPredicate) {
         if (data instanceof AdvancedCriteria ac) {
-            return Collections.singletonList(generateFD(ac));
+            final IFilterData fd = generateFD(ac, exclusionPredicate);
 
+            if (fd == null) {
+                return Collections.EMPTY_LIST;
+            } else {
+                return Collections.singletonList(fd);
+            }
         } else {
             return super.generateFilterData(operationType, textMatchStyle, data, exclusionPredicate);
         }
