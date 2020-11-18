@@ -33,7 +33,7 @@ public class AdvancedJDBCHandler extends JDBCHandler {
 
             if (ac.getCriteria() != null && !ac.getCriteria().isEmpty()) {
                 throw new IllegalStateException(
-                        "Hm, I was sure that this case is impossible, but if you goty this error, I need to rethink this"
+                        "Hm, I was sure that this case is impossible, but if you got this error, I need to rethink this"
                 );
             }
 

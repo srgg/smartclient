@@ -5,6 +5,7 @@ import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
+import org.srg.smartclient.isomorphic.criteria.Criteria;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -28,6 +29,24 @@ public class SQLTemplateEngine {
         return out.toString();
     }
 
+    private static Map<String, Object> populateAdvancedCriteriaMap(Map<String, Object> values, Criteria ac) {
+        if (ac.getFieldName() != null && !ac.getFieldName().isBlank()) {
+            if (ac.getCriteria() != null && !ac.getCriteria().isEmpty()) {
+                throw new IllegalStateException(
+                        "Hm, I was sure that this case is impossible, but if you got this error, I need to rethink this"
+                );
+            }
+
+            values.put(ac.getFieldName(), ac.getValue());
+        } else {
+            for (Criteria c :ac.getCriteria()){
+                values = populateAdvancedCriteriaMap(values, c);
+            }
+        }
+
+        return values;
+    }
+
     public static Map<String, Object > createContext(
             DSRequest request,
             String selectClause,
@@ -44,15 +63,13 @@ public class SQLTemplateEngine {
         ctx.put("defaultAnsiJoinClause", joinClause);
         ctx.put("defaultOrderClause", orderClause);
 
-//                "defaultValuesClause", null,
-
-
         if (DSRequest.OperationType.FETCH.equals(request.getOperationType())) {
             if (request.getData() instanceof Map criteria) {
                 ctx.put("criteria", criteria);
                 ctx.put("advancedCriteria", criteria);
             } else if (request.getData() instanceof AdvancedCriteria ac) {
-                ctx.put("advancedCriteria", ac);
+                final Map<String, Object> values = populateAdvancedCriteriaMap(new HashMap<>(), ac);
+                ctx.put("advancedCriteria", values);
             }
         }
 
