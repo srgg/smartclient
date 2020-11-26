@@ -262,6 +262,7 @@ public class JsonSerde {
 //                    jsonGenerator.writeString(value.toString());
 //                    jsonGenerator.writeObject(value);
                 case FLOAT:
+                case BOOLEAN:
                     return value;
 
                 case DATE:
