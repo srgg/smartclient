@@ -11,38 +11,55 @@
 	<artifactId>smartclient-resources-lgpl</artifactId>
 	<properties>
 		<!--
-			SmartClient release date override- just  uncomment variable above, this can be used to stick
-			with a corespondent release date/version.
-
 			On the one hand - it is hard to predict a date of the next patched release, and, moreover, Isomorphic team treats
 			the patched distros as a nightly builds and removes a stale ones, - it is really hard to automate
 			distro download.
 
 			On the other hand - size of the source is bigger than allowed by GitHub, therefore distro can not be uploaded to GH.
+
+			Therefore actual archive nmae will be parsed
 		  -->
-		<SMART_CLIENT_RELEASE_DATE>2020-11-14</SMART_CLIENT_RELEASE_DATE>
-		<smartclient-lgpl.version>SmartClient_v121p_${SMART_CLIENT_RELEASE_DATE}_LGPL</smartclient-lgpl.version>
-<!--		<smartclient-lgpl.version>SmartClient_SNAPSHOT_v130d_2020-08-06_LGPL</smartclient-lgpl.version>-->
+		<smartclient-lgpl-release>12.1p</smartclient-lgpl-release>
 	</properties>
 	<build>
 		<plugins>
 			<plugin>
 				<artifactId>maven-antrun-plugin</artifactId>
 				<version>3.0.0</version>
+				<dependencies>
+					<dependency>
+						<groupId>ant-contrib</groupId>
+						<artifactId>ant-contrib</artifactId>
+						<version>1.0b3</version>
+
+						<exclusions>
+							<exclusion>
+								<groupId>ant</groupId>
+								<artifactId>ant</artifactId>
+							</exclusion>
+						</exclusions>
+					</dependency>
+				</dependencies>
+
 				<executions>
 					<execution>
 						<phase>generate-resources</phase>
 						<configuration>
 							<exportAntProperties>true</exportAntProperties>
 							<target>
-								<tstamp>
-									<format property="SMART_CLIENT_RELEASE_DATE" pattern="yyyy-MM-dd" offset="-1"/>
-								</tstamp>
+								<taskdef resource="net/sf/antcontrib/antcontrib.properties"/>
+								<loadresource property="latest">
+									<url url="https://www.smartclient.com/builds/SmartClient/${smartclient-lgpl-release}/LGPL/latest"/>
+								</loadresource>
 
-								<echo message="downloading smartclient lgpl ${smartclient-lgpl.version}.zip" />
+								<propertyregex property="latestbuild" regexp='&lt;a\s+href="(?&lt;latestbuild&gt;[^"]+)\"&gt;SmartClient_[^&lt;]+&lt;\/a&gt;' input="${latest}" select="\1"/>
+								<propertyregex property="smartclient-lgpl.version" regexp='&lt;a\s+href="[^"]+\"&gt;(SmartClient_.+).zip&lt;\/a&gt;' input="${latest}" select="\1"/>
 
-								<!--								<get src="https://www.smartclient.com/builds/SmartClient/13.0d/LGPL/latest/${smartclient-lgpl.version}.zip"-->
-								<get src="https://www.smartclient.com/builds/SmartClient/12.1p/LGPL/latest/${smartclient-lgpl.version}.zip"
+
+								<echo message="LATEST SmartClient Build: ${latestbuild}"/>
+								<echo message="Downloading ${smartclient-lgpl.version}.zip" />
+
+								<get src="https://www.smartclient.com${latestbuild}"
 								dest="${project.build.directory}"
 								skipexisting="true"
 								verbose="false"
