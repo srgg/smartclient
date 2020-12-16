@@ -103,10 +103,10 @@ public enum OperatorId {
 //     */
 //    GREATER_OR_EQUAL_FIELD,
 //
-//    /**
-//     *  Greater than
-//     */
-//    GREATER_THAN,
+    /**
+     *  Greater than
+     */
+    GREATER_THAN("greaterThan"),
 //
 //    /**
 //     * Greater than another field (specify fieldName as criterion.value)
@@ -203,11 +203,11 @@ public enum OperatorId {
 //     * Less than or equal to another field (specify fieldName as criterion.value)
 //     */
 //    LESS_OR_EQUAL_FIELD,
-//
-//    /**
-//     * Less than
-//     */
-//    LESS_THAN,
+
+    /**
+     * Less than
+     */
+    LESS_THAN("lessThan"),
 //
 //    /**
 //     * Less than another field (specify fieldName as criterion.value)
@@ -265,7 +265,7 @@ public enum OperatorId {
     /**
      * Does not start with (case insensitive)
      */
-    INOT_STARTS_WITH("iNotStartWith"),
+    INOT_STARTS_WITH("iNotStartsWith"),
 
     /**
      * Starts with (match case)

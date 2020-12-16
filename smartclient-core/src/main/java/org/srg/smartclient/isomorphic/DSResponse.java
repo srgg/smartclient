@@ -122,7 +122,7 @@ public class DSResponse {
         return operationType;
     }
 
-    public void setOperationType(DSRequest.OperationType operationType) {
+    public void  setOperationType(DSRequest.OperationType operationType) {
         this.operationType = operationType;
     }
 

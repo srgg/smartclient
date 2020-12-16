@@ -158,6 +158,16 @@ public class AdvancedJDBCHandler extends JDBCHandler {
                     filterStr = "%s <= ?";
                     break;
 
+                case GREATER_THAN:
+                    values = ac.getValue();
+                    filterStr =  "%s > ?";
+                    break;
+
+                case LESS_THAN:
+                    values = ac.getValue();
+                    filterStr =  "%s < ?";
+                    break;
+
                 default:
                     throw new RuntimeException("DataSource '%s': unsupported operator '%s'"
                             .formatted(

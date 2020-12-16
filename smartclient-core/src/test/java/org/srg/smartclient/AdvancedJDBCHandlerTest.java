@@ -15,19 +15,21 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
     private static Stream<? extends Arguments> provideArgs() {
         return Stream.of(
                 basicCriteria()
-//                ,compositeAndCaseInsensitiveCriteria()
-//                ,compositeOrCaseSensitiveCriteria()
-//                ,iNotContainsCriteria()
-//                ,equalsCriteria()
-//                ,notEqualCriteria()
-//                ,iEqualsCriteria()
-//                ,iContains_by_SQLCalculatedField_Criteria()
-//                ,iStartsWithCriteria()
-//                ,startsWithCriteria()
-//                ,betweenInclusiveCriteria()
-//                ,betweenCriteria()
-//                ,greaterOrEqualCriteria()
-//                ,lessOrEqualCriteria()
+                ,compositeAndCaseInsensitiveCriteria()
+                ,compositeOrCaseSensitiveCriteria()
+                ,iNotContainsCriteria()
+                ,equalsCriteria()
+                ,notEqualCriteria()
+                ,iEqualsCriteria()
+                ,iContains_by_SQLCalculatedField_Criteria()
+                ,iStartsWithCriteria()
+                ,startsWithCriteria()
+                ,betweenInclusiveCriteria()
+                ,betweenCriteria()
+                ,greaterOrEqualCriteria()
+                ,lessOrEqualCriteria()
+                ,lessCriteria()
+                ,greaterCriteria()
         );
     }
 
@@ -626,6 +628,64 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             startRow:0,
                             status:0,
                             totalRows:2
+                        }"""
+        );
+    }
+
+    private static Arguments lessCriteria() {
+        return Arguments.of(
+                "lessThan condition",
+                """
+                        {
+                            "operator" : "and",
+                            "_constructor" : "AdvancedCriteria",
+                            "criteria" : [
+                                {
+                                    "fieldName":"firedAt",
+                                    "operator":"lessThan",
+                                    "value":"2000-05-04T00:02:01.000+00:00"
+                                }
+                            ]
+                        }""",
+                """
+                        {
+                            data:[
+                                {
+                                    id:1,
+                                    name:'admin',
+                                    firedAt: "2000-01-02T01:04:05.000+00:00"
+                                }
+                            ],
+                            endRow:1,
+                            startRow:0,
+                            status:0,
+                            totalRows:1
+                        }"""
+        );
+    }
+
+    private static Arguments greaterCriteria() {
+        return Arguments.of(
+                "greaterThan condition",
+                """
+                        {
+                            "operator" : "and",
+                            "_constructor" : "AdvancedCriteria",
+                            "criteria" : [
+                                {
+                                    "fieldName":"firedAt",
+                                    "operator":"greaterThan",
+                                    "value":"2000-05-04T00:02:01.000+00:00"
+                                }
+                            ]
+                        }""",
+                """
+                        {
+                            data:[],
+                            endRow:0,
+                            startRow:0,
+                            status:0,
+                            totalRows:0
                         }"""
         );
     }
