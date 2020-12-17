@@ -1,6 +1,5 @@
 package org.srg.smartclient.spring.autoconfiguration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +12,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.*;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.util.MimeType;
@@ -21,13 +21,15 @@ import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.srg.smartclient.IDSDispatcher;
 import org.srg.smartclient.isomorphic.DSTransaction;
-import org.srg.smartclient.utils.JsonSerde;
+import org.srg.smartclient.utils.Serde;
 import org.srg.smartclient.isomorphic.DSResponse;
 import org.srg.smartclient.isomorphic.IDSRequest;
 import org.srg.smartclient.spring.SmartClientProperties;
 import reactor.core.publisher.Mono;
 
 import javax.sql.DataSource;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.util.Collection;
 
@@ -55,11 +57,11 @@ public class SmartClientAutoConfiguration {
     @Autowired
     private IDSDispatcher dsDispatcher;
 
-    protected Mono<ServerResponse> processRequest(String request) {
+    protected Mono<ServerResponse> processRequest(String request, String fileName) {
 
         final IDSRequest dsRequest;
         try {
-            dsRequest = JsonSerde.deserializeRequest(request);
+            dsRequest = Serde.deserializeRequest(request);
         } catch(Exception ex) {
             logger.error("Can't deserialize ds request: \n%s"
                             .formatted(request),
@@ -77,18 +79,62 @@ public class SmartClientAutoConfiguration {
         try {
             final Collection<DSResponse> responses = dsDispatcher.dispatch(dsRequest);
 
-            ObjectMapper mapper;
-            try (final StringWriter sw = new StringWriter();) {
-                sw.write("<SCRIPT>//'\"]]>>isc_JSONResponseStart>>\n");
+            if (fileName == null || fileName.isBlank()) {
+                // -- Usual request processing
+                try (final StringWriter sw = new StringWriter();) {
+                    sw.write("<SCRIPT>//'\"]]>>isc_JSONResponseStart>>\n");
 
-                JsonSerde.serializeResponse(sw, transactionNum, responses);
+                    Serde.serializeResponse(sw, transactionNum, responses);
 
-                sw.write("\n//isc_JSONResponseEnd");
+                    sw.write("\n//isc_JSONResponseEnd");
 
-                return ServerResponse
-                        .ok()
-                        .cacheControl(CacheControl.noCache())
-                        .bodyValue(sw.toString());
+                    return ServerResponse
+                            .ok()
+                            .cacheControl(CacheControl.noCache())
+                            .bodyValue(sw.toString());
+                }
+            } else {
+                // -- export data request
+
+                String ext = fileName.substring(fileName.lastIndexOf(".")+1);
+
+                if (!"csv".equalsIgnoreCase(ext)) {
+                    throw new RuntimeException(
+                        "Unsupported export format '%s', the only format supported for export data is 'CSV'"
+                            .formatted(ext)
+                    );
+                }
+
+                if (responses.size() > 1) {
+                    throw new IllegalStateException("Multiple responses is not supported for export data.");
+                }
+
+
+                final DSResponse response = responses.iterator().next();
+
+                try(final ByteArrayOutputStream bos = new ByteArrayOutputStream();) {
+                    try (final OutputStreamWriter writer = new OutputStreamWriter(bos);) {
+                        Serde.serializeResponseAsCSV(writer, ',', response);
+                        writer.flush();
+                    }
+//                final InputStreamResource resource =  new InputStreamResource(
+//                        new ByteArrayInputStream(
+//                                bos.toByteArray()
+//                        )
+//                );
+
+                    // https://forums.smartclient.com/forum/smart-gwt-technical-q-a/7425-url-request-using-exportdata-in-listgrid
+                    // https://medium.com/@victortemitope95/how-to-write-and-download-a-csv-file-in-spring-webflux-5df8d817a597
+                    return ServerResponse
+                            .ok()
+                            .cacheControl(CacheControl.noCache())
+                            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                            .header(HttpHeaders.CONTENT_TYPE, "text/csv")
+//                        .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+//                        .body(BodyInserters.fromResource(resource));
+//                        .body(Mono.just(new ByteArrayInputStream(bos.toByteArray())));
+                            .bodyValue(bos.toString());
+                }
             }
         } catch (Throwable t) {
             return Mono.error(t);
@@ -98,11 +144,18 @@ public class SmartClientAutoConfiguration {
 
     @Bean
     public RouterFunction<ServerResponse> smartClientRESTHandler() {
+        // https://github.com/sdeleuze/webflux-multipart/blob/master/src/main/java/com/example/MultipartRoute.java
         //https://www.programcreek.com/java-api-examples/?code=hantsy/spring-reactive-sample/spring-reactive-sample-master/routes/src/main/java/com/example/demo/PostHandler.java
         return RouterFunctions.route(POST(smartClientProperties.getDispatcherPath()), r ->
              r.bodyToMono(String.class)
-                    .flatMap( body -> this.processRequest(body))
-        );
+                    .flatMap( body -> this.processRequest(body, null))
+        )
+        // export data
+        .andRoute(POST(smartClientProperties.getDispatcherPath()+"/{export-file-name}"), r -> {
+            final String exportFile = r.pathVariable("export-file-name");
+            return r.bodyToMono(String.class)
+                    .flatMap(body -> this.processRequest(body,exportFile));
+        });
     }
 
     @Bean

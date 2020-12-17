@@ -7,7 +7,7 @@ import org.srg.smartclient.isomorphic.IDSRequest;
 import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
 import org.srg.smartclient.isomorphic.criteria.Criteria;
 import org.srg.smartclient.isomorphic.criteria.OperatorId;
-import org.srg.smartclient.utils.JsonSerde;
+import org.srg.smartclient.utils.Serde;
 
 import java.io.IOException;
 import java.util.Map;
@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class DSRequestDeserializationTest {
     private static  <T extends IDSRequest> T deserialize(String data) throws IOException {
 
-        final T retVal = JsonSerde.deserializeRequest(data);
+        final T retVal = Serde.deserializeRequest(data);
 
         if (retVal instanceof DSRequest request){
                 assertEquals("userAssignmentsDS", request.getDataSource());

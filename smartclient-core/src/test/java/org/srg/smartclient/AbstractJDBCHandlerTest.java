@@ -11,7 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
-import org.srg.smartclient.utils.JsonSerde;
+import org.srg.smartclient.utils.Serde;
 
 import java.lang.reflect.Constructor;
 import java.sql.Connection;
@@ -291,7 +291,7 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> {
 
     @BeforeAll
     public static void setupDB() {
-        JsonTestSupport.defaultMapper = JsonSerde.createMapper();
+        JsonTestSupport.defaultMapper = Serde.createMapper();
     }
 
     @AfterAll

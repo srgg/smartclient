@@ -1,7 +1,6 @@
 package org.srg.smartclient.jpa;
 
 import com.fasterxml.jackson.databind.BeanDescription;
-import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.ser.BeanPropertyWriter;
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
@@ -11,7 +10,7 @@ import org.hibernate.internal.SessionFactoryImpl;
 import org.junit.jupiter.api.*;
 import org.srg.smartclient.JDBCHandler;
 import org.srg.smartclient.JpaDSDispatcher;
-import org.srg.smartclient.utils.JsonSerde;
+import org.srg.smartclient.utils.Serde;
 import org.srg.smartclient.JsonTestSupport;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
@@ -89,7 +88,7 @@ public class JpaDSDispatcherTest {
 
     @BeforeAll
     public static void setupMapper() {
-        JsonTestSupport.defaultMapper = JsonSerde.createMapper();
+        JsonTestSupport.defaultMapper = Serde.createMapper();
     }
 
     private Void initDB( Connection connection ) {

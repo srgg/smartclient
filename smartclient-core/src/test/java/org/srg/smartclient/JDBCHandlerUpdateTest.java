@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
 import org.srg.smartclient.utils.ContextualRuntimeException;
-import org.srg.smartclient.utils.JsonSerde;
+import org.srg.smartclient.utils.Serde;
 
 import java.io.StringWriter;
 
@@ -55,7 +55,7 @@ public class JDBCHandlerUpdateTest extends AbstractJDBCHandlerTest<JDBCHandler> 
              * Other than that it does not have any sense
              */
             final StringWriter sw = new StringWriter();
-            final ObjectMapper mapper = JsonSerde.createMapper();
+            final ObjectMapper mapper = Serde.createMapper();
 
             e.dumpContext_ifAny(sw, "  ", mapper.writerWithDefaultPrettyPrinter());
             System.out.println( sw.toString());

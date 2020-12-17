@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.jpa.*;
-import org.srg.smartclient.utils.JsonSerde;
+import org.srg.smartclient.utils.Serde;
 
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.metamodel.Attribute;
@@ -22,7 +22,7 @@ public class JPAAwareHandlerFactoryTest {
 
 	@BeforeAll
 	public static void setupJsonMapper() {
-		JsonTestSupport.defaultMapper = JsonSerde.createMapper();
+		JsonTestSupport.defaultMapper = Serde.createMapper();
 	}
 
 	@BeforeEach

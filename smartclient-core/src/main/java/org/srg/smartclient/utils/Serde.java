@@ -23,7 +23,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-public class JsonSerde {
+public class Serde {
 
     public static <T extends IDSRequest> T deserializeRequest(String data) throws IOException {
         final ObjectMapper mapper = createMapper();
@@ -38,6 +38,53 @@ public class JsonSerde {
                 return (T)mapper.readValue(data, DSRequest.class);
             }
         }
+    }
+
+    public static void serializeResponseAsCSV(Writer writer, char separator,  DSResponse response) throws IOException {
+        final DSResponseDataContainer.RawDataResponse rdr = response.getData().getRawDataResponse();
+        final ObjectMapper mapper = Serde.createMapper();
+
+        // -- write header
+        boolean first = true;
+        for (DSField dsf: rdr.getFields()) {
+            if (!first){
+                writer.append(separator);
+            }
+            writer.append('"');
+            writer.write(dsf.getName());
+            writer.append('"');
+            first = false;
+        }
+        writer.write("\n");
+
+        // -- write data
+        for (Object[] r :rdr.getData()){
+            first = true;
+            for (Object v: r) {
+                if (!first){
+                    writer.write(separator);
+                }
+                if (v != null) {
+                    if (v instanceof String) {
+                        writer.append('"');
+                        writer.write((String) v);
+                        writer.append('"');
+                    } else if (v instanceof DSResponseDataContainer.RawDataResponse subValue) {
+                        final String str = mapper.writeValueAsString(subValue);
+                        writer.write(str);
+                    } else {
+                        writer.write(v.toString());
+                    }
+                } else {
+                    writer.write("");
+                }
+
+                first = false;
+            }
+            writer.write("\n");
+        }
+
+        writer.flush();
     }
 
     public static void serializeResponse(Writer writer, Integer transactionNum, Collection<DSResponse> responses) throws IOException {

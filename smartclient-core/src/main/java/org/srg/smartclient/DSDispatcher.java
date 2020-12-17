@@ -19,7 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.*;
 import org.srg.smartclient.utils.ContextualRuntimeException;
-import org.srg.smartclient.utils.JsonSerde;
+import org.srg.smartclient.utils.Serde;
 import org.srg.smartclient.utils.Utils;
 
 
@@ -91,10 +91,10 @@ public class DSDispatcher implements IDSDispatcher {
         pp.indentArraysWith(indenter);
         pp.indentObjectsWith(indenter);
 
-        ObjectMapper om = JsonSerde.createMapper();
+        ObjectMapper om = Serde.createMapper();
 
         final ContextAttributes attrs = om.getSerializationConfig().getAttributes()
-                .withSharedAttribute(JsonSerde.RawDataResponseSerializer.SERIALIZE_FIELDS_ONLY, logger.isTraceEnabled() ? null : Boolean.TRUE);
+                .withSharedAttribute(Serde.RawDataResponseSerializer.SERIALIZE_FIELDS_ONLY, logger.isTraceEnabled() ? null : Boolean.TRUE);
 
         SerializationConfig sc =  om.getSerializationConfig().with(attrs);
         om.setConfig(sc);
@@ -107,7 +107,7 @@ public class DSDispatcher implements IDSDispatcher {
                 .addMixIn(DSResponse.class, PropertyFilterMixIn.class)
                 .setFilterProvider(filterProvider)
                 .writer(pp)
-                .withAttribute(JsonSerde.RawDataResponseSerializer.SERIALIZE_FIELDS_ONLY, logger.isTraceEnabled() ? null : Boolean.TRUE);
+                .withAttribute(Serde.RawDataResponseSerializer.SERIALIZE_FIELDS_ONLY, logger.isTraceEnabled() ? null : Boolean.TRUE);
 
 
 //        if (!logger.isTraceEnabled()) {

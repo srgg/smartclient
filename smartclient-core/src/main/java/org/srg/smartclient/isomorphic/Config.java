@@ -1,6 +1,6 @@
 package org.srg.smartclient.isomorphic;
 
-import org.srg.smartclient.utils.JsonSerde;
+import org.srg.smartclient.utils.Serde;
 import org.srg.smartclient.utils.Utils;
 
 import java.io.FileInputStream;
@@ -177,7 +177,7 @@ final public class Config {
 
             // -- parse Database section
             final Map<String, Object> db = (Map<String, Object>) v.get("database");
-            c.database = JsonSerde.createMapper().convertValue(db, SQLConfig.Connection.Database.class);
+            c.database = Serde.createMapper().convertValue(db, SQLConfig.Connection.Database.class);
 
             // -- parse driver section
             final Object d = v.get("driver");
