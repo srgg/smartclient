@@ -213,7 +213,7 @@ public class JDBCHandler extends AbstractDSHandler {
         try(PreparedStatement st = connection.prepareStatement(opaqueFetchQuery, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)){
 
             // If paginated, then tune statement accordingly
-            if (sqlFetchContext.getPageSize() != -1) {pa
+            if (sqlFetchContext.getPageSize() != -1) {
                 st.setFetchSize(sqlFetchContext.getPageSize());
                 st.setMaxRows(sqlFetchContext.getPageSize());
             }
