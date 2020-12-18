@@ -1,27 +1,42 @@
 package org.srg.smartclient.isomorphic;
 
-import java.util.Map;
-import java.util.Objects;
+import org.srg.smartclient.isomorphic.criteria.OperatorId;
+
+import java.util.*;
 
 // https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/serverds/DataSourceField.html
 public class DSField {
+
+    private static Set<OperatorId> NUMERIC_OP_IDS = new HashSet<>(Arrays.asList(
+            OperatorId.EQUALS, OperatorId.NOT_EQUAL,
+            OperatorId.GREATER_OR_EQUAL, OperatorId.GREATER_THAN, OperatorId.LESS_OR_EQUAL, OperatorId.LESS_THAN,
+            OperatorId.NOT_NULL, OperatorId.IS_NULL,
+            OperatorId.BETWEEN, OperatorId.BETWEEN_INCLUSIVE
+    ));
+
+    private static Set<OperatorId> TEXT_SPECIFIC = new HashSet<>(Arrays.asList(
+            OperatorId.IEQUALS, OperatorId.INOT_EQUAL,
+            OperatorId.CONTAINS, OperatorId.ICONTAINS, OperatorId.NOT_CONTAINS, OperatorId.INOT_CONTAINS,
+            OperatorId.STARTS_WITH, OperatorId.ISTARTS_WITH, OperatorId.NOT_STARTS_WITH, OperatorId.INOT_STARTS_WITH,
+            OperatorId.ENDS_WITH, OperatorId.IENDS_WITH, OperatorId.NOT_ENDS_WITH, OperatorId.INOT_ENDS_WITH
+    ));
 
     // https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/types/FieldType.html
     public enum FieldType {
         ANY,
         BINARY,
-        BOOLEAN,
+        BOOLEAN(OperatorId.EQUALS, OperatorId.NOT_EQUAL),
         CREATOR,
         CREATORTIMESTAMP,
         CUSTOM,
-        DATE,
-        DATETIME,
-        ENUM,
-        FLOAT,
+        DATE(NUMERIC_OP_IDS),
+        DATETIME(NUMERIC_OP_IDS),
+        ENUM(NUMERIC_OP_IDS),
+        FLOAT(NUMERIC_OP_IDS),
         IMAGE,
         IMAGEFILE,
-        INTEGER,
-        INTENUM,
+        INTEGER(NUMERIC_OP_IDS),
+        INTENUM(NUMERIC_OP_IDS),
         LINK,
         LOCALECURRENCY,
         LOCALEFLOAT,
@@ -32,14 +47,33 @@ public class DSField {
         PASSWORD,
         PHONENUMBER,
         SEQUENCE,
-        TEXT,
-        TIME,
+        TEXT( TEXT_SPECIFIC, NUMERIC_OP_IDS),
+        TIME(NUMERIC_OP_IDS),
 
         /**
          * This is not originally supported by SmartClient.
          * It can be used ONLY in conjunction with foreignKey
          */
-        ENTITY,
+        ENTITY(Collections.EMPTY_SET);
+
+
+        public final Set<OperatorId> defaultOperators;
+
+        FieldType() {
+            this(Collections.EMPTY_SET);
+        }
+        FieldType(OperatorId... operatorIds) {
+            this.defaultOperators = Collections.unmodifiableSet(new HashSet<OperatorId>(Arrays.asList(operatorIds)));
+        }
+
+        FieldType(Set<OperatorId>... operatorIds) {
+            HashSet<OperatorId> r = new HashSet<>();
+            for ( Set<OperatorId> s: operatorIds) {
+                r.addAll(s);
+            }
+            this.defaultOperators = Collections.unmodifiableSet(r);
+        }
+
     }
 
     private String name;
@@ -50,6 +84,12 @@ public class DSField {
     private FieldType type;
     private String foreignKey;
     private String foreignDisplayField;
+
+    /**
+     * Set of search-operators valid for this field.
+     * If not specified, all operators that are valid for the field type are allowed.
+     */
+    private Set<OperatorId> validOperators;
 
     /**
      * Indicates this field should be fetched from another, related DataSource.
@@ -419,5 +459,18 @@ public class DSField {
 
     public void setRelatedTableAlias(String relatedTableAlias) {
         this.relatedTableAlias = relatedTableAlias;
+    }
+
+    public Set<OperatorId> getValidOperators() {
+        if (validOperators == null && getType() != null) {
+
+            // if validOperators is not set explicitly, then use the default ones
+            return getType().defaultOperators;
+        }
+        return validOperators;
+    }
+
+    public void setValidOperators(Set<OperatorId> validOperators) {
+        this.validOperators = validOperators;
     }
 }

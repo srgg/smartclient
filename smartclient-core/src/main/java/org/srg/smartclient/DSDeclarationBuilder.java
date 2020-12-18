@@ -265,6 +265,14 @@ abstract class DSDeclarationBuilder {
                     f.isCustomSQL()
         );
 
+
+        ctx.write_if( f.getValidOperators() != null,
+                "\t\t\t,validOperators: [%s]\n",
+                f.getValidOperators() == null ? null : f.getValidOperators().stream()
+                        .map(operatorId -> "\"%s\"".formatted(operatorId.jsonValue()))
+                    .collect(Collectors.joining(","))
+        );
+
 //        context.write_if_notBlank(f.getCustomSelectExpression(),
 //                "\t\t\t,customSelectExpression:\"%s\"\n",
 //                f.getCustomSelectExpression()

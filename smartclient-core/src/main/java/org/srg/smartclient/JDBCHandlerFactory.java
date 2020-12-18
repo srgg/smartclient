@@ -86,6 +86,9 @@ public class JDBCHandlerFactory {
                         f.setValueMap(vm);
                         break;
                 }
+
+                // Init default OperatorIds
+                f.setValidOperators(f.getType().defaultOperators);
             }
         } catch (Throwable t) {
             logger.warn("DataSource '%s': Can't determine field type for field '%s'"

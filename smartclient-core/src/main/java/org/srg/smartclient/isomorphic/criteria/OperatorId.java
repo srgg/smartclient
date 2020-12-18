@@ -291,7 +291,7 @@ public enum OperatorId {
     }
 
     @JsonValue
-    final String jsonValue() {
+    final public String jsonValue() {
         return this.jsonValue;
     }
 }
