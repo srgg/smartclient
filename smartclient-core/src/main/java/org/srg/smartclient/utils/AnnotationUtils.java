@@ -1,6 +1,8 @@
 package org.srg.smartclient.utils;
 
 import org.jboss.jandex.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.beans.*;
 import java.io.IOException;
@@ -12,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 
 public final class AnnotationUtils {
+    private static Logger logger = LoggerFactory.getLogger(AnnotationUtils.class);
+
     private AnnotationUtils() {
     }
 
@@ -54,7 +58,15 @@ public final class AnnotationUtils {
         }
 
         if (propertyDescriptor == null) {
-            throw new IllegalStateException();
+            /**
+             * If property descriptor is null that probably means that it is not a bean property and there is no
+             * accessors for it. In most cases it will be a field introduced by a various proxies introduced by
+             * Hibernate, java assist, etc.
+             */
+
+            logger.debug("Property Description is empty {}.{}, this will be treated as no {} annotation was found for the field.",
+                    clazz.getSimpleName(), name, annotationClass.getSimpleName());
+            return null;
         }
 
         final List<AnnotationInstance> effectiveAnnotations = new LinkedList<>();
