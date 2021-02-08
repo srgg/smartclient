@@ -50,7 +50,7 @@ public class JDBCHandlerFactory {
 
         final List<DSField> dsFields = fields.stream()
                 // remove hibernate-related internal fields (they are started with $ sign)
-                .filter( f -> f.getName().startsWith("$"))
+                .filter( f -> !f.getName().startsWith("$"))
                 .map( f -> describeField(ds.getId(), entityClass, f))
                 .collect(Collectors.toList());
 
