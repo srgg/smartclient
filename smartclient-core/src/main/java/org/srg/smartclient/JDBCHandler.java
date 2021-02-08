@@ -626,7 +626,7 @@ public class JDBCHandler extends AbstractDSHandler {
                 DataSource fkDataSource = foreignKeyRelation.foreign().dataSource();
                 DSField fkField = foreignKeyRelation.foreign().field();
                 DSField srcField = foreignKeyRelation.sourceField();
-                sbld.append(" JOIN %s ON %s.%s = %s.%s\n"
+                sbld.append(" LEFT JOIN %s ON %s.%s = %s.%s\n"
                         .formatted(
                                 fkDataSource.getTableName(),
                                 srcDataSource.getTableName(), srcField.getDbName(),
