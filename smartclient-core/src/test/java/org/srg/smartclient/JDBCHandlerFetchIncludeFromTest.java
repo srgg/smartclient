@@ -105,7 +105,7 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
 
         MatcherAssert.assertThat( sqlJoin,
                 equalToCompressingWhiteSpace("""
-                        JOIN locations ON employee.location_id = locations.id        
+                        LEFT JOIN locations ON employee.location_id = locations.id        
                     """
                 )
         );
@@ -206,8 +206,8 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
 
         MatcherAssert.assertThat( sqlJoin,
                 equalToCompressingWhiteSpace("""
-                        JOIN locations ON employee.location_id = locations.id
-                        JOIN countries ON locations.country_id = countries.id        
+                        LEFT JOIN locations ON employee.location_id = locations.id
+                        LEFT JOIN countries ON locations.country_id = countries.id        
                     """
                 )
         );
@@ -370,8 +370,8 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
 
         MatcherAssert.assertThat( sqlJoin,
                 equalToCompressingWhiteSpace("""
-                        JOIN locations ON employee.location_id = locations.id
-                        JOIN countries ON locations.country_id = countries.id        
+                        LEFT JOIN locations ON employee.location_id = locations.id
+                        LEFT JOIN countries ON locations.country_id = countries.id        
                     """
                 )
         );
