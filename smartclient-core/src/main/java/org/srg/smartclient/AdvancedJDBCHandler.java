@@ -168,6 +168,19 @@ public class AdvancedJDBCHandler extends JDBCHandler {
                     filterStr =  "%s < ?";
                     break;
 
+                case IN_SET:
+                    values = ac.getValue();
+                    final String s;
+                    if ( values instanceof Collection c) {
+                        s = String.join(",", Collections.nCopies(c.size(), "?"));
+                    } else if (values instanceof Object[] a ) {
+                        s = String.join(",", Collections.nCopies(a.length, "?"));
+                    } else {
+                        s = "?";
+                    }
+                    filterStr = "%s IN (" + s + ")";
+                    break;
+
                 default:
                     throw new RuntimeException("DataSource '%s': unsupported operator '%s'"
                             .formatted(

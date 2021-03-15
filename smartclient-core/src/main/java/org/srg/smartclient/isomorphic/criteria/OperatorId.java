@@ -150,12 +150,12 @@ public enum OperatorId {
 //     */
 //    IEQUALS_FIELD,
 //
-//    /**
-//     * value is in a set of values.
-//     */
-//    IN_SET,
-//
-//
+    /**
+     * value is in a set of values.
+     */
+    IN_SET("inSet"),
+
+
 
 //    /**
 //     * Does not contain as sub-string (case insensitive) another field value (specify fieldName as criterion.value)
@@ -236,11 +236,11 @@ public enum OperatorId {
 //     */
 //    NOT_EQUAL_FIELD,
 //
-//    /**
-//     * value is not in a set of values.
-//     */
-//    NOT_IN_SET,
-//
+    /**
+     * value is not in a set of values.
+     */
+    NOT_IN_SET("notInSet"),
+
     /**
      * value is non-null.
      */

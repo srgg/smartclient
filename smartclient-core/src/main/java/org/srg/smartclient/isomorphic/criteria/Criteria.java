@@ -45,7 +45,7 @@ public class Criteria {
     }
 
     public OperatorId getOperator() {
-        return operator;
+        return operator == null ? OperatorId.AND : operator;
     }
 
     public void setOperator(OperatorId operator) {
