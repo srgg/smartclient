@@ -21,6 +21,51 @@ public class DSField {
             OperatorId.ENDS_WITH, OperatorId.IENDS_WITH, OperatorId.NOT_ENDS_WITH, OperatorId.INOT_ENDS_WITH
     ));
 
+    /*
+     * https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/JpaHibernateRelations.html
+     */
+    private static Set<OperatorId> ENTITY_SPECIFIC = new HashSet<>(Arrays.asList(
+            OperatorId.CONTAINS, OperatorId.ICONTAINS, OperatorId.INOT_CONTAINS,
+
+            /**
+             * criterion.value should an array of primaryKey values for the related DataSource.
+             * this criterion matches any country which contains any of the passed records
+             * (or for "notInSet", which contains none of the passed records).
+             */
+            OperatorId.IN_SET,  OperatorId.NOT_IN_SET,
+
+            //Matches records which have no related
+            OperatorId.IS_NULL,
+
+            // matches records which have at least one related record
+            OperatorId.NOT_NULL
+    ));
+
+    public static class JoinTableDescr {
+        final String tableName;
+        final String sourceColumn;
+        final String destColumn;
+
+        public JoinTableDescr(String tableName, String sourceColumn, String destColumn) {
+            this.tableName = tableName;
+            this.sourceColumn = sourceColumn;
+            this.destColumn = destColumn;
+        }
+
+        public String getTableName() {
+            return tableName;
+        }
+
+        public String getSourceColumn() {
+            return sourceColumn;
+        }
+
+        public String getDestColumn() {
+            return destColumn;
+        }
+    }
+
+
     // https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/types/FieldType.html
     public enum FieldType {
         ANY,
@@ -51,10 +96,10 @@ public class DSField {
         TIME(NUMERIC_OP_IDS),
 
         /**
-         * This is not originally supported by SmartClient.
+         * This type is not originally supported by SmartClient.
          * It can be used ONLY in conjunction with foreignKey
          */
-        ENTITY(Collections.EMPTY_SET);
+        ENTITY(ENTITY_SPECIFIC);
 
 
         public final Set<OperatorId> defaultOperators;
@@ -232,6 +277,11 @@ public class DSField {
      * between values when they are displayed. Default value is ", "
      */
     private String multipleValueSeparator;
+
+    /**
+     * Server internal representation of join table used for Many To Many
+     */
+    private JoinTableDescr joinTable;
 
     /**
      * https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/CustomQuerying.html
@@ -419,6 +469,14 @@ public class DSField {
 
     public void setMultiple(boolean multiple) {
         this.multiple = multiple;
+    }
+
+    public JoinTableDescr getJoinTable() {
+        return joinTable;
+    }
+
+    public void setJoinTable(JoinTableDescr joinTable) {
+        this.joinTable = joinTable;
     }
 
     public String getTableName() {

@@ -1,17 +1,24 @@
 package org.srg.smartclient;
 
+import com.fasterxml.jackson.annotation.JsonFilter;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonStreamContext;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
+import com.fasterxml.jackson.databind.ser.PropertyWriter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
+import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import net.javacrumbs.jsonunit.JsonAssert;
 import net.javacrumbs.jsonunit.core.Configuration;
 import net.javacrumbs.jsonunit.core.Option;
 
 import java.io.IOException;
+import java.util.*;
 
 public class JsonTestSupport {
 
@@ -78,9 +85,10 @@ public class JsonTestSupport {
         assertEqualsUsingJSONImpl(expected, actual, defaultConfiguration, beanSerializerModifier);
     }
 
-    protected static void assertEqualsUsingJSONImpl(Object expected, Object actual, Configuration configuration, BeanSerializerModifier beanSerializerModifier) {
+    protected static void assertEqualsUsingJSONImpl(Object expected, Object actual, Configuration configuration, BeanSerializerModifier beanSerializerModifier /*, String... ignoreProperties*/) {
 
-        final ObjectMapper om = tolerantMapper().copy();
+        final ObjectMapper om = tolerantMapper().copy()
+                .setSerializationInclusion(JsonInclude.Include.ALWAYS);
 
         if (beanSerializerModifier != null) {
             om.registerModule(new SimpleModule() {
@@ -92,21 +100,56 @@ public class JsonTestSupport {
             });
         }
 
+        /*
+         * If expected is provided as a String -- THE ALL expected fields MUST BE COUNTED(included)
+         */
+        final Set<String> includeFields;
+
+        if (expected instanceof String) {
+            try {
+                final Object oExpected = parseIfString(expected);
+                includeFields = DeepFieldFilter.buildInclusionSetByExample(oExpected);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            includeFields = Set.of();
+        }
+
+        /*
+         * Deep field filtering has been taken from  https://gist.github.com/sdorra/a59a7cb95c49afc84ed26211350c1321
+         */
+        final DeepFieldFilter f = new DeepFieldFilter(includeFields);
+        final SimpleFilterProvider sfp = new SimpleFilterProvider();
+        sfp.addFilter("customPropertyFilter", f);
+
         String strExpected = null;
         String strActual = null;
         try {
+
+            // It is expected taht DeepFieldFilter will do all teh required magic
+            om.setSerializationInclusion(JsonInclude.Include.ALWAYS);
+
             strExpected = om
+                    .addMixIn(Object.class, CustomPropertyFilterMixIn.class)
+                    .setFilterProvider(sfp)
                     .writerWithDefaultPrettyPrinter()
                     .writeValueAsString(parseIfString(expected));
 
+
             strActual = om
+                    .addMixIn(Object.class, CustomPropertyFilterMixIn.class)
+                    .setFilterProvider(sfp)
                     .writerWithDefaultPrettyPrinter()
                     .writeValueAsString(parseIfString(actual));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
-        JsonAssert.assertJsonEquals(strExpected, strActual, configuration);
+         JsonAssert.assertJsonEquals(strExpected, strActual, configuration);
+//        assertThatJson(strActual)
+//                .withConfiguration(с -> configuration)
+//                .isEqualTo(strExpected);
     }
 
     public static <T> T fromJSON(TypeReference<T> typeReference, String json, Object... args) {
@@ -167,8 +210,6 @@ public class JsonTestSupport {
     }
 
     private static class ForeignKeyRelationSerializer extends JsonSerializer<RelationSupport.ForeignKeyRelation> {
-
-
         @Override
         public void serialize(RelationSupport.ForeignKeyRelation value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
             gen.writeStartObject();
@@ -186,6 +227,79 @@ public class JsonTestSupport {
             gen.writeObjectField("foreign", value.foreign());
 
             gen.writeEndObject();
+        }
+    }
+
+    @JsonFilter("customPropertyFilter")
+    public static class CustomPropertyFilterMixIn {
+
+    }
+
+
+    private static class DeepFieldFilter extends SimpleBeanPropertyFilter {
+        private final Set<String> includes;
+
+        private DeepFieldFilter(Set<String> includes) {
+            this.includes = includes;
+        }
+
+        private String createPath(PropertyWriter writer, JsonGenerator jgen) {
+            final StringBuilder path = new StringBuilder();
+            path.append(writer.getName());
+
+            JsonStreamContext sc = jgen.getOutputContext();
+            if (sc != null) {
+                sc = sc.getParent();
+            }
+
+            while (sc != null) {
+                if (sc.getCurrentName() != null) {
+                    if (path.length() > 0) {
+                        path.insert(0, ".");
+                    }
+                    path.insert(0, sc.getCurrentName());
+                }
+                sc = sc.getParent();
+            }
+            return path.toString();
+        }
+
+        @Override
+        public void serializeAsField(Object pojo, JsonGenerator gen, SerializerProvider provider, PropertyWriter writer)
+                throws Exception {
+            String path = createPath(writer, gen);
+            if (includes.contains(path)) {
+                writer.serializeAsField(pojo, gen, provider);
+            } else {
+                writer.serializeAsOmittedField(pojo, gen, provider);
+            }
+        }
+
+        private static Set<String> buildInclusionSetByExampleImpl(String parentPath, Object example) {
+            final HashSet<String> r = new HashSet<>();
+
+            if (!parentPath.isBlank()) {
+                r.add(parentPath);
+            }
+
+            if (example instanceof Collection c) {
+                for (Object o: c) {
+                    final Set<String> childFields = buildInclusionSetByExampleImpl(parentPath, o);
+                    r.addAll(childFields);
+                }
+            } else if (example instanceof Map m) {
+                for (Map.Entry<String, Object> e: ((Map<String,Object>)m).entrySet()) {
+                    final String path = parentPath.isBlank() ? e.getKey() : parentPath + "." + e.getKey();
+                    final Set<String> childFields = buildInclusionSetByExampleImpl(path, e.getValue());
+                    r.addAll(childFields);
+                }
+            }
+
+            return r;
+        }
+
+        public static Set<String> buildInclusionSetByExample(Object example) {
+            return buildInclusionSetByExampleImpl("", example);
         }
     }
 }

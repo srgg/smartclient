@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.srg.smartclient.annotations.SmartClientField;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
+import org.srg.smartclient.isomorphic.OperationBinding;
 import org.srg.smartclient.utils.Utils;
 
 import javax.persistence.*;
@@ -479,7 +480,8 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                              * @see <a href="https://www.smartclient.com/smartgwtee/showcase/#large_valuemap_sql"> example shows the simple use of custom SQL clauses to provide a DataSource that joins multiple tables</a>
                              */
                             if (jpaRelation.joinTable() == null
-                                || jpaRelation.joinTable().isBlank()) {
+                                    || jpaRelation.joinTable().name() == null
+                                    || jpaRelation.joinTable().name().isBlank()) {
                                 throw new RuntimeException(
                                         "Datasource '%s', field '%s': Can't determine a join table name  for relation '%s'."
                                                 .formatted( dsId,
@@ -491,7 +493,7 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
 
                             final String effectiveJoinTable;
 
-                            if (jpaRelation.joinTable().isBlank()) {
+                            if (jpaRelation.joinTable().name().isBlank()) {
                                 effectiveJoinTable = "%s_%s"
                                         .formatted(
                                                 fkRelation.dataSourceId(),
@@ -507,19 +509,54 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                                 );
 
                             } else {
-                                effectiveJoinTable = jpaRelation.joinTable();
+                                effectiveJoinTable = jpaRelation.joinTable().name();
                             }
 
                             /*
                              * It is completly wrong to store join table in dsf.tableName
-                             * threfore iot will be re-worked later
+                             * therefore this must be  re-worked later
                              */
                             f.setTableName(effectiveJoinTable);
 
-                            /*
-                             * SKIP MANY-TO-MANY SINCE IT IS NOT WORKING PROPERLY
-                             */
-                            return null;
+//                            /*
+//                             * SKIP MANY-TO-MANY SINCE IT IS NOT WORKING PROPERLY
+//                             */
+//                            return null;
+
+                            f.setForeignKey(
+                                    "%s.%s"
+                                            .formatted(
+                                                    fkRelation.dataSourceId(),
+                                                    fkRelation.fieldName()
+                                            )
+                            );
+
+                            if (jpaRelation.joinTable().joinColumns().length > 1
+                                || jpaRelation.joinTable().inverseJoinColumns().length > 1 ) {
+
+                                throw new RuntimeException(
+                                        "Datasource '%s', field '%s': composite join columns are not supported."
+                                                .formatted( dsId,
+                                                        f.getName()
+                                                )
+                                );
+                            }
+
+                            final String c1;
+                            final String c2;
+                            if (jpaRelation.isInverse()) {
+                                c1 = jpaRelation.joinTable().inverseJoinColumns()[0].name();
+                                c2 = jpaRelation.joinTable().joinColumns()[0].name();
+                            } else {
+                                c1 = jpaRelation.joinTable().joinColumns()[0].name();
+                                c2 = jpaRelation.joinTable().inverseJoinColumns()[0].name();
+                            }
+
+                            f.setJoinTable(
+                                    new DSField.JoinTableDescr(effectiveJoinTable, c1, c2)
+                            );
+
+                            break;
 
                         case ONE_TO_MANY:
                             /*

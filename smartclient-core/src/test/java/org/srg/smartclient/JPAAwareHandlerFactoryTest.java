@@ -3,7 +3,6 @@ package org.srg.smartclient;
 import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.jpa.*;
@@ -160,7 +159,8 @@ public class JPAAwareHandlerFactoryTest {
 					targetType:'EmployeeStatus',
 					targetAttribute: 'owner',
 					isInverse: true,
-					joinColumns: []
+					joinColumns: [],
+					joinTable: null
 				}""", jpaRelation);
 
 			final DSField dsf = jpaAwareHandlerFactory.describeField(mm, dsId, employeeEntityType, employeeStatusesAttribute);
@@ -203,7 +203,8 @@ public class JPAAwareHandlerFactoryTest {
 						unique:false,
 						updatable:true
 					}
-				]      			
+				],
+				joinTable: null      			
     		}""", relation);
 
 		final DSField dsf = jpaAwareHandlerFactory.describeField(mm, dsId, employeeStatusEntityType, employeeStatusAttribute);
@@ -248,16 +249,18 @@ public class JPAAwareHandlerFactoryTest {
 		}
 	}
 
-	@Disabled("Disabled until @ManyToMany will be supported")
 	@Test
 	public void manyToMany() {
 		final Metamodel mm = emf.getMetamodel();
 		final String dsId = "TestDS";
 
+
+		// -- Check straight/obverse Many To Many: Project.teamMembers
 		{
 			final EntityType<Project> projectEntityType = mm.entity(Project.class);
 			final Attribute<Project, ?> projectTeamAttribute = projectEntityType.getDeclaredAttribute("teamMembers");
 
+			// -- Check JPA Relation
 			final JpaRelation jpaRelation = JpaRelation.describeRelation(mm, projectEntityType, projectTeamAttribute);
 			JsonTestSupport.assertJsonEquals("""
 					{
@@ -278,9 +281,35 @@ public class JPAAwareHandlerFactoryTest {
 								referencedColumnName:'',
 								table:''
 							}
-						]
+						],
+						joinTable: {
+							name: 'project_team',
+							joinColumns: [
+								{
+									name: 'project_id',
+									nullable: true,
+									insertable: true,
+									unique: false,
+									updatable: true,
+									referencedColumnName:'',
+									table:''
+								}
+							],
+							inverseJoinColumns: [
+								{
+									name: 'employee_id',
+									nullable: true,
+									insertable: true,
+									unique: false,
+									updatable: true,
+									referencedColumnName:'',
+									table:''
+								}
+							]
+						}
 					}""", jpaRelation);
 
+			// -- Check  DSField
 			final DSField dsf = jpaAwareHandlerFactory.describeField(mm, dsId, projectEntityType, projectTeamAttribute);
 
 			JsonTestSupport.assertJsonEquals("""
@@ -294,9 +323,16 @@ public class JPAAwareHandlerFactoryTest {
    					includeFrom:null,
    					foreignDisplayField:null,
 				   	dbName:'project_id',
-   					multiple:true
+   					multiple:true,
+   					joinTable : {
+   						tableName: 'project_team',
+   						sourceColumn: 'project_id',
+   						destColumn: 'employee_id'
+   					}
 				}""", dsf, Option.IGNORING_EXTRA_FIELDS);
 		}
+
+		// -- Check inverse/mappedBy Many To Many: Employee.projects
 		{
 			final EntityType<Employee> employeeEntityType = mm.entity(Employee.class);
 			final Attribute<Employee, ?> employeeProjectsAttribute = employeeEntityType.getDeclaredAttribute("projects");
@@ -311,7 +347,32 @@ public class JPAAwareHandlerFactoryTest {
 						targetType:'Project',
 						targetAttribute: 'teamMembers',
 						isInverse: true,
-						joinColumns: []
+						joinColumns: [],						
+						joinTable: {
+							name: 'project_team',
+							joinColumns: [
+								{
+									name: 'project_id',
+									nullable: true,
+									insertable: true,
+									unique: false,
+									updatable: true,
+									referencedColumnName:'',
+									table:''
+								}
+							],
+							inverseJoinColumns: [
+								{
+									name: 'employee_id',
+									nullable: true,
+									insertable: true,
+									unique: false,
+									updatable: true,
+									referencedColumnName:'',
+									table:''
+								}
+							]
+						}
 					}""", jpaRelation);
 
 			final DSField dsf = jpaAwareHandlerFactory.describeField(mm, dsId, employeeEntityType, employeeProjectsAttribute);
@@ -327,9 +388,14 @@ public class JPAAwareHandlerFactoryTest {
    					includeFrom:'ProjectDS.teamMembers',
    					foreignDisplayField:null,
 				   	dbName:'projects',
-   					multiple:true
+   					multiple:true,
+   					joinTable : {
+   						tableName: 'project_team',
+   						sourceColumn: 'employee_id',
+   						destColumn: 'project_id'
+   					}
+   					
 				}""", dsf, Option.IGNORING_EXTRA_FIELDS);
-
 		}
 	}
 }

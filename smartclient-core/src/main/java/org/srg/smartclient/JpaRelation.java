@@ -13,6 +13,7 @@ import org.srg.smartclient.utils.RuntimeAnnotations;
 
 import javax.persistence.*;
 import javax.persistence.metamodel.*;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,7 +43,7 @@ public record JpaRelation<S, T>(
 
         List<JoinColumn> joinColumns,
 
-        String joinTable
+        JoinTable joinTable
 ) {
 
     public String getTargetAttributeName_or_null() {
@@ -145,12 +146,19 @@ public record JpaRelation<S, T>(
             mappedByAttribute = null;
         }
 
-        // -- Join columns
+        // -- Join table (many to many)
+        final JoinTable joinTableAnnotation = getAnnotation(JoinTable.class, sourceAttribute);
 
+        // -- Join columns
         final List<AssociationOverride> associationOverrides = determineAssociationOverrides(sourceEntityType, sourceAttribute);
         final List<JoinColumn> joinColumns = determineJoinColumns(sourceEntityType, sourceAttribute);
 
         final List<JoinColumn> allJoinColumns = new ArrayList<>(joinColumns);
+        final List<JoinTable> allJoinTables = new ArrayList<>();
+
+        if (joinTableAnnotation != null){
+            allJoinTables.add(joinTableAnnotation);
+        }
 
         for (AssociationOverride ao : associationOverrides) {
             if (ao.joinColumns() != null
@@ -162,6 +170,7 @@ public record JpaRelation<S, T>(
 
             if (ao.joinTable() != null) {
                 final JoinTable jt = ao.joinTable();
+                 allJoinTables.add(jt);
 
                 if (jt != null
                         && jt.joinColumns() != null) {
@@ -173,7 +182,7 @@ public record JpaRelation<S, T>(
             }
         }
 
-        final JoinColumn effectiveJoinColumn = mergeJoinColumns(allJoinColumns);
+        final JoinColumn effectiveJoinColumn = mergeAnnotations(JoinColumn.class, DEFAULT_JOIN_COLUMN, allJoinColumns);
 
 //        List<JoinColumn> mappedByJoinColumns = mappedByField == null ? Collections.EMPTY_LIST : determineJoinColumns(mappedByField);
 //
@@ -207,11 +216,13 @@ public record JpaRelation<S, T>(
         // -- Join Table
         final JoinTable joinTable;
 
+//        final JoinTable effectiveJoinTable = mergeAnnotations(JoinTable.class, DEFAULT_JOIN_TABLE, allJoinTables);
         if (mappedByAttribute == null) {
             joinTable = sourceJavaField.getAnnotation(JoinTable.class);
         } else {
             joinTable = mappedByField.getAnnotation(JoinTable.class);
         }
+
         return new JpaRelation(
                 relationType, null,
                 sourceEntityType,
@@ -220,14 +231,12 @@ public record JpaRelation<S, T>(
                 effectiveTargetAttribute,
                 isInverseRelation,
                 effectiveJoinColumn == null ? Collections.EMPTY_LIST : List.of(effectiveJoinColumn),
-                joinTable == null ? null : joinTable.name()
-//                joinColumns
-//                , mappedByFieldName, mappedByJoinColumns
+                joinTable
         );
     }
 
     private static <T> List<AssociationOverride> determineAssociationOverrides(EntityType<? super T> sourceEntityType, Attribute<?, ?> sourceAttribute) {
-        final AssociationOverrides overrides = sourceEntityType.getJavaType().getAnnotation(AssociationOverrides.class);
+        final AssociationOverrides overrides = getAnnotation(AssociationOverrides.class, sourceEntityType);
         if (overrides != null) {
             for (AssociationOverride ao : overrides.value()) {
                 if (ao.name().equals(sourceAttribute.getName())) {
@@ -236,7 +245,7 @@ public record JpaRelation<S, T>(
             }
         }
 
-        final AssociationOverride ao = sourceEntityType.getJavaType().getAnnotation(AssociationOverride.class);
+        final AssociationOverride ao = getAnnotation(AssociationOverride.class, sourceEntityType);
         if (ao != null) {
             return List.of(ao);
         }
@@ -351,14 +360,24 @@ public record JpaRelation<S, T>(
         }
 
         throw new IllegalStateException();
+    }
 
+    @JoinTable
+    private static JoinTable getDefaultJoinTable() {
+        try {
+            final Method m = JpaRelation.class.getDeclaredMethod("getDefaultJoinTable");
+            return m.getAnnotation(JoinTable.class);
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        }
+
+        throw new IllegalStateException();
     }
 
     private static final JoinColumn DEFAULT_JOIN_COLUMN = getDefaultJoinColumn();
+    private static final JoinTable DEFAULT_JOIN_TABLE = getDefaultJoinTable();
 
-
-    private static JoinColumn mergeJoinColumns(Iterable<JoinColumn> joinColumns){
-
+    private static <A extends Annotation> A mergeAnnotations(Class<A> clazz, A defaultAnnotation, Iterable<A> annotations) {
         final Javers javers = JaversBuilder.javers()
 //                .withObjectAccessHook(new ObjectAccessHook() {
 //                    @Override
@@ -378,8 +397,8 @@ public record JpaRelation<S, T>(
 
         final Map<String, Object> res = new HashMap<>();
 
-        for (JoinColumn jc : joinColumns) {
-            final Diff diff = javers.compare(DEFAULT_JOIN_COLUMN, jc);
+        for (A ja : annotations) {
+            final Diff diff = javers.compare(defaultAnnotation, ja);
 
             if (diff.hasChanges()) {
                 javers.processChangeList(diff.getChanges(), new AbstractTextChangeLog() {
@@ -412,14 +431,25 @@ public record JpaRelation<S, T>(
 
 
         if (!res.isEmpty()) {
-            return createJoinColumnAnnotationAtRuntime(res);
+            return (A) createAnnotationAtRuntime(clazz, res);
         } else {
             return null;
         }
     }
 
-    private static JoinColumn createJoinColumnAnnotationAtRuntime(Map<String, Object> values) {
-        return RuntimeAnnotations.annotationForMap(JoinColumn.class, values);
+    private static <A extends Annotation> A getAnnotation(Class<A> clazz, EntityType<?> entityType ) {
+        final Class c = entityType.getJavaType();
+        return (A) c.getAnnotation(clazz);
+    }
+
+    private static <A extends Annotation> A getAnnotation(Class<A> clazz, Attribute<?, ?> sourceAttribute) {
+        final Field f = (Field) sourceAttribute.getJavaMember();
+        return f.getAnnotation(clazz);
+    }
+
+
+    private static <T extends Annotation> T createAnnotationAtRuntime(Class<T> clazz, Map<String, Object> values) {
+        return RuntimeAnnotations.annotationForMap(clazz, values);
     }
 
     public static <E> Set<SingularAttribute<? super E,?>> getIdAttributes(EntityType<E> et) {

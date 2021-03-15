@@ -3,6 +3,9 @@ package org.srg.smartclient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.*;
+import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
+import org.srg.smartclient.isomorphic.criteria.Criteria;
+import org.srg.smartclient.isomorphic.criteria.OperatorId;
 import org.srg.smartclient.utils.ContextualRuntimeException;
 import org.srg.smartclient.utils.Utils;
 
@@ -123,12 +126,298 @@ public class JDBCHandler extends AbstractDSHandler {
     @Override
     protected DSResponse handleFetch(DSRequest request) throws Exception {
         final DSResponse r[] = {null};
-        policy.withConnectionDo(this.getDataSource().getDbName(), conn-> {
-            r[0] = doHandleFetch(request, conn, true);
-            return null;
-        });
+        if (request instanceof StickyDBDSRequest sdbRequest) {
+            r[0] = doHandleFetch(request, sdbRequest.connection(), true);
+        } else {
+            policy.withConnectionDo(this.getDataSource().getDbName(), conn -> {
+                r[0] = doHandleFetch(request, conn, true);
+                return null;
+            });
+        }
 
         return r[0];
+    }
+
+    private static class StickyDBDSRequest extends DSRequest {
+        private final Connection connection;
+
+        public StickyDBDSRequest(Connection connection) {
+            this.connection = connection;
+        }
+
+        public Connection connection() {
+            return connection;
+        }
+    }
+
+    private static class EntitySubFetch {
+        private static Logger logger = LoggerFactory.getLogger(EntitySubFetch.class);
+
+        private final Map<String, Object> primaryKeys;
+        private final DSField dsf;
+        private final ForeignKeyRelation foreignKeyRelation;
+        private final List<DSField> requestedFields;
+        private final IDSLookup idsRegistry;
+        private final boolean useSimpleCriteria;
+
+        public EntitySubFetch(IDSLookup idsRegistry, DSField dsf, ForeignKeyRelation foreignKeyRelation,
+                              List<DSField> requestedFields, Map<String, Object> primaryKeys,
+                              boolean useSimpleCriteria) {
+            this.idsRegistry = idsRegistry;
+            this.primaryKeys = primaryKeys;
+            this.dsf = dsf;
+            this.foreignKeyRelation = foreignKeyRelation;
+
+            if (requestedFields != null && !requestedFields.isEmpty()) {
+                this.requestedFields = requestedFields;
+            } else {
+                this.requestedFields = foreignKeyRelation.foreign().dataSource().getFields();
+            }
+
+            this.useSimpleCriteria = useSimpleCriteria;
+        }
+
+        public Map<String, Object> getPrimaryKeys() {
+            return primaryKeys;
+        }
+
+        public DSField getDsf() {
+            return dsf;
+        }
+
+        public ForeignKeyRelation getForeignKeyRelation() {
+            return foreignKeyRelation;
+        }
+
+        public List<DSField> getRequestedFields() {
+            return requestedFields;
+        }
+
+        public static EntitySubFetch create(boolean useSimpleCriteria, IDSLookup idsRegistry,
+                                            DataSource dataSource, DSField dsf, List<DSField> requestedFields,
+                                            Map<String, Object> rowPkValues) {
+            final ForeignKeyRelation foreignKeyRelation;
+
+            if (dsf.getIncludeFrom() != null
+                    && !dsf.getIncludeFrom().isBlank()) {
+                /*
+                 * Use 'includeFrom' if it is provided
+                 */
+                final ImportFromRelation importFromRelation = RelationSupport.describeImportFrom(idsRegistry, dataSource, dsf);
+                foreignKeyRelation = importFromRelation.toForeignDisplayKeyRelation();
+            } else {
+                foreignKeyRelation = RelationSupport.describeForeignKey(idsRegistry, dataSource, dsf);
+            }
+
+            return new EntitySubFetch(idsRegistry, dsf, foreignKeyRelation, requestedFields,
+                    rowPkValues, useSimpleCriteria);
+        }
+
+        protected DSResponse fetchForeignEntity(Connection connection, ForeignKeyRelation foreignKeyRelation, String outputs, IDSRequestData criteria) throws Exception {
+            logger.debug("Performing foreign fetch for relation '%s' with criteria: %s"
+                    .formatted(
+                            foreignKeyRelation,
+                            criteria
+                    )
+            );
+
+//            if (filtersAndKeys.size() > 1) {
+//                throw new IllegalStateException("Fetch Entity does not supports composite keys");
+//            }
+
+            final DSHandler dsHandler = this.idsRegistry.getHandlerByName(foreignKeyRelation.foreign().dataSourceId());
+            if (dsHandler == null) {
+                throw new RuntimeException( "Foreign data source handler with id '%s' is not registered."
+                        .formatted(foreignKeyRelation.foreign().dataSourceId())
+                );
+            }
+
+            final DSRequest fetchEntity = new StickyDBDSRequest(connection);
+            fetchEntity.setDataSource(dsHandler.id());
+            fetchEntity.setOperationType(DSRequest.OperationType.FETCH);
+            fetchEntity.setData(criteria);
+            fetchEntity.setOutputs(outputs);
+
+            /*
+             * if type is not provided this indicates that the only PKs should be fetched.
+             *
+             * @see <a href="https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/JpaHibernateRelations.html">JPA & Hibernate Relations</a>
+             */
+            if (null == foreignKeyRelation.sourceField().getType()) {
+                logger.trace(("Field type is not provided for the source field '%s.%s', therefore the only primary key[s] " +
+                        "will be fetched by the foreign fetch %s.")
+                        .formatted(
+                                foreignKeyRelation.dataSource().getId(),
+                                foreignKeyRelation.sourceField().getName(),
+                                foreignKeyRelation
+                        )
+                );
+
+                final DataSource foreignDS = foreignKeyRelation.foreign().dataSource();
+
+                final String pkNames = foreignDS.getFields().stream()
+                        .filter(DSField::isPrimaryKey)
+                        .map(DSField::getName)
+                        .collect(Collectors.joining(", "));
+
+                fetchEntity.setOutputs(pkNames);
+            }
+
+            return dsHandler.handle(fetchEntity);
+        }
+
+        protected static Map<String, Object> retrieveIdsFromDb(Connection connection, DSField.JoinTableDescr jtd, Map<String, Object> pks) throws SQLException {
+
+            if (pks.size() > 1) {
+                throw new IllegalStateException("Composite PKs is not supported");
+            }
+
+            try (PreparedStatement st = connection.prepareStatement(
+                    "SELECT %s FROM %s WHERE %s IN (?)"
+                            .formatted(
+                                    jtd.getDestColumn(),
+                                    jtd.getTableName(),
+                                    jtd.getSourceColumn()
+                            ),
+                    ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
+
+
+                final Map.Entry<String, Object> e = pks.entrySet().iterator().next();
+                st.setObject(1, e.getValue());
+
+                final List<Object> values = new LinkedList<>();
+
+                try (ResultSet rs = st.executeQuery()) {
+                    while (rs.next()) {
+                        Object o = rs.getObject(1);
+                        assert o != null;
+                        values.add(o);
+                    }
+                }
+
+                if (values.isEmpty()) {
+                    /*
+                     * There is no relevant records found, therefore,
+                     * no needs to perform actual fetch
+                     */
+                    return null;
+                } else {
+                    e.setValue(values);
+                }
+            }
+
+            return pks;
+        }
+
+        public Object fetch(Connection connection) {
+
+            final DSResponse response;
+            try {
+                final Map<String, Object> effectivePKs;
+
+                if (getDsf().getJoinTable() != null) {
+                    /*
+                     * To Handle Many To Many relation (non null joi table indicates that it is m2m)
+                     * it is required to retrieve secondary ids from join table
+                     */
+
+                    effectivePKs = retrieveIdsFromDb(connection, getDsf().getJoinTable(), getPrimaryKeys());
+                } else {
+                    final List<DSField> pkFields = foreignKeyRelation.dataSource().getFields()
+                            .stream()
+                            .filter( dsf-> dsf.isPrimaryKey())
+                            .collect(Collectors.toList());
+
+                    if (pkFields.size() > 1) {
+                        // TODO: add fency error message generation
+                        throw new IllegalStateException("Composite PKs are not supported");
+                    }
+
+                    final DSField pkField = pkFields.get(0);
+                    final Object v = getPrimaryKeys().get(pkField.getName());
+
+                    effectivePKs = Map.of(foreignKeyRelation.foreign().fieldName(), v );
+                }
+
+                if (effectivePKs == null) {
+                    /*
+                     * It can happen when Many2Many does not have related records
+                     */
+
+                    return null;
+                }
+
+                final String entityOutputs = getRequestedFields().stream()
+                        .map(DSField::getName)
+                        .collect(Collectors.joining(", "));
+
+                // -- create Criteria to fetch by PK
+                if (primaryKeys.size() > 1) {
+                    throw new IllegalStateException("Composite PKs is not supported");
+                }
+
+                final IDSRequestData filterData;
+
+                if (useSimpleCriteria) {
+                    final DSRequest.MapData md = new DSRequest.MapData();
+                    md.putAll(effectivePKs);
+                    filterData = md;
+                } else {
+                    final Map.Entry<String, Object> e = effectivePKs.entrySet().iterator().next();
+                    final AdvancedCriteria ac = new AdvancedCriteria();
+                    final Criteria c = new Criteria();
+
+                    c.setOperator(OperatorId.IN_SET);
+                    c.setValue(e.getValue());
+                    c.setFieldName(e.getKey());
+
+                    ac.setCriteria(List.of(c));
+                    filterData = ac;
+                }
+
+                // --
+                response = this.fetchForeignEntity(connection, getForeignKeyRelation(), entityOutputs, filterData);
+                assert response != null;
+            } catch ( Throwable t) {
+                final String message = "Subsequent entity fetch failed: %s, filters: %s"
+                        .formatted(
+                                foreignKeyRelation,
+                                getPrimaryKeys().entrySet().stream()
+                                        .map( e -> "'%s': %s"
+                                                .formatted(
+                                                        e.getKey(),
+                                                        e.getValue()
+                                                )
+                                        )
+                                        .collect(Collectors.joining(","))
+                        );
+
+                logger.error(message, t);
+                throw new RuntimeException(message, t);
+            }
+
+            if (0 != response.getStatus()) {
+                throw new RuntimeException("Subsequent entity fetch failed: %s, %s, filters: %s"
+                        .formatted(
+                                response.getData().getGeneralFailureMessage(),
+                                foreignKeyRelation,
+                                getPrimaryKeys().entrySet().stream()
+                                        .map( e -> "'%s': %s"
+                                                .formatted(
+                                                        e.getKey(),
+                                                        e.getValue()
+                                                )
+                                        )
+                                        .collect(Collectors.joining(","))
+                        )
+                );
+            }
+
+            Object o = response.getData().getRawDataResponse();
+            assert o != null;
+
+            return o;
+        }
     }
 
     protected DSResponse doHandleFetch(DSRequest request, Connection connection, boolean calculateTotal) throws Exception {
@@ -225,11 +514,11 @@ public class JDBCHandler extends AbstractDSHandler {
                 idx = fd.setStatementParameters(idx, st);
             }
 
-            final Map<String, Object> rowPkValues =  new HashMap<>();
             try (ResultSet rs = st.executeQuery() ) {
                 while (rs.next())  {
+                    final Map<String, Object> rowPkValues =  new HashMap<>();
 
-                    final Object[] r = new Object[getFields().size()];
+                    final Object[] r = new Object[sqlFetchContext.getRequestedFields().size()];
 
                     int i =0;
 
@@ -248,10 +537,37 @@ public class JDBCHandler extends AbstractDSHandler {
 
                     for(int j = 0; j< sqlFetchContext.getRequestedFields().size(); ++j) {
                         final DSField dsf = sqlFetchContext.getRequestedFields().get(j);
-                        r[j] = postProcessFieldValue(sqlFetchContext, rowPkValues, dsf, r[j]);
-                    }
 
-                    rowPkValues.clear();
+                        r[j] = postProcessFieldValue(sqlFetchContext, rowPkValues, dsf, r[j]);
+
+                        if (!isSubEntityFetchRequired(dsf)) {
+                            continue;
+                        }
+
+                        /*
+                         * Create EntitySubFetch for further processing
+                         */
+//
+//                        logger.trace("Processing multi-value and/or Entity relations for data source '%s', requested fields '%s'..."
+//                                .formatted(
+//                                        getDataSource().getId(),
+//                                        sqlFetchContext.getRequestedFields()
+//                                )
+//                        );
+
+                        final List<ForeignRelation> ffs = sqlFetchContext.getAdditionalOutputs().get(dsf);
+                        final List<DSField> requestedFields = ffs == null ? null : ffs.stream()
+                                .map(ForeignRelation::field)
+                                .collect(Collectors.toList());
+
+                        r[j] = EntitySubFetch.create( !this.allowAdvancedCriteria(),
+                                this::getDataSourceHandlerById,
+                                this.getDataSource(),
+                                dsf,
+                                requestedFields,
+                                rowPkValues
+                        );
+                    }
 
                     final Object[] postProcessed = postProcessRow(sqlFetchContext, r);
 
@@ -266,6 +582,15 @@ public class JDBCHandler extends AbstractDSHandler {
             }
         }
 
+        // -- Perform subsequent entity fetch requests, if any
+        for(Object[] r: data) {
+            for (int i=0; i< r.length; ++i) {
+                if (r[i]  instanceof EntitySubFetch esf) {
+                    r[i] = esf.fetch(connection);
+                }
+            }
+        }
+
 
         return DSResponse.successFetch(request.getStartRow(), request.getStartRow() + data.size(), totalRows[0],
                 sqlFetchContext.getRequestedFields(),
@@ -277,136 +602,7 @@ public class JDBCHandler extends AbstractDSHandler {
     }
 
     protected Object postProcessFieldValue(SQLFetchContext<JDBCHandler> ctx, Map<String, Object> rowPkValues, DSField dsf, Object value) {
-
-        if (!isSubEntityFetchRequired(dsf)) {
-            return value;
-        }
-
-        /*
-         * Fetch sub-entities
-         */
-
-        logger.trace("Processing multi-value and/or Entity relations for data source '%s', requested fields '%s'..."
-                .formatted(
-                        getDataSource().getId(),
-                        ctx.getRequestedFields()
-                )
-        );
-
-        final ForeignKeyRelation foreignKeyRelation;
-
-        if (dsf.getIncludeFrom() != null
-                && !dsf.getIncludeFrom().isBlank()) {
-            /*
-             * Use 'includeFrom' if it is provided
-             */
-            final ImportFromRelation importFromRelation = describeImportFrom(dsf);
-            foreignKeyRelation = importFromRelation.toForeignDisplayKeyRelation();
-        } else {
-            foreignKeyRelation = describeForeignKey(dsf);
-        }
-
-        final List<ForeignRelation> ffs = ctx.getAdditionalOutputs().get(dsf);
-        final String entityOutputs = ffs == null ? null : ffs.stream()
-                .map(ForeignRelation::fieldName)
-                .collect(Collectors.joining(", "));
-
-        final DSResponse response;
-        try {
-            response = fetchForeignEntity(foreignKeyRelation, entityOutputs, rowPkValues);
-            assert response != null;
-        } catch ( Throwable t) {
-            throw new RuntimeException("Subsequent entity fetch failed: %s, filters: %s"
-                    .formatted(
-                            foreignKeyRelation,
-                            rowPkValues.entrySet().stream()
-                                    .map( e -> "'%s': %s"
-                                            .formatted(
-                                                    e.getKey(),
-                                                    e.getValue()
-                                            )
-                                    )
-                                    .collect(Collectors.joining(","))
-                    ),
-                    t
-            );
-        }
-
-        if (0 != response.getStatus()) {
-            throw new RuntimeException("Subsequent entity fetch failed: %s, %s, filters: %s"
-                    .formatted(
-                            response.getData().getGeneralFailureMessage(),
-                            foreignKeyRelation,
-                            rowPkValues.entrySet().stream()
-                                    .map( e -> "'%s': %s"
-                                            .formatted(
-                                                    e.getKey(),
-                                                    e.getValue()
-                                            )
-                                    )
-                                    .collect(Collectors.joining(","))
-                    )
-            );
-        }
-
-        Object o = response.getData().getRawDataResponse();
-        assert o != null;
-
-        return o;
-    }
-
-    protected DSResponse fetchForeignEntity(ForeignKeyRelation foreignKeyRelation, String outputs, Map<String, Object> filtersAndKeys) throws Exception {
-        logger.debug("Performing foreign fetch for relation '%s' with criteria: %s"
-                .formatted(
-                        foreignKeyRelation,
-                        filtersAndKeys
-                )
-            );
-
-        if (filtersAndKeys.size() > 1) {
-            throw new IllegalStateException("Fetch Entity does not supports composite keys");
-        }
-
-        final DSHandler dsHandler = this.getDataSourceHandlerById(foreignKeyRelation.foreign().dataSourceId());
-        if (dsHandler == null) {
-            throw new RuntimeException( "Foreign data source handler with id '%s' is not registered."
-                    .formatted(foreignKeyRelation.foreign().dataSourceId())
-            );
-        }
-
-        final DSRequest fetchEntity = new DSRequest();
-        fetchEntity.setDataSource(dsHandler.id());
-        fetchEntity.setOperationType(DSRequest.OperationType.FETCH);
-        fetchEntity.setOutputs(outputs);
-
-        /*
-         * if type is not provided this indicates that the only PKs should be fetched.
-         *
-         * @see <a href="https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/JpaHibernateRelations.html">JPA & Hibernate Relations</a>
-         */
-        if (null == foreignKeyRelation.sourceField().getType()) {
-            logger.trace(("Field type is not provided for the source field '%s.%s', therefore the only primary key[s] " +
-                    "will be fetched by the foreign fetch %s.")
-                    .formatted(
-                            foreignKeyRelation.dataSource().getId(),
-                            foreignKeyRelation.sourceField().getName(),
-                            foreignKeyRelation
-                    )
-            );
-
-            final DataSource foreignDS = foreignKeyRelation.foreign().dataSource();
-
-            final String pkNames = foreignDS.getFields().stream()
-                    .filter(DSField::isPrimaryKey)
-                    .map(DSField::getName)
-                    .collect(Collectors.joining(", "));
-
-            fetchEntity.setOutputs(pkNames);
-        }
-
-        fetchEntity.wrapAndSetData(Map.of(foreignKeyRelation.foreign().fieldName(), filtersAndKeys.values().iterator().next()));
-
-        return dsHandler.handle(fetchEntity);
+        return value;
     }
 
     protected  List<IFilterData> generateFilterData(

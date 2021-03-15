@@ -326,7 +326,6 @@ public class JpaDSDispatcherTest {
             }
         };
 
-
         final List<Employee> employees;
         final EntityManager em = emf.createEntityManager();
         try {
@@ -894,7 +893,8 @@ public class JpaDSDispatcherTest {
                                        owner:1,
                                        employeeName: 'admin',
                                        status:'status 3',
-                                       startDate:'2000-07-06'
+                                       startDate:'2000-07-06',
+                                       endDate: null
                                     }
                                  ]
                               },
@@ -925,9 +925,8 @@ public class JpaDSDispatcherTest {
             ]""", responses);
     }
 
-    @Disabled("Disabled until @ManyToMany will be supported")
     @Test
-    public void manyToManyRelation() {
+    public void fetchManyToManyWithAdditionalOutputs() {
         dispatcher.registerJPAEntity(Employee.class);
         dispatcher.registerJPAEntity(Client.class);
         dispatcher.registerJPAEntity(ClientData.class);
@@ -944,7 +943,67 @@ public class JpaDSDispatcherTest {
         final Collection<DSResponse> responses = dispatcher.dispatch(request);
         JsonTestSupport.assertJsonEquals(
                 """
-                [
-                ]""", responses);
+                        [
+                           {
+                              status: 0,
+                              startRow: 0,
+                              endRow: 5,
+                              totalRows: 5,
+                              data:[
+                                   {
+                                      id:1,
+                                      name:'Project 1 for client 1',
+                                      teamMembers:[
+                                         {
+                                            id:1,
+                                            name:'admin'
+                                         },
+                                         {
+                                            id:2,
+                                            name:'developer'
+                                         }
+                                      ]
+                                   },
+                                   {
+                                      id:2,
+                                      name:'Project 2 for client 1',
+                                      teamMembers:[
+                                         {
+                                            id:2,
+                                            name:'developer'
+                                         },
+                                         {
+                                            id:3,
+                                            name:'UseR3'
+                                         }
+                                      ]
+                                   },
+                                   {
+                                      id:3,
+                                      name:'Project 1 for client 2',
+                                      teamMembers:[
+                                         {
+                                            id:4,
+                                            name:'manager1'
+                                         },
+                                         {
+                                            id:5,
+                                            name:'manager2'
+                                         }
+                                      ]
+                                   },
+                                   {
+                                      id:4,
+                                      name:'Project 2 for client 2',
+                                      teamMembers: null
+                                   },
+                                   {
+                                      id:5,
+                                      name:'Project 3 for client 2',
+                                      teamMembers: null
+                                   }
+                              ]
+                           }
+                        ]""", responses);
     }
 }

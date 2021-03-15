@@ -1,5 +1,6 @@
 package org.srg.smartclient.utils;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
@@ -7,15 +8,18 @@ import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.deser.BeanDeserializerFactory;
 import com.fasterxml.jackson.databind.deser.ResolvableDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.introspect.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import org.srg.smartclient.JpaRelation;
 import org.srg.smartclient.isomorphic.*;
 import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
 
 import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.metamodel.Attribute;
+import javax.persistence.metamodel.IdentifiableType;
 import java.io.IOException;
 import java.io.Writer;
 import java.lang.annotation.IncompleteAnnotationException;
@@ -372,31 +376,48 @@ public class Serde {
 //        }
 //    }
 
-    private static class JpaRelationSerializer extends JsonSerializer<JpaRelation> {
-
+    private static class IdentifiableTypeSerializer extends JsonSerializer<IdentifiableType> {
         @Override
-        public void serialize(JpaRelation value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-            gen.writeStartObject();
-
-            gen.writeStringField("type", value.type().name());
-            gen.writeStringField("sourceType", value.sourceType().getJavaType().getSimpleName());
-            gen.writeStringField("sourceAttribute", value.sourceAttribute().getName());
-
-            gen.writeStringField("targetType", value.targetType().getJavaType().getSimpleName());
-
-            if (value.targetAttribute() != null) {
-                gen.writeStringField("targetAttribute", value.targetAttribute().getName());
-            } else {
-                gen.writeNullField("targetAttribute");
-            }
-
-            gen.writeBooleanField("isInverse", value.isInverse());
-
-            gen.writeObjectField("joinColumns", value.joinColumns());
-
-            gen.writeEndObject();
+        public void serialize(IdentifiableType value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            //value.sourceType().getJavaType().getSimpleName()
+            gen.writeString(value.getJavaType().getSimpleName());
         }
     }
+
+    private static class AttributeSerializer extends JsonSerializer<Attribute> {
+        @Override
+        public void serialize(Attribute value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            //gen.writeStringField("sourceAttribute", value.sourceAttribute().getName());
+            gen.writeString(value.getName());
+        }
+    }
+
+//    private static class JpaRelationSerializer extends JsonSerializer<JpaRelation> {
+//
+//        @Override
+//        public void serialize(JpaRelation value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+//            gen.writeStartObject();
+//
+//            gen.writeStringField("type", value.type().name());
+//            gen.writeStringField("sourceType", value.sourceType().getJavaType().getSimpleName());
+//            gen.writeStringField("sourceAttribute", value.sourceAttribute().getName());
+//
+//            gen.writeStringField("targetType", value.targetType().getJavaType().getSimpleName());
+//
+//            if (value.targetAttribute() != null) {
+//                gen.writeStringField("targetAttribute", value.targetAttribute().getName());
+//            } else {
+//                gen.writeNullField("targetAttribute");
+//            }
+//
+//            gen.writeBooleanField("isInverse", value.isInverse());
+//
+//            gen.writeObjectField("joinColumns", value.joinColumns());
+//            gen.writeObjectField("joinTable", value.joinTable());
+//
+//            gen.writeEndObject();
+//        }
+//    }
 
     private static class JoinColumnSerializer extends JsonSerializer<JoinColumn> {
         @Override
@@ -467,14 +488,96 @@ public class Serde {
         }
     }
 
+    private static class JoinTableSerializer extends JsonSerializer<JoinTable> {
+        @Override
+        public void serialize(JoinTable value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            gen.writeStartObject();
+
+            String name;
+            try {
+                name = value.name();
+            } catch (IncompleteAnnotationException e) {
+                name = "";
+            }
+            gen.writeStringField("name", name);
+
+            JoinColumn[] joinColumns;
+            try {
+                joinColumns = value.joinColumns();
+            } catch (IncompleteAnnotationException e) {
+                joinColumns = null;
+            }
+            gen.writeObjectField("joinColumns", joinColumns);
+
+            JoinColumn[] inverseJoinColumns;
+            try {
+                inverseJoinColumns = value.inverseJoinColumns();
+            } catch (IncompleteAnnotationException e) {
+                inverseJoinColumns = null;
+            }
+            gen.writeObjectField("inverseJoinColumns", inverseJoinColumns);
+
+
+            gen.writeEndObject();
+        }
+    }
+
+    // The following  AnnotationIntrospector is required to fix issues with Record deserialization,
+    // that is a technical preview and does not supported by Jackson from out of the box.
+    public static JacksonAnnotationIntrospector createAnnotationIntrospector() {
+        return new JacksonAnnotationIntrospector() {
+            @Override
+            public PropertyName findNameForDeserialization(Annotated a) {
+                PropertyName nameForDeserialization = super.findNameForDeserialization(a);
+
+                if (a instanceof AnnotatedMember
+                        && ((AnnotatedMember) a).getDeclaringClass().isRecord()) {
+
+                    final JsonIgnoreProperties.Value v = super.findPropertyIgnorals(a);
+                    // Even when @JsonProperty  is not used that's no reason to ignore it
+                    // Until it is not ignored explicditly
+                    if (nameForDeserialization == null
+
+                            // when @JsonDeserialize is used, USE_DEFAULT is default
+                            // preventing the implicit constructor to be found
+                            || PropertyName.USE_DEFAULT.equals(nameForDeserialization)) {
+                        String str = findImplicitPropertyName((AnnotatedMember) a);
+                        if (str != null && !str.isEmpty()) {
+                            return PropertyName.construct(str);
+                        }
+                    }
+
+                }
+                return nameForDeserialization;
+            }
+
+            @Override
+            public String findImplicitPropertyName(AnnotatedMember m) {
+                if (m.getDeclaringClass().isRecord()
+                        && m instanceof AnnotatedParameter parameter) {
+                    final String name = m.getDeclaringClass().getRecordComponents()[parameter.getIndex()].getName();
+                    return name;
+                } /*else if (m.getDeclaringClass().isRecord()
+                        && m instanceof AnnotatedField af) {
+                    return af.getName();
+                }*/
+                return super.findImplicitPropertyName(m);
+            }
+        };
+    }
+
+
     public static ObjectMapper createMapper() {
         final ObjectMapper mapper = new ObjectMapper();
         final SimpleModule module = new SimpleModule("DSResponse-Serialization", Version.unknownVersion());
 //        module.addSerializer(DSResponse.class, new DSResponseSerialize() );
         module.addSerializer(DSResponseDataContainer.class, new DSResponseDataContainerSerializer());
         module.addSerializer(DSResponseDataContainer.RawDataResponse.class, new RawDataResponseSerializer());
-        module.addSerializer(JpaRelation.class, new JpaRelationSerializer());
+//        module.addSerializer(JpaRelation.class, new JpaRelationSerializer());
+        module.addSerializer(IdentifiableType.class, new IdentifiableTypeSerializer());
+        module.addSerializer(Attribute.class, new AttributeSerializer());
         module.addSerializer(JoinColumn.class, new JoinColumnSerializer());
+        module.addSerializer(JoinTable.class, new JoinTableSerializer());
 
         module.addDeserializer(IDSRequestData.class, new DSRequestDeserializer());
         module.addDeserializer(DSField.class, new DSFieldDeserializer(DSField.class));
@@ -491,7 +594,11 @@ public class Serde {
 //                .enable(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES)
 //                .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
                 .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
-                .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature());
+                .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature())
+                .setAnnotationIntrospector(
+                    createAnnotationIntrospector()
+                );
+
         return mapper;
     }
 }
