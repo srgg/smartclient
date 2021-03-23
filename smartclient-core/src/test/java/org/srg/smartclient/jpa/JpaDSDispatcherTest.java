@@ -547,44 +547,92 @@ public class JpaDSDispatcherTest {
         final DSRequest request = new DSRequest();
         request.setStartRow(0);
         request.setOutputs("id, data");
-        request.setDataSource( clientDsId);
+        request.setDataSource(clientDsId);
 
-        final Collection<DSResponse> responses = dispatcher.dispatch(request);
-        JsonTestSupport.assertJsonEquals(
-                """
-                [
-                    {
-                        status:0,
-                        startRow:0,
-                        endRow:2,
-                        totalRows:2,
-                        data:[
-                            {
-                                id:1,
-                                data:[
-                                    {
-                                         id:1,
-                                         data:'Data1: client 1',
-                                         client:1,
-                                         clientName:'client 1'
-                                    }
-                                ]
-                            },
-                            {
-                                id:2,
-                                data:[
-                                    {
-                                        id:2,
-                                        data:'Data2: client 2',
-                                        client:2,
-                                        clientName:'client 2'
-                                  }
-                               ]
-                            }
-                         ]
-                    }
-                ]""", responses
-        );
+        {
+            /*
+             * Fetch w/o specifying any AdditionalOutput for EmployeeStatus
+             * should return the only correspondent EmployeeStatus IDs
+             */
+            final Collection<DSResponse> responses = dispatcher.dispatch(request);
+            JsonTestSupport.assertJsonEquals(
+                    """
+                            [
+                                {
+                                    status:0,
+                                    startRow:0,
+                                    endRow:2,
+                                    totalRows:2,
+                                    data:[
+                                        {
+                                            id:1,
+                                            data:[
+                                                {
+                                                     id:1
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            id:2,
+                                            data:[
+                                                {
+                                                    id:2
+                                              }
+                                           ]
+                                        }
+                                     ]
+                                }
+                            ]""", responses
+            );
+        }
+
+        {
+            /*
+             * Fetch with  AdditionalOutput should return requested fields and PKs.
+             */
+            request.setAdditionalOutputs(
+                    "data!ClientDataDS.id," +
+                            "data!ClientDataDS.data," +
+                            "data!ClientDataDS.client," +
+                            "data!ClientDataDS.clientName");
+
+            final Collection<DSResponse> responses = dispatcher.dispatch(request);
+            JsonTestSupport.assertJsonEquals(
+                    """
+                            [
+                                {
+                                    status:0,
+                                    startRow:0,
+                                    endRow:2,
+                                    totalRows:2,
+                                    data:[
+                                        {
+                                            id:1,
+                                            data:[
+                                                {
+                                                     id:1,
+                                                     data:'Data1: client 1',
+                                                     client:1,
+                                                     clientName:'client 1'
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            id:2,
+                                            data:[
+                                                {
+                                                    id:2,
+                                                    data:'Data2: client 2',
+                                                    client:2,
+                                                    clientName:'client 2'
+                                              }
+                                           ]
+                                        }
+                                     ]
+                                }
+                            ]""", responses
+            );
+        }
     }
 
     @Test
@@ -859,74 +907,221 @@ public class JpaDSDispatcherTest {
         request.setOutputs("id, statuses");
         request.setDataSource(employeeDsId);
 
-        final Collection<DSResponse> responses = dispatcher.dispatch(request);
-        JsonTestSupport.assertJsonEquals(
-    """
-            [
-                   {
-                         status:0,
-                         startRow:0,
-                         endRow:6,
-                         totalRows:6,
-                         data:[
-                             {
-                                 id:1,
-                                 statuses:[
-                                    {
-                                       id:1,
-                                       owner:1,
-                                       employeeName: 'admin',
-                                       status:'status 1',
-                                       startDate:'2000-05-04',
-                                       endDate:'2000-06-04'
-                                    },
-                                    {
-                                       id:2,
-                                       owner:1,
-                                       employeeName: 'admin',
-                                       status:'status 2',
-                                       startDate:'2000-06-05',
-                                       endDate:'2000-07-05'
-                                    },
-                                    {
-                                       id:3,
-                                       owner:1,
-                                       employeeName: 'admin',
-                                       status:'status 3',
-                                       startDate:'2000-07-06',
-                                       endDate: null
-                                    }
-                                 ]
-                              },
-                              {
-                                 "id":2,
-                                 "statuses":[]
-                              },
-                              {
-                                 "id":3,
-                                 "statuses":[]
-                              },
-                              {
-                                 "id":4,
-                                 "statuses":[]
-                              },
-                              {
-                                 "id":5,
-                                 "statuses":[]
-                              },                     
-                              {
-                                 "id":6,
-                                 "statuses":[]
-                              }                     
-                            ]
-                       }
-                   ]
-                }
-            ]""", responses);
+        {
+            /*
+             * Fetch w/o specifying any AdditionalOutput for EmployeeStatus
+             * should return the only correspondent EmployeeStatus IDs
+             */
+            request.setAdditionalOutputs(null);
+            final Collection<DSResponse> responses = dispatcher.dispatch(request);
+            JsonTestSupport.assertJsonEquals("""
+                    [
+                           {
+                                 status:0,
+                                 startRow:0,
+                                 endRow:6,
+                                 totalRows:6,
+                                 data:[
+                                     {
+                                         id:1,
+                                         statuses:[
+                                            {
+                                               id:1
+                                            },
+                                            {
+                                               id:2
+                                            },
+                                            {
+                                               id:3
+                                            }
+                                         ]
+                                      },
+                                      {
+                                         "id":2,
+                                         "statuses":[]
+                                      },
+                                      {
+                                         "id":3,
+                                         "statuses":[]
+                                      },
+                                      {
+                                         "id":4,
+                                         "statuses":[]
+                                      },
+                                      {
+                                         "id":5,
+                                         "statuses":[]
+                                      },                     
+                                      {
+                                         "id":6,
+                                         "statuses":[]
+                                      }                     
+                                    ]
+                               }
+                           ]
+                        }
+                    ]""", responses);
+        }
+
+        {
+            /*
+             * Fetch with  AdditionalOutput should return requested fields and PKs.
+             */
+            request.setAdditionalOutputs(
+                    "statuses!EmployeeStatusDS.id," +
+                    "statuses!EmployeeStatusDS.status," +
+                    "statuses!EmployeeStatusDS.startDate," +
+                    "statuses!EmployeeStatusDS.endDate");
+
+            final Collection<DSResponse> responses = dispatcher.dispatch(request);
+            JsonTestSupport.assertJsonEquals(
+                    """
+                            [
+                                   {
+                                         status:0,
+                                         startRow:0,
+                                         endRow:6,
+                                         totalRows:6,
+                                         data:[
+                                             {
+                                                 id:1,
+                                                 statuses:[
+                                                    {
+                                                       id:1,
+                                                       status:'status 1',
+                                                       startDate:'2000-05-04',
+                                                       endDate:'2000-06-04'
+                                                    },
+                                                    {
+                                                       id:2,
+                                                       status:'status 2',
+                                                       startDate:'2000-06-05',
+                                                       endDate:'2000-07-05'
+                                                    },
+                                                    {
+                                                       id:3,
+                                                       status:'status 3',
+                                                       startDate:'2000-07-06',
+                                                       endDate: null
+                                                    }
+                                                 ]
+                                              },
+                                              {
+                                                 "id":2,
+                                                 "statuses":[]
+                                              },
+                                              {
+                                                 "id":3,
+                                                 "statuses":[]
+                                              },
+                                              {
+                                                 "id":4,
+                                                 "statuses":[]
+                                              },
+                                              {
+                                                 "id":5,
+                                                 "statuses":[]
+                                              },
+                                              {
+                                                 "id":6,
+                                                 "statuses":[]
+                                              }
+                                            ]
+                                       }
+                                   ]
+                                }
+                            ]""", responses);
+        }
     }
 
     @Test
-    public void fetchManyToManyWithAdditionalOutputs() {
+    public void fetchManyToMany_MappedBy() {
+        dispatcher.registerJPAEntity(Project.class);
+        dispatcher.registerJPAEntity(Client.class);
+        dispatcher.registerJPAEntity(ClientData.class);
+
+        final String employeeDs = dispatcher.registerJPAEntity(Employee.class);
+
+        // --
+        final DSRequest request = new DSRequest();
+        request.setStartRow(0);
+        request.setDataSource(employeeDs);
+        request.setOutputs("id, name, projects");
+
+        {
+            /*
+             * Fetch w/o specifying any AdditionalOutput for Employee
+             * should return the only correspondent Employee IDs
+             */
+            final Collection<DSResponse> responses = dispatcher.dispatch(request);
+            JsonTestSupport.assertJsonEquals("""
+                [
+                   {
+                      status: 0,
+                      startRow: 0,
+                      endRow: 6,
+                      totalRows: 6,
+                      data:[
+                         {
+                            id:1,
+                            name:'admin',
+                            projects:[
+                               {
+                                  id:1
+                               }
+                            ]
+                         },
+                         {
+                            id:2,
+                            name:'developer',
+                            projects:[
+                               {
+                                  id:1
+                               },
+                               {
+                                  id:2
+                               }
+                            ]
+                         },
+                         {
+                            id:3,
+                            name:'UseR3',
+                            projects:[
+                               {
+                                  id:2
+                               }
+                            ]
+                         },
+                         {
+                            id:4,
+                            name:'manager1',
+                            projects:[
+                               {
+                                  id:3
+                               }
+                            ]
+                         },
+                         {
+                            id:5,
+                            name:'manager2',
+                            projects:[
+                               {
+                                  id:3
+                               }
+                            ]
+                         },
+                         {
+                            id:6,
+                            name:'user2',
+                            projects: null
+                         }                     
+                      ]
+                   }
+                ]""", responses);
+        }
+    }
+    @Test
+    public void fetchManyToMany() {
         dispatcher.registerJPAEntity(Employee.class);
         dispatcher.registerJPAEntity(Client.class);
         dispatcher.registerJPAEntity(ClientData.class);
@@ -936,74 +1131,145 @@ public class JpaDSDispatcherTest {
         // --
         final DSRequest request = new DSRequest();
         request.setStartRow(0);
-        request.setOutputs("id, name, teamMembers");
-        request.setAdditionalOutputs("teamMembers!EmployeeDS.id, teamMembers!EmployeeDS.name");
         request.setDataSource( projectDs);
+        request.setOutputs("id, name, teamMembers");
 
-        final Collection<DSResponse> responses = dispatcher.dispatch(request);
-        JsonTestSupport.assertJsonEquals(
-                """
-                        [
+
+        {
+            /*
+             * Fetch w/o specifying any AdditionalOutput for Employee
+             * should return the only correspondent Employee IDs
+             */
+            final Collection<DSResponse> responses = dispatcher.dispatch(request);
+            JsonTestSupport.assertJsonEquals("""
+                [
+                   {
+                      status: 0,
+                      startRow: 0,
+                      endRow: 5,
+                      totalRows: 5,
+                      data:[
                            {
-                              status: 0,
-                              startRow: 0,
-                              endRow: 5,
-                              totalRows: 5,
-                              data:[
-                                   {
-                                      id:1,
-                                      name:'Project 1 for client 1',
-                                      teamMembers:[
-                                         {
-                                            id:1,
-                                            name:'admin'
-                                         },
-                                         {
-                                            id:2,
-                                            name:'developer'
-                                         }
-                                      ]
-                                   },
-                                   {
-                                      id:2,
-                                      name:'Project 2 for client 1',
-                                      teamMembers:[
-                                         {
-                                            id:2,
-                                            name:'developer'
-                                         },
-                                         {
-                                            id:3,
-                                            name:'UseR3'
-                                         }
-                                      ]
-                                   },
-                                   {
-                                      id:3,
-                                      name:'Project 1 for client 2',
-                                      teamMembers:[
-                                         {
-                                            id:4,
-                                            name:'manager1'
-                                         },
-                                         {
-                                            id:5,
-                                            name:'manager2'
-                                         }
-                                      ]
-                                   },
-                                   {
-                                      id:4,
-                                      name:'Project 2 for client 2',
-                                      teamMembers: null
-                                   },
-                                   {
-                                      id:5,
-                                      name:'Project 3 for client 2',
-                                      teamMembers: null
-                                   }
+                              id:1,
+                              name:'Project 1 for client 1',
+                              teamMembers:[
+                                 {
+                                    id:1
+                                 },
+                                 {
+                                    id:2
+                                 }
                               ]
+                           },
+                           {
+                              id:2,
+                              name:'Project 2 for client 1',
+                              teamMembers:[
+                                 {
+                                    id:2
+                                 },
+                                 {
+                                    id:3
+                                 }
+                              ]
+                           },
+                           {
+                              id:3,
+                              name:'Project 1 for client 2',
+                              teamMembers:[
+                                 {
+                                    id:4
+                                 },
+                                 {
+                                    id:5
+                                 }
+                              ]
+                           },
+                           {
+                              id:4,
+                              name:'Project 2 for client 2',
+                              teamMembers: null
+                           },
+                           {
+                              id:5,
+                              name:'Project 3 for client 2',
+                              teamMembers: null
                            }
-                        ]""", responses);
+                      ]
+                   }
+                ]""", responses);
+        }
+
+        {
+            /*
+             * Fetch with  AdditionalOutput should return requested fields and PKs.
+             */
+            request.setAdditionalOutputs("teamMembers!EmployeeDS.id, teamMembers!EmployeeDS.name");
+
+            final Collection<DSResponse> responses = dispatcher.dispatch(request);
+            JsonTestSupport.assertJsonEquals("""
+                [
+                   {
+                      status: 0,
+                      startRow: 0,
+                      endRow: 5,
+                      totalRows: 5,
+                      data:[
+                           {
+                              id:1,
+                              name:'Project 1 for client 1',
+                              teamMembers:[
+                                 {
+                                    id:1,
+                                    name:'admin'
+                                 },
+                                 {
+                                    id:2,
+                                    name:'developer'
+                                 }
+                              ]
+                           },
+                           {
+                              id:2,
+                              name:'Project 2 for client 1',
+                              teamMembers:[
+                                 {
+                                    id:2,
+                                    name:'developer'
+                                 },
+                                 {
+                                    id:3,
+                                    name:'UseR3'
+                                 }
+                              ]
+                           },
+                           {
+                              id:3,
+                              name:'Project 1 for client 2',
+                              teamMembers:[
+                                 {
+                                    id:4,
+                                    name:'manager1'
+                                 },
+                                 {
+                                    id:5,
+                                    name:'manager2'
+                                 }
+                              ]
+                           },
+                           {
+                              id:4,
+                              name:'Project 2 for client 2',
+                              teamMembers: null
+                           },
+                           {
+                              id:5,
+                              name:'Project 3 for client 2',
+                              teamMembers: null
+                           }
+                      ]
+                   }
+                ]""", responses);
+        }
     }
 }

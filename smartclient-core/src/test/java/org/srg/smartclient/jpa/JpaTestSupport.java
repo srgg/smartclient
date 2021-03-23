@@ -31,6 +31,7 @@ public class JpaTestSupport {
                                 "hibernate.connection.driver_class", "org.h2.Driver",
                                 "hibernate.dialect", "org.hibernate.dialect.MySQL5InnoDBDialect",
                                 "hibernate.hbm2ddl.auto", "none",
+//                                "hibernate.hbm2ddl.auto", "create",
                                 "hibernate.connection.username", "sa",
                                 "hibernate.connection.password","sa",
                                 "hibernate.show_sql", "true"

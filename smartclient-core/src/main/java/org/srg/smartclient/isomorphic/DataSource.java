@@ -1,6 +1,7 @@
 package org.srg.smartclient.isomorphic;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 // https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/serverds/DataSource.html
 //https://www.smartclient.com/isomorphic/system/reference/?id=class..DataSource
@@ -172,6 +173,12 @@ public class DataSource {
         }
 
         return fieldMap;
+    }
+
+    public Set<DSField> getPKFields() {
+        return getFields().stream()
+                .filter(DSField::isPrimaryKey)
+                .collect(Collectors.toSet());
     }
 
     @Override

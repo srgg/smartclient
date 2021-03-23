@@ -1,6 +1,11 @@
 package org.srg.smartclient.isomorphic.criteria;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import org.srg.smartclient.utils.Serde;
+
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 // https://www.smartclient.com/smartclient-release/isomorphic/system/reference/?id=class..Criterion
 public class Criteria {
@@ -82,5 +87,38 @@ public class Criteria {
 
     public void setCriteria(List<Criteria> criteria) {
         this.criteria = criteria;
+    }
+
+    /**
+     * Utility function
+     */
+    public Set<String> getCriteriaFieldNames() {
+        final HashSet<String> r = new HashSet<>();
+
+        if (getFieldName() != null && !getFieldName().isBlank()) {
+            r.add(getFieldName());
+        }
+
+        if (getCriteria() != null) {
+            for (Criteria c : getCriteria()) {
+                final Set<String> rc = c.getCriteriaFieldNames();
+                r.addAll(rc);
+            }
+        }
+
+        return r;
+    }
+
+    @Override
+    public String toString() {
+        try {
+            return "Criteria {\n\t%s\n}".formatted(
+                    Serde.toJson(this)
+            );
+        } catch (JsonProcessingException e) {
+            return "Criteria {\n\t%s\n}".formatted(
+                    super.toString()
+            );
+        }
     }
 }

@@ -453,7 +453,18 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         withExtraFields(ExtraField.OneToMany_FetchEntireEntities, ExtraField.SqlCalculated);
 
         final DSRequest request = new DSRequest();
+
+        /*
+         * Fetch with  AdditionalOutput should return requested fields and PKs.
+         */
+        request.setAdditionalOutputs(
+                "roles!EmployeeRoleDS.role," +
+                        "roles!EmployeeRoleDS.employee," +
+                        "roles!EmployeeRoleDS.employeeCalculated");
+
         final DSResponse response = handler.handleFetch(request);
+
+
         JsonTestSupport.assertJsonEquals("""
                 {
                   status:0,
@@ -530,6 +541,7 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                   ]
                 }""", response);
     }
+
 
     @Test
     public void fetchOneToMany_OnlyIds() throws Exception {
@@ -716,7 +728,7 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
 
     @Test
     @Regression("Requests with multiple 'includeFrom' for the same foreign data source fails due to improper JOIN clause generation" +
-            " dublicating join is generated for the same table.")
+            " duplicate join is generated for the same table.")
     public void fetchWithMultipleIncludeFromToTheSameJoin() throws Exception {
         final JDBCHandler projectHandler =  withHandlers(Handler.Client, Handler.Project);
 

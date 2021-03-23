@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.OperationBinding;
+import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
 import org.srg.smartclient.utils.ContextualRuntimeException;
 
 import java.io.IOException;
@@ -290,7 +291,63 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
             this.additionalOutputs.putAll(additionalOutputs);
         }
 
-        final String selectClause = this.getRequestedFields()
+        // -- SELECT
+
+        /*
+         * Ensure that all the filtered(criteria) fields will be requested/queried.
+         *
+         * Otherwise it WHERE clause will produce an error.
+         */
+        Set<String> extraFieldNames;
+
+        if (request().getData() instanceof Map m) {
+            // It is required to make a copy of the original keySet to prevent it from the modifications
+            extraFieldNames = new HashSet<>(m.keySet());
+        } else if (request().getData() instanceof AdvancedCriteria ac) {
+            extraFieldNames = ac.getCriteriaFieldNames();
+        } else if (request().getData() == null) {
+            extraFieldNames = Set.of();
+        } else {
+            throw new IllegalStateException("Unsupported IDSRequestData type '%s'".formatted(request().getData().getClass().getCanonicalName()));
+        }
+
+        if (!extraFieldNames.isEmpty()) {
+            extraFieldNames.removeIf(n -> requestedFields.stream().anyMatch(dsf -> dsf.getName().equals(n)));
+        }
+        final Set<DSField> extraFields = extraFieldNames.stream()
+                .map( n ->  {
+                    final DSField dsf = this.dataSource().getField(n);
+
+                    if (dsf == null) {
+                        /*
+                         *  This still can be a valid state, if criteria was binded to represent stored function parameter
+                         *  that is specified as part of a template.
+                         */
+                        final Set<String> excludedFields = Arrays.stream(this.operationBinding().getExcludeCriteriaFields().split(","))
+                                .map( s -> s.trim())
+                                .collect(Collectors.toSet());
+
+                        if (!excludedFields.contains(n)) {
+                            // Ok, that is definitely WRONG
+                            throw new ContextualRuntimeException("%s: nothing known about an extra field '%s', data source: %s."
+                                .formatted(getClass().getSimpleName(), n, dataSource().getId()), this);
+                        }
+                    }
+
+                    return dsf;
+                })
+                .filter(dsf -> dsf !=null)
+                .collect(Collectors.toSet());
+
+
+        /*
+         * It is quite important to do not mess fields order and preserve original Requested Fields order.
+         */
+        final List<DSField> effectiveFields = new ArrayList<>(getRequestedFields().size() + extraFields.size());
+        effectiveFields.addAll(getRequestedFields());
+        effectiveFields.addAll(extraFields);
+
+        final String selectClause = effectiveFields
                 .stream()
                 .map(this::formatFieldNameForSqlSelectClause)
                 .collect(Collectors.joining(",\n  "));

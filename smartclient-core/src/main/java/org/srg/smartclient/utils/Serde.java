@@ -133,6 +133,12 @@ public class Serde {
         }
     }
 
+    public static String toJson(Object o) throws JsonProcessingException {
+        final ObjectMapper om = createMapper();
+
+        return om.writeValueAsString(o);
+    }
+
     private static class DSRequestDeserializer extends JsonDeserializer<IDSRequestData> {
         @Override
         public IDSRequestData deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
