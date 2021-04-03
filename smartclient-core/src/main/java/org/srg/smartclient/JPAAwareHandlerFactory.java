@@ -113,6 +113,9 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
                 } else if (a instanceof PluralAttribute) {
                     PluralAttribute pa = (PluralAttribute) a;
                     targetEntity = (EntityType<T>) pa.getElementType();
+
+                    // Should be set to multiple = true, otherwise something going wrong and better to understand what.
+                    assert f.isMultiple();
                 } else  {
                     throw new IllegalStateException("Unsupported Attribute class '%s'".formatted(a.getClass()));
                 }
@@ -177,6 +180,12 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
 
                 targetField.setIncludeVia(f.getName());
 
+                // Propagate source value to the target
+                targetField.setMultiple(f.isMultiple());
+
+                if (f.isMultiple() && targetField.getIncludeSummaryFunction() == null) {
+                    targetField.setIncludeSummaryFunction(DSField.SummaryFunctionType.CONCAT);
+                }
 
                 targetField.setDbName("%s.%s"
                         .formatted(targetClass.getSimpleName(), f.getForeignDisplayField())
@@ -384,12 +393,14 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
         } else if (attr instanceof PluralAttribute<?,?,?> pa){
             final Type<?> type = pa.getElementType();
 
+            // Mark field as multiple: true to indicate that relation will return miltiple results
+            f.setMultiple(true);
+
             switch (type.getPersistenceType()) {
                 case ENTITY:
 
                     final Class<?> foreignJavaType = type.getJavaType();
                     final String foreignDsId = getDsId(foreignJavaType);
-                    f.setMultiple(true);
 
                     // should be hidden by default
                     if (f.isHidden() == null) {

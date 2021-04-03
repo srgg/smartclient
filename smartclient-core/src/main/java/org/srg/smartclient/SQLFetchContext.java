@@ -361,10 +361,18 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                 .stream()
                 .filter(dsf -> dsf.isIncludeField()
                         /*
-                         * Entities will be fetched separately via sub-entity fetch request,
+                         * Entities will be handled separately via sub-entity fetch request,
                          * therefore exclude this field from the sql join.
                          */
-                        && !DSField.FieldType.ENTITY.equals(dsf.getType()))
+                        && !DSField.FieldType.ENTITY.equals(dsf.getType())
+
+                        /**
+                         * Multiple record inclusion will be handled via a separate subquery
+                         * in SELECT clause,  utilizing  the includeSummaryFunction mechanism
+                         */
+                        // TODO: consider checking source field from effective relation as well
+                        && !dsf.isMultiple()
+                )
                 .map(dsf -> {
                     final RelationSupport.ImportFromRelation relation = dsHandler().describeImportFrom(dsf);
                     return relation.foreignKeyRelations();
