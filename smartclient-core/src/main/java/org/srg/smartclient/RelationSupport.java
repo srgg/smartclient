@@ -242,7 +242,7 @@ public class RelationSupport {
                         throw new IllegalStateException(("DataSource '%s' can't determine a sourceField for importFromField  '%s' by IncludeVia '%s': " +
                                 "there are multiple fields with the name '%s'.")
                                 .formatted(
-                                        foreignRelation.dataSourceId(),
+                                        dataSource.getId(),
                                         importFromField.getName(),
                                         importFromField.getIncludeVia(),
                                         importFromField.getIncludeVia()
@@ -253,7 +253,7 @@ public class RelationSupport {
                         throw new IllegalStateException(("DataSource '%s' can't determine a sourceField for importFromField  '%s' by IncludeVia '%s': " +
                                 "there is no field with name '%s'.")
                                 .formatted(
-                                        foreignRelation.dataSourceId(),
+                                        dataSource.getId(),
                                         importFromField.getName(),
                                         importFromField.getIncludeVia(),
                                         importFromField.getIncludeVia()
