@@ -45,7 +45,7 @@ public class JDBCHandler extends AbstractDSHandler {
 
 
         // --
-        final DSResponse response[] = {null};
+        final DSResponse[] response = {null};
 
         policy.withConnectionDo(this.getDataSource().getDbName(), conn-> {
 
@@ -118,14 +118,12 @@ public class JDBCHandler extends AbstractDSHandler {
             return fetchRespone;
         }
 
-        DSResponse r = DSResponse.successUpdate(fetchRespone.getData());
-
-        return r;
+        return DSResponse.successUpdate(fetchRespone.getData());
     }
 
     @Override
     protected DSResponse handleFetch(DSRequest request) throws Exception {
-        final DSResponse r[] = {null};
+        final DSResponse[] r = {null};
         if (request instanceof StickyDBDSRequest sdbRequest) {
             r[0] = doHandleFetch(request, sdbRequest.connection(), true);
         } else {
@@ -151,7 +149,7 @@ public class JDBCHandler extends AbstractDSHandler {
     }
 
     private static class EntitySubFetch {
-        private static Logger logger = LoggerFactory.getLogger(EntitySubFetch.class);
+        private static final Logger logger = LoggerFactory.getLogger(EntitySubFetch.class);
 
         private final Map<String, Object> primaryKeys;
         private final DSField dsf;
@@ -341,8 +339,9 @@ public class JDBCHandler extends AbstractDSHandler {
 
                 if (getDsf().getJoinTable() != null) {
                     /*
-                     * To Handle Many To Many relation (non null joi table indicates that it is m2m)
-                     * it is required to retrieve secondary ids from join table
+                     * If join table is provided - it indicates that the relation is Many to Many.
+                     * And to Handle Many To Many relation it is required to retrieve correspondent
+                     * secondary ids from join table
                      */
 
                     effectivePKs = retrieveIdsFromDb(connection, getDsf(), foreignKeyRelation, getPrimaryKeys());
@@ -628,14 +627,6 @@ public class JDBCHandler extends AbstractDSHandler {
                         /*
                          * Create EntitySubFetch for further processing
                          */
-//
-//                        logger.trace("Processing multi-value and/or Entity relations for data source '%s', requested fields '%s'..."
-//                                .formatted(
-//                                        getDataSource().getId(),
-//                                        sqlFetchContext.getRequestedFields()
-//                                )
-//                        );
-
                         final List<ForeignRelation> ffs = sqlFetchContext.getAdditionalOutputs().get(dsf);
                         final List<DSField> requestedFields = ffs == null ? null : ffs.stream()
                                 .map(ForeignRelation::field)
@@ -725,7 +716,7 @@ public class JDBCHandler extends AbstractDSHandler {
                             filterStr = "%s like ?";
                         } else {
                             filterStr = "%s = ?";
-                        };
+                        }
 
                         ForeignRelation effectiveField = determineEffectiveField(dsf);
                         effectiveField = effectiveField.createWithSqlFieldAlias(
@@ -837,7 +828,7 @@ public class JDBCHandler extends AbstractDSHandler {
         private final DSRequest request;
         private final OperationBinding operationBinding;
 
-        public AbstractSQLContext(H dsHandler, DSRequest request, OperationBinding operationBinding) throws Exception {
+        public AbstractSQLContext(H dsHandler, DSRequest request, OperationBinding operationBinding) {
             this.request = request;
             this.operationBinding = operationBinding;
             this.dsHandler = dsHandler;
@@ -863,11 +854,11 @@ public class JDBCHandler extends AbstractDSHandler {
         }
 
         protected static Predicate<String> createCriteriaExclusionPredicate(String excludeCriteriaFields) {
-            final String splitted [] = excludeCriteriaFields == null ? null : excludeCriteriaFields.split("\\s*,\\s*");
+            final String[] splitted = excludeCriteriaFields == null ? null : excludeCriteriaFields.split("\\s*,\\s*");
             if ( splitted == null || splitted.length == 0 ) {
                 return s -> false;
             } else {
-                return new Predicate<String>() {
+                return new Predicate<>() {
                     final private Set<String> exclusions = new HashSet<>(Arrays.asList(splitted));
 
                     @Override
