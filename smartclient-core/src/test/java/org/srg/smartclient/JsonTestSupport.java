@@ -181,7 +181,7 @@ public class JsonTestSupport {
             }
 
             if (value.field() != null) {
-                gen.writeObjectField("field", value.field());
+                gen.writeObjectField("field", value.field().getName());
             } else {
                 gen.writeStringField("fieldName", value.fieldName());
             }
@@ -199,11 +199,11 @@ public class JsonTestSupport {
             gen.writeStartObject();
 
             gen.writeStringField("dataSource", value.dataSource().getId());
-            gen.writeObjectField("field", value.sourceField());
+            gen.writeObjectField("sourceField", value.sourceField().getName());
 
             gen.writeObjectField("foreignKeyRelations", value.foreignKeyRelations());
 
-            gen.writeObjectField("foreignDisplay", value.foreignDisplay());
+            gen.writeObjectField("foreignDisplay", value.foreignDisplay().getName());
 
             gen.writeEndObject();
         }
@@ -221,7 +221,7 @@ public class JsonTestSupport {
             }
 
 
-            gen.writeObjectField("sourceField", value.sourceField());
+            gen.writeObjectField("sourceField", value.sourceField().getName());
             gen.writeBooleanField("isInverse", value.isInverse());
 
             gen.writeObjectField("foreign", value.foreign());

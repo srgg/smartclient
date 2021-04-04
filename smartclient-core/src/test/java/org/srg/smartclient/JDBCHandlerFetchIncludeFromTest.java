@@ -18,90 +18,30 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
 
     @Test
     public void directIncludeFrom_without_includeVia() throws Exception {
-        final String extra = """
-                [
-                    {
-                        name:"location"
-                        , foreignKey:"LocationDS.id"
-                        , dbName:"location_id"
-                        , displayField: 'location_city'                        
-                    },
-                    {
-                        name:"location_city"
-                        , type:"TEXT"
-                        , includeFrom:"LocationDS.city"
-                    }
-                ]""";
+        final JDBCHandler h = RelationSupportTest.IncludeFrom_TestCases.Direct_Without_IncludeVia.apply(this);
 
-        withHandlers(Handler.Location);
-        final JDBCHandler employeeHandler = withExtraFields(extra);
+        final DSField includeFrom = h.getField("location_city");
 
-        // -- Check validity ImportFromRelation
-        final DSField includeFrom = employeeHandler.getField("location_city");
-        final RelationSupport.ImportFromRelation ifrl = RelationSupport.describeImportFrom(dsId -> employeeHandler.getDataSourceHandlerById(dsId), employeeHandler.dataSource(), includeFrom);
-        JsonTestSupport.assertJsonEquals("""
-                {
-                   dataSource:'EmployeeDS',
-                   field:{
-                      name:'location',
-                      foreignKey:'LocationDS.id',
-                      displayField:'location_city',
-                      dbName:'location_id',
-                      includeField:false
-                   },
-                   foreignKeyRelations: [
-                      {
-                         dataSource:'EmployeeDS',
-                         sourceField:{
-                            name:'location',
-                            foreignKey:'LocationDS.id',
-                            displayField:'location_city',
-                            dbName:'location_id',
-                            includeField:false
-                         },
-                         isInverse:false,
-                         foreign:{
-                            dataSource:'LocationDS',
-                            field:{
-                               name:'id',
-                               required:true,
-                               primaryKey:true,
-                               dbName:'id'
-                            },
-                            sqlFieldAlias:null
-                         }
-                      }
-                   ],
-                   foreignDisplay:{
-                      name:'city',
-                      dbName:'city',
-                      type: 'TEXT',
-                      foreignKey: null,                      
-                      includeField:false
-                   }
-                }""",
-                ifrl,
-                Option.IGNORING_EXTRA_FIELDS
+        final RelationSupport.ImportFromRelation ifr = RelationSupport.describeImportFrom(
+                h::getDataSourceHandlerById,
+                h.dataSource(),
+                includeFrom
         );
 
         // --
-        final RelationSupport.ForeignRelation frl = employeeHandler.determineEffectiveField(includeFrom);
+        final RelationSupport.ForeignRelation frl = h.determineEffectiveField(includeFrom);
         JsonTestSupport.assertJsonEquals("""
                 {
                     dataSource:'LocationDS',
-                    field:{
-                       name:'city',
-                       type:'TEXT',
-                       includeField:false
-                    },
-                    "sqlFieldAlias":null
+                    field: 'city',
+                    sqlFieldAlias:null
                 }""",
                 frl,
                 Option.IGNORING_EXTRA_FIELDS
         );
 
         // -- Check generated SQL join clause
-        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifrl.foreignKeyRelations());
+        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifr.foreignKeyRelations());
 
         MatcherAssert.assertThat( sqlJoin,
                 equalToCompressingWhiteSpace("""
@@ -115,7 +55,7 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
         request.setStartRow(0);
         request.setEndRow(3);
 
-        final DSResponse response = employeeHandler.handleFetch(request);
+        final DSResponse response = h.handleFetch(request);
 
         JsonTestSupport.assertJsonEquals("""
             {
@@ -148,50 +88,20 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
 
     @Test
     public void indirectIncludeFrom_without_includeVia() throws Exception {
-        final JDBCHandler locationHandler = withHandlers(Handler.Country, Handler.Location);
-        withExtraFields(locationHandler, """
-            [
-                {
-                  name: "country",
-                  dbName: "country_id",
-                  type: "integer",
-                  foreignKey:"CountryDS.id"
-                }
-            ]""");
-
-        final JDBCHandler employeeHandler = withExtraFields(
-                """
-                    [
-                        {
-                            name:'location'
-                            , foreignKey:'LocationDS.id'
-                            , dbName:'location_id'
-                            , displayField: 'location_country'
-                        },
-                        {
-                            name:'location_country'
-                            , type:'TEXT'
-                            , includeFrom:'LocationDS.country.CountryDS.name'
-                        }
-                    ]
-                """);
+        final JDBCHandler h = RelationSupportTest.IncludeFrom_TestCases.Indirect_Without_IncludeVia.apply(this);
 
         DSRequest request = new DSRequest();
         request.setStartRow(0);
         request.setEndRow(3);
 
-        final DSField includeFrom = employeeHandler.getField("location_country");
+        final DSField includeFrom = h.getField("location_country");
 
-        final RelationSupport.ForeignRelation frl = employeeHandler.determineEffectiveField(includeFrom);
+        final RelationSupport.ForeignRelation frl = h.determineEffectiveField(includeFrom);
         JsonTestSupport.assertJsonEquals("""
                 {
                     dataSource:'CountryDS',
-                    field:{
-                       name:'name',
-                       type:'TEXT',
-                       includeField:false
-                    },
-                    "sqlFieldAlias":null
+                    field: 'name',
+                    sqlFieldAlias:null
                 }""",
                 frl,
                 Option.IGNORING_EXTRA_FIELDS
@@ -199,10 +109,10 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
 
 
 
-        final RelationSupport.ImportFromRelation ifrl = employeeHandler.describeImportFrom(includeFrom);
+        final RelationSupport.ImportFromRelation ifr = h.describeImportFrom(includeFrom);
 
         // -- Check generated SQL join clause
-        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifrl.foreignKeyRelations());
+        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifr.foreignKeyRelations());
 
         MatcherAssert.assertThat( sqlJoin,
                 equalToCompressingWhiteSpace("""
@@ -212,74 +122,7 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
                 )
         );
 
-        // -- Check validity ImportFromRelation
-        JsonTestSupport.assertJsonEquals("""
-                {
-                   dataSource:'EmployeeDS',
-                   field:{
-                      name:'location',
-                      foreignKey:'LocationDS.id',
-                      displayField:'location_country',
-                      dbName:'location_id',
-                      includeField:false
-                   },
-                   foreignDisplay:{
-                      name:'name',
-                      type:'TEXT',
-                      dbName:'name',
-                      foreignKey:null,
-                      includeField:false
-                   },
-                   foreignKeyRelations:[
-                      {
-                         dataSource:'EmployeeDS',
-                         foreign:{
-                            dataSource:'LocationDS',
-                            field:{
-                               name:'id',
-                               dbName:'id',
-                               includeField:false,
-                               primaryKey:true
-                            },
-                            sqlFieldAlias:null
-                         },
-                         isInverse:false,
-                         sourceField:{
-                            name:'location',
-                            dbName:'location_id',
-                            displayField:'location_country',
-                            foreignKey:'LocationDS.id',
-                            includeField:false
-                         }
-                      },
-                      {
-                         dataSource:'LocationDS',
-                         foreign:{
-                            dataSource:'CountryDS',
-                            field:{
-                               name:'id',
-                               dbName:'id',
-                               includeField:false,
-                               'primaryKey':true
-                            },
-                            sqlFieldAlias:null
-                         },
-                         isInverse:false,
-                         sourceField:{
-                            name:'country',
-                            dbName:'country_id',
-                            foreignKey:'CountryDS.id',
-                            includeField:false,
-                            type:'INTEGER'
-                         }
-                      }
-                   ]
-                }""",
-                ifrl,
-                Option.IGNORING_EXTRA_FIELDS
-        );
-
-        final DSResponse response = employeeHandler.handleFetch(request);
+        final DSResponse response = h.handleFetch(request);
 
         JsonTestSupport.assertJsonEquals("""
             {
@@ -312,50 +155,20 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
 
     @Test
     public void indirectIncludeFrom_with_includeVia() throws Exception {
-        final JDBCHandler locationHandler = withHandlers(Handler.Country, Handler.Location);
-        withExtraFields(locationHandler, """
-            [
-                {
-                  name: "country",
-                  dbName: "country_id",
-                  type: "integer",
-                  foreignKey:"CountryDS.id"
-                }
-            ]""");
+        final JDBCHandler h = RelationSupportTest.IncludeFrom_TestCases.Indirect_With_IncludeVia.apply(this);
 
-        final JDBCHandler employeeHandler = withExtraFields(
-                """
-                    [
-                        {
-                            name:'location'
-                            , foreignKey:'LocationDS.id'
-                            , dbName:'location_id'
-                            , displayField: 'location_country'
-                        },
-                        {
-                            name:'location_country'
-                            , type:'TEXT'
-                            , includeFrom:'LocationDS.country.CountryDS.name'
-                            , includeVia:'location'
-                        }
-                    ]
-                """);
         DSRequest request = new DSRequest();
         request.setStartRow(0);
         request.setEndRow(3);
 
-        final DSField includeFrom = employeeHandler.getField("location_country");
+        final DSField includeFrom = h.getField("location_country");
 
-        final RelationSupport.ForeignRelation frl = employeeHandler.determineEffectiveField(includeFrom);
+        final RelationSupport.ForeignRelation frl = h.determineEffectiveField(includeFrom);
         JsonTestSupport.assertJsonEquals("""
                 {
                     dataSource:'CountryDS',
-                    field:{
-                       name:'name',
-                       type:'TEXT'
-                       , includeField:false
-                    },
-                    "sqlFieldAlias":null
+                    field: 'name',
+                    sqlFieldAlias:null
                 }""",
                 frl,
                 Option.IGNORING_EXTRA_FIELDS
@@ -363,10 +176,10 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
 
 
 
-        final RelationSupport.ImportFromRelation ifrl = employeeHandler.describeImportFrom(includeFrom);
+        final RelationSupport.ImportFromRelation ifr = h.describeImportFrom(includeFrom);
 
         // -- Check generated SQL join clause
-        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifrl.foreignKeyRelations());
+        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifr.foreignKeyRelations());
 
         MatcherAssert.assertThat( sqlJoin,
                 equalToCompressingWhiteSpace("""
@@ -376,74 +189,7 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
                 )
         );
 
-        // -- Check validity ImportFromRelation
-        JsonTestSupport.assertJsonEquals("""
-                {
-                   dataSource:'EmployeeDS',
-                   field:{
-                      name:'location',
-                      foreignKey:'LocationDS.id',
-                      displayField:'location_country',
-                      dbName:'location_id',
-                      includeField:false
-                   },
-                   foreignDisplay:{
-                      name:'name',
-                      type:'TEXT',
-                      dbName:'name',
-                      foreignKey:null,
-                      includeField:false
-                   },
-                   foreignKeyRelations:[
-                      {
-                         dataSource:'EmployeeDS',
-                         foreign:{
-                            dataSource:'LocationDS',
-                            field:{
-                               name:'id',
-                               dbName:'id',
-                               includeField:false,
-                               primaryKey:true
-                            },
-                            sqlFieldAlias:null
-                         },
-                         isInverse:false,
-                         sourceField:{
-                            name:'location',
-                            dbName:'location_id',
-                            displayField:'location_country',
-                            foreignKey:'LocationDS.id',
-                            includeField:false
-                         }
-                      },
-                      {
-                         dataSource:'LocationDS',
-                         foreign:{
-                            dataSource:'CountryDS',
-                            field:{
-                               name:'id',
-                               dbName:'id',
-                               includeField:false,
-                               'primaryKey':true
-                            },
-                            sqlFieldAlias:null
-                         },
-                         isInverse:false,
-                         sourceField:{
-                            name:'country',
-                            dbName:'country_id',
-                            foreignKey:'CountryDS.id',
-                            includeField:false,
-                            type:'INTEGER'
-                         }
-                      }
-                   ]
-                }""",
-                ifrl,
-                Option.IGNORING_EXTRA_FIELDS
-        );
-
-        final DSResponse response = employeeHandler.handleFetch(request);
+        final DSResponse response = h.handleFetch(request);
 
         JsonTestSupport.assertJsonEquals("""
             {

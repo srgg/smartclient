@@ -11,7 +11,7 @@ import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
 import java.sql.*;
 import java.util.*;
 
-public class OperationBindingTest extends AbstractJDBCHandlerTest {
+public class OperationBindingTest extends AbstractJDBCHandlerTest<JDBCHandler> {
 
     final private static String TIME_REPORT = """
             {                        
