@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -237,7 +237,7 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
         request.setEndRow(2);
 
         // -- check default order (should be ascending)
-        request.setSortBy(Arrays.asList("name"));
+        request.setSortBy(Collections.singletonList("name"));
         final DSResponse response1 = handler.handleFetch(request);
         JsonTestSupport.assertJsonEquals("""
             {
@@ -258,7 +258,7 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
             }""", response1);
 
         // -- check descending
-        request.setSortBy(Arrays.asList("-name"));
+        request.setSortBy(Collections.singletonList("-name"));
 
         final DSResponse response2 = handler.handleFetch(request);
         JsonTestSupport.assertJsonEquals("""
@@ -280,7 +280,7 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
             }""", response2);
 
         // -- check ascending
-        request.setSortBy(Arrays.asList("+name"));
+        request.setSortBy(Collections.singletonList("+name"));
         final DSResponse response3 = handler.handleFetch(request);
         JsonTestSupport.assertJsonEquals("""
             {
