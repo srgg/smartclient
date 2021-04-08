@@ -1,6 +1,7 @@
 package org.srg.smartclient;
 
 import freemarker.template.TemplateException;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.DSField;
@@ -16,14 +17,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.AbstractSQLContext<JDBCHandler> {
-    private static Logger logger = LoggerFactory.getLogger(SQLFetchContext.class);
+    private static final Logger logger = LoggerFactory.getLogger(SQLFetchContext.class);
     private String genericQuery;
     private int pageSize;
     private String orderClause;
     private String paginationClause;
 
-    private List<DSField> requestedFields = new LinkedList<>();
-    private Map<DSField, List<RelationSupport.ForeignRelation>> additionalOutputs = new HashMap<>();
+    private final List<DSField> requestedFields = new LinkedList<>();
+    private final Map<DSField, List<RelationSupport.ForeignRelation>> additionalOutputs = new HashMap<>();
     private List<JDBCHandler.IFilterData> filterData = new LinkedList<>();
 
     private Map<String, Object> templateContext;
@@ -68,7 +69,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
         final RelationSupport.ForeignRelation effectiveRelation;
         final String effectiveColumn;
 
-        if (dsHandler().isSubEntityFetchRequired(dsf)) {
+        if (AbstractDSHandler.isSubEntityFetchRequired(dsf)) {
 
             if (!formatForSelect) {
                 throw new IllegalStateException("MNot supported yet.");
@@ -105,7 +106,32 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                     && !effectiveRelation.field().getCustomSelectExpression().isBlank()) {
                 effectiveColumn = effectiveRelation.field().getCustomSelectExpression();
             } else {
-                effectiveColumn = effectiveRelation.formatAsSQL();
+                if (dsHandler().isIncludeSummaryRequired(dsf)) {
+                    final RelationSupport.ImportFromRelation ifr = dsHandler().describeImportFrom(dsf);
+
+                    final String extraInfo;
+                    if (logger.isDebugEnabled()) {
+                        extraInfo = "Fetch includeFrom with Summary %s"
+                            .formatted(ifr);
+                    } else {
+                        extraInfo = "Fetch includeFrom with Summary %s(%s)"
+                            .formatted(
+                                dsf.getIncludeSummaryFunction(),
+                                ifr.sourceField().getName()
+                            );
+                    }
+
+                    final String query = fetchSummarized(ifr);
+                    effectiveColumn = """
+                            (
+                               /*  %s  */
+                               %s
+                            ) 
+                            """.formatted(extraInfo, query);
+
+                } else {
+                    effectiveColumn = effectiveRelation.formatAsSQL();
+                }
             }
         }
 
@@ -324,7 +350,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                          *  that is specified as part of a template.
                          */
                         final Set<String> excludedFields = Arrays.stream(this.operationBinding().getExcludeCriteriaFields().split(","))
-                                .map( s -> s.trim())
+                                .map(String::trim)
                                 .collect(Collectors.toSet());
 
                         if (!excludedFields.contains(n)) {
@@ -336,7 +362,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
 
                     return dsf;
                 })
-                .filter(dsf -> dsf !=null)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
 
@@ -366,7 +392,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                          */
                         && !DSField.FieldType.ENTITY.equals(dsf.getType())
 
-                        /**
+                        /*
                          * Multiple record inclusion will be handled via a separate subquery
                          * in SELECT clause,  utilizing  the includeSummaryFunction mechanism
                          */
@@ -477,5 +503,110 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
              */
             this.genericQuery = SQLTemplateEngine.processSQL(templateContext,this.genericQuery);
         }
+    }
+
+    public static String fetchSummarized(RelationSupport.ImportFromRelation ifr) {
+        final DSField sourceField = ifr.sourceField();
+        if (!sourceField.isIncludeField()
+                || !sourceField.isMultiple()) {
+            throw new IllegalStateException();
+        }
+
+        final DSField.SummaryFunctionType summaryFunction;
+        if (sourceField.getIncludeSummaryFunction() != null) {
+            summaryFunction = sourceField.getIncludeSummaryFunction();
+        } else {
+            summaryFunction = DSField.SummaryFunctionType.CONCAT;
+        }
+
+        /*
+         * <em>Note:</em> that tables in sub-select will always use relatedTableAlias if set or automatically generated aliases.
+         * Automatic aliases are generated according to the rule:
+         * first table in possible chain of relations being the name of the field sub-select is getting value for
+         * (with underscore "_" in front) and the rest aliases are built up using foreign key field names
+         * in the chained relations leading to the target table. This allows to avoid any conflicts with the tables/aliases
+         * from the main query. Like in the second example table "orderItem" is used in both main query without
+         * alias and sub-select under _orderItemsCount_orderID alias.
+         *
+         * @see https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/serverds/DataSourceField.html#includeSummaryFunction
+         */
+        final String effectiveRelatedTableAlias = "_%s%s".formatted(
+                StringUtils.uncapitalize(ifr.getLast().foreign().dataSource().getTableName()),
+                StringUtils.capitalize(ifr.sourceField().getName())
+        );
+
+        final String fieldName = "%s.%s".formatted(
+                effectiveRelatedTableAlias,
+                ifr.foreignDisplay().getDbName()
+            );
+
+        final String fieldSeparator;
+
+        if( ifr.foreignDisplay().getMultipleValueSeparator() == null ) {
+            fieldSeparator = ", ";
+        } else {
+            fieldSeparator = ifr.foreignDisplay().getMultipleValueSeparator();
+        }
+
+        // TODO: Think about DB agnostic approach: STRING_AGG is PostgreSQL specific
+        //       in MySQL it is GROUP_CONCAT and LISTAGG in Oracle.
+        final String effectiveField = switch (summaryFunction) {
+            case CONCAT -> "STRING_AGG(%s, '%s')".formatted(fieldName, fieldSeparator);
+            case AVG, MAX, COUNT, MIN, SUM  -> "%s(%s)".formatted(summaryFunction.name(),fieldName);
+            case FIRST -> "MIN(%s)".formatted(fieldName);
+
+            default -> throw new IllegalStateException("Unsupported SummaryFunctionType '%s'."
+                    .formatted(summaryFunction));
+        };
+
+        final ISQLForeignKeyRelation fkr;
+        {
+            final RelationSupport.ForeignKeyRelation fkrO = ifr.toForeignKeyRelation();
+            fkr = ISQLForeignKeyRelation.wrap(
+                    ifr.toForeignKeyRelation()
+                )
+                .withDestFieldAlias(effectiveRelatedTableAlias)
+                .withSourceTableAlias(effectiveRelatedTableAlias + "_" + fkrO.foreign().field().getName())
+                .wrap();
+        }
+
+        if (fkr.sourceField().getJoinTable() == null) {
+            throw new IllegalStateException(
+                    "DataSource '%s': summarized fetch generation is failed: field '%s.%s' does not specify any 'joinTable', relation: %s".formatted(
+                            fkr.dataSource().getId(),
+                            fkr.dataSource().getId(),
+                            fkr.sourceField().getName(),
+                            ifr
+                    )
+            );
+        }
+
+        final StringBuilder sbld = new StringBuilder("""
+                SELECT %s
+                    FROM %s %s
+                """.formatted(
+                        effectiveField,
+                        fkr.foreign().dataSource().getTableName(),
+                        effectiveRelatedTableAlias
+                )
+            );
+
+        // -- join
+        final String joinClause = JDBCHandler.AbstractSQLContext.generateSQLJoin(List.of(fkr));
+
+        sbld.append('\n')
+                .append(joinClause);
+
+        // -- where
+        final DSField pk = ifr.dataSource().getNonCompositePK();
+
+        sbld.append('\n')
+                .append("WHERE %s.%s = %s.%s".formatted(
+                        ifr.dataSource().getTableName(), pk.getDbName(),
+                        fkr.sourceTableAlias(), pk.getDbName()
+                    )
+                );
+
+        return sbld.toString();
     }
 }

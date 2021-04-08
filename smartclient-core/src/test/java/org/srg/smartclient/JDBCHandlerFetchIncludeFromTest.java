@@ -294,4 +294,108 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
                ]
             }""", response);
     }
+
+    @Test
+    public void fetchManyToMany_EntireEntity_WithForeignDisplayField() throws Exception {
+        final JDBCHandler h = RelationSupportTest.IncludeFrom_TestCases.Direct_Multiple_With_IncludeVia.apply(this);
+
+        final DSRequest request = new DSRequest();
+        request.setOutputs("id, name, teamMembers, employeeName");
+
+
+        final DSField includeFrom = h.getField("employeeName");
+
+        final RelationSupport.ForeignRelation frl = h.determineEffectiveField(includeFrom);
+        JsonTestSupport.assertJsonEquals("""
+                {
+                    dataSource:'EmployeeDS',
+                    field: 'name',
+                    sqlFieldAlias:null
+                }""",
+                frl,
+                Option.IGNORING_EXTRA_FIELDS
+        );
+
+
+
+        final RelationSupport.ImportFromRelation ifr = h.describeImportFrom(includeFrom);
+
+        // -- Check generated SQL join clause
+        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifr.foreignKeyRelations());
+
+        MatcherAssert.assertThat( sqlJoin,
+                equalToCompressingWhiteSpace("""
+                        JOIN project_team  ON employee.id = project_team.employee_id
+                        JOIN project project ON project_team.project_id = project.id                                                                          
+                        """
+                )
+        );
+
+
+        final DSResponse response = h.handleFetch(request);
+
+//        /*
+//         * It is expected that ForeignDisplayField will be returned as part of foreign entity
+//         */
+        JsonTestSupport.assertJsonEquals("""
+                {
+                  status:0,
+                  startRow:0,
+                  endRow:5,
+                  totalRows:5,
+                  data:[
+                    {
+                      id:1,
+                      name:'Project 1 for client 1',
+                      teamMembers:[
+                         {
+                            id:1
+                         },
+                         {
+                            id:2
+                         }
+                      ],
+                      employeeName:'admin, developer'
+                    },
+                    {
+                      id:2,
+                      name:'Project 2 for client 1',
+                      teamMembers:[
+                         {
+                            id:2
+                         },
+                         {
+                            id:3
+                         }
+                      ],
+                      employeeName:'developer, UseR3'
+                    },
+                    {
+                      id:3,
+                      name:'Project 1 for client 2',
+                      teamMembers:[
+                         {
+                            id:4
+                         },
+                         {
+                            id:5
+                         }
+                      ],
+                      employeeName:'manager1, manager2'
+                    },
+                    {
+                      id:4,
+                      name:'Project 2 for client 2',
+                      teamMembers:null,
+                      employeeName:null
+                    },
+                    {
+                      id:5,
+                      name:'Project 3 for client 2',
+                      teamMembers:null,
+                      employeeName:null
+                    }
+                  ]
+                }""", response);
+    }
 }

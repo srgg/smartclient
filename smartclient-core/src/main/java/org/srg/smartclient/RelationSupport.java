@@ -6,18 +6,26 @@ import org.srg.smartclient.isomorphic.DataSource;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class RelationSupport {
+
+    public interface IForeignKeyRelation {
+        DataSource dataSource();
+        DSField sourceField();
+        boolean isInverse();
+
+        ForeignRelation foreign();
+    }
+
     @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-    public static record ForeignKeyRelation(
+    public static record ForeignKeyRelation (
             DataSource dataSource,
             DSField sourceField,
             boolean isInverse,
 
             ForeignRelation foreign
-    ){
+    ) implements IForeignKeyRelation {
         @Override
         public String toString() {
             return "ForeignKeyRelation{" +
@@ -29,7 +37,6 @@ public class RelationSupport {
         }
     }
 
-
     @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
     public static record ImportFromRelation(
             DataSource dataSource,
@@ -37,13 +44,13 @@ public class RelationSupport {
 
             List<ForeignKeyRelation> foreignKeyRelations,
             DSField foreignDisplay
-    ){
+    ) {
         protected ForeignKeyRelation getLast() {
             if (foreignKeyRelations.isEmpty()) {
                 throw new IllegalStateException();
             }
 
-            return foreignKeyRelations.get(foreignKeyRelations.size() -1);
+            return foreignKeyRelations.get(foreignKeyRelations.size() - 1);
         }
 
         protected ForeignKeyRelation get1st() {
@@ -57,8 +64,8 @@ public class RelationSupport {
         @Override
         public String toString() {
             return "ImportFromRelation{ " +
-                    "FOREIGN KEY " + dataSource.getId() +"(" + sourceField.getName() + ") \n" +
-                    "  REFERENCES " +foreignKeyRelations.toString()  + ")\n" +
+                    "FOREIGN KEY " + dataSource.getId() + "(" + sourceField.getName() + ") \n" +
+                    "  REFERENCES " + foreignKeyRelations.toString() + ")\n" +
                     "  DISPLAYS (" + foreignDisplay.getName() + ")" +
                     '}';
         }
@@ -70,8 +77,8 @@ public class RelationSupport {
             final ForeignKeyRelation fkrl = get1st();
 
             return new ForeignKeyRelation(
-                    this.dataSource,
-                    this.sourceField,
+                    fkrl.dataSource,
+                    fkrl.sourceField,
                     false, // no chance to determine this at this point/level
                     new ForeignRelation(
                             fkrl.foreign.dataSource().getId(),
@@ -91,8 +98,8 @@ public class RelationSupport {
             final ForeignKeyRelation fkrl = get1st();
 
             return new ForeignKeyRelation(
-                    this.dataSource,
-                    this.sourceField,
+                    fkrl.dataSource,
+                    fkrl.sourceField,
                     false, // no chance to determine this at this point/level
                     new ForeignRelation(
                             fkrl.foreign.dataSource().getId(),
@@ -232,7 +239,7 @@ public class RelationSupport {
     }
 
     private static DSField determineForeignKeyField(DataSource dataSource, DSField importFromField, ForeignRelation foreignRelation) {
-        DSField fkField = null;
+        DSField fkField;
 
         if ( importFromField.getIncludeVia() != null && !importFromField.getIncludeVia().isBlank() ) {
             // Lookup source field by "IncludeVia"
@@ -290,8 +297,9 @@ public class RelationSupport {
 
             switch (size) {
                 case 1: fkField = foreignFields.get(0);
+                break;
 
-                case 0: new IllegalStateException(("DataSource '%s' can't determine a sourceField for importFromField  '%s' by foreign relation: " +
+                case 0: throw new IllegalStateException(("DataSource '%s' can't determine a sourceField for importFromField  '%s' by foreign relation: " +
                         "there is no fields with foreignKey pointed out to the foreignDataSource '%s'.")
                         .formatted(
                                 foreignRelation.dataSourceId(),
@@ -300,7 +308,7 @@ public class RelationSupport {
                         ));
 
                 default:
-                    new IllegalStateException(("DataSource '%s' can't determine a sourceField for importFromField  '%s' by foreign relation: " +
+                    throw new IllegalStateException(("DataSource '%s' can't determine a sourceField for importFromField  '%s' by foreign relation: " +
                             "there are multiple fields with foreignKey pointed out to the foreignDataSource '%s', consider to use includeVia to point it oit to the exact field.")
                             .formatted(
                                     foreignRelation.dataSourceId(),
@@ -319,7 +327,7 @@ public class RelationSupport {
         }
 
 
-        final String parsedIncludeFrom[] = importFromField.getIncludeFrom().trim().split("\\.");
+        final String[] parsedIncludeFrom = importFromField.getIncludeFrom().trim().split("\\.");
 
         if (parsedIncludeFrom.length % 2 != 0) {
             throw new IllegalStateException(
@@ -354,7 +362,7 @@ public class RelationSupport {
             final DSField fkField = determineForeignKeyField(ds, currentSourceField, foreignRelation);
 
             // -- foreign key
-            final String parsedForeignKey[] = fkField.getForeignKey().split("\\.");
+            final String[] parsedForeignKey = fkField.getForeignKey().split("\\.");
             if (parsedForeignKey.length != 2) {
                 throw new RuntimeException(("Can't determine ImportFromRelation for '%s.%s': " +
                         "invalid foreignKey value '%s'; 'foreignKey' field MUST be prefixed with a DataSource ID.")
@@ -411,7 +419,7 @@ public class RelationSupport {
         final ForeignKeyRelation frl1 = foreignKeyRelations.get(0);
         return new ImportFromRelation(
                 frl1.dataSource(),
-                frl1.sourceField(),
+                importFromField,
                 foreignKeyRelations,
                 displayField
         );
@@ -437,7 +445,7 @@ public class RelationSupport {
 
             // -- find PKs
             final List<DSField> pks = dataSource.getFields().stream()
-                    .filter(dsf -> dsf.isPrimaryKey())
+                    .filter(DSField::isPrimaryKey)
                     .collect(Collectors.toList());
 
             switch (pks.size()) {

@@ -181,6 +181,27 @@ public class DataSource {
                 .collect(Collectors.toSet());
     }
 
+    public DSField getNonCompositePK() {
+        final Set<DSField> pks = getPKFields();
+
+        switch (pks.size()) {
+            case 1:
+                return pks.iterator().next();
+
+            case 0:
+                throw new IllegalStateException(
+                        "DataSource '%s': Does not have any PK."
+                                .formatted(this.getId())
+                );
+
+            default:
+                throw new IllegalStateException(
+                        "DataSource '%s': Composite PKs are not supported."
+                                .formatted(this.getId())
+                );
+        }
+    }
+
     @Override
     public String toString() {
         return "DataSource{" +

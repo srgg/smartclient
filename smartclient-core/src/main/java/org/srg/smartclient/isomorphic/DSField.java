@@ -42,9 +42,12 @@ public class DSField {
     ));
 
     public static class JoinTableDescr {
-        final String tableName;
-        final String sourceColumn;
-        final String destColumn;
+        private String tableName;
+        private String sourceColumn;
+        private String destColumn;
+
+        public JoinTableDescr() {
+        }
 
         public JoinTableDescr(String tableName, String sourceColumn, String destColumn) {
             this.tableName = tableName;
@@ -62,6 +65,18 @@ public class DSField {
 
         public String getDestColumn() {
             return destColumn;
+        }
+
+        public void setTableName(String tableName) {
+            this.tableName = tableName;
+        }
+
+        public void setSourceColumn(String sourceColumn) {
+            this.sourceColumn = sourceColumn;
+        }
+
+        public void setDestColumn(String destColumn) {
+            this.destColumn = destColumn;
         }
     }
 
@@ -118,7 +133,64 @@ public class DSField {
             }
             this.defaultOperators = Collections.unmodifiableSet(r);
         }
+    }
 
+    /**
+     * This is used for client-side or server-side summaries
+     * Client-side: Function to produce a summary value based on an array of records and a field definition. An example usage is the listGrid summary row, where a row is shown at the bottom of the listGrid containing summary information about each column.
+     * Server-side: Function used for getting summarized field value using Server Summaries feature or when Including values from multiple records
+     *
+     * @see https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/types/SummaryFunctionType.html
+     */
+    public enum SummaryFunctionType {
+        /**
+         * iterates through the set of records, picking up all numeric values for the specified field and determining the mean value.
+         */
+        AVG,
+
+        /**
+         * Client: iterates through the set of records, producing a string with each value concatenated to the end.
+         * Server: implemented as SQL CONCAT function.
+         */
+        CONCAT,
+
+        /**
+         * Client: returns a numeric count of the total number of records passed in.
+         * Server: acts exactly like SQL COUNT function.
+         */
+        COUNT,
+
+        /**
+         * Client: Currently the same as the min function.
+         * Server: implemented as SQL MIN function.
+         */
+        FIRST,
+
+        /**
+         * Client: iterates through the set of records, picking up all values for the specified field and finding the maximum value.
+         */
+        MAX,
+
+        /**
+         * Client: iterates through the set of records, picking up all values for the specified field and finding the minimum value.
+         */
+        MIN,
+
+        /**
+         * Client: iterates through the set of records, picking up all numeric values for the specified field and multiplying them together.
+         */
+        MULTIPLIER,
+
+        /**
+         * Client: iterates through the set of records, picking up and summing all numeric values for the specified field.
+         */
+        SUM,
+
+        /**
+         * Client: returns field.summaryValueTitle if specified, otherwise field.title
+         * Server: not supported.
+         */
+        TITLE
     }
 
     private String name;
@@ -165,6 +237,14 @@ public class DSField {
      */
     private String includeVia;
 
+
+    /**
+     * When field.includeFrom is specified and multiple records exist in the related DataSource per record in the including DataSource, includeSummaryFunction indicates which SummaryFunctionType is used to produce the field value.
+     *
+     * @see https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/serverds/DataSourceField.html#includeSummaryFunction
+     */
+    private SummaryFunctionType includeSummaryFunction;
+
     private String displayField;
     private String rootValue;
     private String dbName;
@@ -174,8 +254,13 @@ public class DSField {
      */
     private String tableName;
 
-    /*
-     * https://www.smartclient.com/smartclient-release/isomorphic/system/reference/?id=attr..DataSourceField.relatedTableAlias
+    /**
+     * For a SQL DataSource field that specifies a foreignKey, this property defines the table alias name to use in generated SQL.
+     * Aliasing is necessary when the same table appears more than once in a query. This can happen when using Multiple includeFrom \n fields referring to the same related DataSource. It can also happen when a foreignKey definition references the same dataSource that the field is defined in; this happens with hierarchical structures, for example where every Employee reports to another Employee. This is a so-called "self join", and it always requires relatedTableAlias to be specified; failure to do so will result in invalid SQL.
+     *
+     * In case of indirect relationship, when more than single join is needed to join the target table, and includeVia is missing, generated alias is a concatenation of relatedTableAlias and FK field names starting with the first relatedTableAlias met in chain of relations leading to the target table.
+     *
+     * @see https://www.smartclient.com/smartclient-release/isomorphic/system/reference/?id=attr..DataSourceField.relatedTableAlias
      */
     private String relatedTableAlias;
 
@@ -512,11 +597,48 @@ public class DSField {
     }
 
     public String getRelatedTableAlias() {
+        assert (this.getForeignKey() == null || !this.getForeignKey().isBlank())
+                : "getRelatedTableAlias() MUST NOT been called for a non FK fields";
+
+//        if (this.getForeignKey() == null || this.getForeignKey().isBlank()) {
+//            return null;
+//        }
+//
+//        if (this.relatedTableAlias == null) {
+//            /**
+//             * Automatic aliases are generated according to the rule:
+//             *   first table in possible chain of relations being the name of the field sub-select is getting value
+//             *   for (with underscore "_" in front) and the rest aliases are built up using foreign key field names
+//             *   in the chained relations leading to the target table.
+//             *
+//             * This allows to avoid any conflicts with the tables/aliases from the main query.
+//             *
+//             * from here https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/serverds/DataSourceField.html#includeSummaryFunction
+//             */
+//
+//            final String alias = "_%s".formatted(this.getName());
+
         return relatedTableAlias;
+    }
+
+    public SummaryFunctionType getIncludeSummaryFunction() {
+        return includeSummaryFunction;
+    }
+
+    public void setIncludeSummaryFunction(SummaryFunctionType includeSummaryFunction) {
+        this.includeSummaryFunction = includeSummaryFunction;
     }
 
     public void setRelatedTableAlias(String relatedTableAlias) {
         this.relatedTableAlias = relatedTableAlias;
+    }
+
+    public String getMultipleValueSeparator() {
+        return multipleValueSeparator;
+    }
+
+    public void setMultipleValueSeparator(String multipleValueSeparator) {
+        this.multipleValueSeparator = multipleValueSeparator;
     }
 
     public Set<OperatorId> getValidOperators() {

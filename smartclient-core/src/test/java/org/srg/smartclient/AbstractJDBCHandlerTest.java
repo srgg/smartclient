@@ -14,17 +14,6 @@ import java.sql.SQLException;
 
 public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> extends AbstractHandlerTest<H> {
     protected static class ExtraField extends AbstractHandlerTest.ExtraFieldBase{
-        public static String ManyToMany = """
-                    [
-                        {
-                            name:"teamMembers"
-                            ,tableName:"project_team"
-                            ,type:"integer"
-                            ,foreignKey:"EmployeeDS.id"
-                            ,multiple:true
-                        }
-                    ]
-                """;
 
         public static String OneToMany_FetchEntireEntities = """
                 [

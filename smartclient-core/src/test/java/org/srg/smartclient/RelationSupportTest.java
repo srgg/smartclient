@@ -1,6 +1,5 @@
 package org.srg.smartclient;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
@@ -38,6 +37,32 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                 return projectHandler;
             }
         },
+
+        Direct_Multiple_With_IncludeVia() {
+            @Override
+            public <H extends DSHandler> H apply(AbstractHandlerTest<H> test) throws Exception {
+                final H h = test.withHandlers(Handler.Project);
+                withExtraFields(h,
+                        """
+                                   [{
+                                       name:'employeeName',
+                                       type:'TEXT',
+                                       includeFrom:'EmployeeDS.name',
+                                       includeVia:'teamMembers',
+                                       includeSummaryFunction:'CONCAT',
+                                       dbName:"Employee.name",
+                                       multiple:true,
+                                       includeSummaryFunction: 'CONCAT',
+                                       customSQL:false
+                                   }]                                                                                                      
+                                """,
+                        ExtraFieldBase.Project_IncludeTeamMembersFromFromEmployee
+                );
+
+                return h;
+            }
+        },
+
         Indirect_Without_IncludeVia() {
             @Override
             public <H extends DSHandler> H apply(AbstractHandlerTest<H> test) throws Exception {
@@ -120,7 +145,7 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
         JsonTestSupport.assertJsonEquals("""
                 {
                    dataSource:'EmployeeDS',
-                   sourceField: 'location',
+                   sourceField: 'location_city',
                    foreignKeyRelations: [
                       {
                          dataSource:'EmployeeDS',
@@ -152,7 +177,7 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
         JsonTestSupport.assertJsonEquals("""
             {
                dataSource:'EmployeeDS',
-               sourceField: 'location',
+               sourceField: 'location_country',
                foreignDisplay: 'name',
                foreignKeyRelations:[
                   {
@@ -194,7 +219,7 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
         JsonTestSupport.assertJsonEquals("""
             {
                dataSource:'EmployeeDS',
-               sourceField: 'location',
+               sourceField: 'location_country',
                foreignDisplay: 'name',
                foreignKeyRelations:[
                   {
@@ -236,7 +261,7 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
         JsonTestSupport.assertJsonEquals("""
             {
                 dataSource: 'ProjectDS',
-                sourceField: 'manager',
+                sourceField: 'employeeFullName',
                 foreignDisplay: 'calculated',
                 foreignKeyRelations: [
                     {
@@ -250,34 +275,67 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                         }
                     }
                 ]
-            }""", ifr);
+            }""", ifr
+        );
     }
 
-    @Disabled
     @Test
-    public void importFromRelation_on_include_field_with_multi() throws Exception {
-        final DSHandler projectHandler =  withHandlers(Handler.Project);
-        withExtraFields(projectHandler,
-            """
-               [{
-                   name:'employeeName',
-                   type:'TEXT',
-                   includeFrom:'EmployeeDS.name',
-                   includeVia:'teamMembers',
-                   includeSummaryFunction:'CONCAT',
-                   dbName:"Employee.name",
-                   multiple:true,
-                   customSQL:false
-               }]
-            """);
+    public void importFromRelation_directIncludeFrom_multiple_with_includeVia() throws Exception {
+        final DSHandler h = IncludeFrom_TestCases.Direct_Multiple_With_IncludeVia.apply(this);
 
         final RelationSupport.ImportFromRelation ifr = RelationSupport.describeImportFrom(
             dsRegistry,
-            projectHandler.dataSource(),
-            projectHandler.dataSource().getField("employeeName")
+            h.dataSource(),
+            h.dataSource().getField("employeeName")
         );
 
-        JsonTestSupport.assertJsonEquals("{}", ifr);
+        JsonTestSupport.assertJsonEquals("""
+            {
+                dataSource: 'ProjectDS',
+                sourceField: 'employeeName',
+                foreignDisplay: 'name',
+                foreignKeyRelations: [
+                    {
+                        dataSource: 'ProjectDS',
+                        sourceField: 'teamMembers',
+                        isInverse: false,
+                        foreign: {
+                            dataSource: 'EmployeeDS',
+                            field: 'id',
+                            sqlFieldAlias: null
+                        }
+                    }
+                ]
+            }""", ifr
+        );
+
+        final RelationSupport.ForeignKeyRelation  fkr = ifr.toForeignKeyRelation();
+        JsonTestSupport.assertJsonEquals("""
+            {
+                dataSource:'ProjectDS',
+                sourceField:'teamMembers',
+                isInverse:false,
+                foreign: {
+                    dataSource:'EmployeeDS',
+                    field:'id',
+                    sqlFieldAlias:null
+                }
+            }""", fkr
+        );
+
+        final RelationSupport.ForeignKeyRelation fkrDisplay = ifr.toForeignDisplayKeyRelation();
+        JsonTestSupport.assertJsonEquals("""
+            {
+                dataSource:'ProjectDS',
+                sourceField:'teamMembers',
+                isInverse:false,
+                foreign: {
+                    dataSource:'EmployeeDS',
+                    field:'name',
+                    sqlFieldAlias:null
+                }
+            }""", fkrDisplay
+        );
     }
 
     @Override

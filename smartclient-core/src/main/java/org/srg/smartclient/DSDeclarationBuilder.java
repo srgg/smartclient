@@ -244,6 +244,8 @@ abstract class DSDeclarationBuilder {
 
         ctx.write_if(f.isMultiple(), "\t\t\t,multiple:true\n");
 
+        ctx.write_if(f.getIncludeSummaryFunction() != null, "\t\t\t,includeSummaryFunction:\"%s\"\n", f.getIncludeSummaryFunction());
+
         ctx.write_if(f.isPrimaryKey(),
                 "\t\t\t,primaryKey:true\n"
                 + "\t\t\t,canEdit:false\n");

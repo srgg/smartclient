@@ -8,7 +8,7 @@ import java.util.*;
 
 public abstract class AbstractDSHandler extends RelationSupport implements DSHandler {
     private static final String META_DATA_PREFIX = "_";
-    private static Logger logger = LoggerFactory.getLogger(AbstractDSHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(AbstractDSHandler.class);
 
     private final IDSRegistry dsRegistry;
     private final DataSource datasource;
@@ -28,8 +28,14 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
     }
 
     protected static boolean isSubEntityFetchRequired(DSField dsf){
-        return dsf.isMultiple()
+
+        return (dsf.isMultiple() && !dsf.isIncludeField())
                 || DSField.FieldType.ENTITY.equals(dsf.getType());
+    }
+
+    protected static boolean isIncludeSummaryRequired(DSField dsf) {
+        return dsf.isIncludeField()
+                && dsf.getIncludeSummaryFunction() != null;
     }
 
     protected Map<DSRequest.OperationType, List<OperationBinding>> getBindingsMap() {
@@ -41,12 +47,7 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
                 final Map<DSRequest.OperationType, List<OperationBinding>> m = new LinkedHashMap<>();
 
                 for (OperationBinding b : dataSource().getOperationBindings()) {
-                    List<OperationBinding> bindings = m.get(b.getOperationType());
-                    if (bindings == null) {
-                        bindings = new LinkedList<>();
-                        m.put(b.getOperationType(), bindings);
-                    }
-
+                    final List<OperationBinding> bindings = m.computeIfAbsent(b.getOperationType(), k -> new LinkedList<>());
                     bindings.add(b);
                 }
 
@@ -100,15 +101,11 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
             request.setOperationType(DSRequest.OperationType.FETCH);
         }
 
-        switch (request.getOperationType()) {
-            case FETCH:
-                return handleFetch(request);
-
-            case UPDATE:
-                return handleUpdate(request);
-            default:
-                return failureDueToUnsupportedOperation(request);
-        }
+        return switch (request.getOperationType()) {
+            case FETCH -> handleFetch(request);
+            case UPDATE -> handleUpdate(request);
+            default -> failureDueToUnsupportedOperation(request);
+        };
     }
 
     private DSResponse failureDueToUnsupportedOperation(DSRequest request) {
@@ -120,8 +117,7 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
 
     protected DSHandler getDataSourceHandlerById(String id) {
         assert dsRegistry != null;
-        final DSHandler dsHandler = dsRegistry.getHandlerByName(id);
-        return dsHandler;
+        return dsRegistry.getHandlerByName(id);
     }
 
     protected DataSource getDataSourceById(String dsId) {
@@ -141,15 +137,15 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
     }
 
     protected ImportFromRelation describeImportFrom(DSField importFromField) {
-        return RelationSupport.describeImportFrom(dsId -> this.getDataSourceHandlerById(dsId), this.getDataSource(), importFromField);
+        return RelationSupport.describeImportFrom(this::getDataSourceHandlerById, this.getDataSource(), importFromField);
     }
 
     protected ForeignKeyRelation describeForeignKey(DSField foreignKeyField) {
-        return RelationSupport.describeForeignKey(dsId -> this.getDataSourceHandlerById(dsId), this.getDataSource(), foreignKeyField);
+        return RelationSupport.describeForeignKey(this::getDataSourceHandlerById, this.getDataSource(), foreignKeyField);
     }
 
     protected ForeignRelation describeForeignRelation(DataSource dataSource, DSField field, String relation) {
-        return RelationSupport.ForeignRelation.describeForeignRelation(dataSource, field, dsId -> this.getDataSourceHandlerById(dsId), relation);
+        return RelationSupport.ForeignRelation.describeForeignRelation(dataSource, field, this::getDataSourceHandlerById, relation);
     }
 
     protected ForeignRelation determineEffectiveField(DSField dsf) {

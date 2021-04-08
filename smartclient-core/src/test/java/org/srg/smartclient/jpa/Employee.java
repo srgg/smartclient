@@ -1,6 +1,5 @@
 package org.srg.smartclient.jpa;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import javax.persistence.*;

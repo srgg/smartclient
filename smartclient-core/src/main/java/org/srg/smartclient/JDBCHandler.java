@@ -289,11 +289,7 @@ public class JDBCHandler extends AbstractDSHandler {
 
 
                 // -- Get Source PK value
-                final Set<DSField> srcPks = foreignKeyRelation.dataSource().getPKFields();
-                if (srcPks.size() > 1) {
-                    throw new IllegalStateException("Composite PK is not supported");
-                }
-                final DSField srcPk = srcPks.iterator().next();
+                final DSField srcPk = foreignKeyRelation.dataSource().getNonCompositePK();
                 final Object srcPkValue = pks.get(srcPk.getName());
 
                 if (srcPkValue == null) {
@@ -322,12 +318,7 @@ public class JDBCHandler extends AbstractDSHandler {
             }
 
             // -- Create resulting Map<PkFieldName, PkValue>
-            final Set<DSField> dstPks = foreignKeyRelation.foreign().dataSource().getPKFields();
-            if (dstPks.size() > 1) {
-                throw new IllegalStateException("Composite PK is not supported");
-            }
-
-            final DSField dstPk = dstPks.iterator().next();
+            final DSField dstPk = foreignKeyRelation.foreign().dataSource().getNonCompositePK();
             return Map.of(dstPk.getName(), values);
         }
 
@@ -346,14 +337,7 @@ public class JDBCHandler extends AbstractDSHandler {
 
                     effectivePKs = retrieveIdsFromDb(connection, getDsf(), foreignKeyRelation, getPrimaryKeys());
                 } else {
-                    final Set<DSField> pkFields = foreignKeyRelation.dataSource().getPKFields();
-
-                    if (pkFields.size() > 1) {
-                        // TODO: add fency error message generation
-                        throw new IllegalStateException("Composite PKs are not supported");
-                    }
-
-                    final DSField pkField = pkFields.iterator().next();
+                    final DSField pkField = foreignKeyRelation.dataSource().getNonCompositePK();
                     final Object v = getPrimaryKeys().get(pkField.getName());
 
                     if (v == null) {
@@ -884,25 +868,208 @@ public class JDBCHandler extends AbstractDSHandler {
             return m;
         }
 
-        public static String generateSQLJoin(List<ForeignKeyRelation> frls) {
+        /**
+         * Wrapper to set table and field aliases at runtime in accordence to the alias auto generation rules
+         */
+        public interface ISQLForeignKeyRelation extends IForeignKeyRelation{
+            String sourceTableAlias();
+            String destTableAlias();
 
-            // -- generate relation chain
-            final StringBuilder sbld = new StringBuilder();
-
-            for (ForeignKeyRelation foreignKeyRelation : frls) {
-                DataSource srcDataSource = foreignKeyRelation.dataSource();
-                DataSource fkDataSource = foreignKeyRelation.foreign().dataSource();
-                DSField fkField = foreignKeyRelation.foreign().field();
-                DSField srcField = foreignKeyRelation.sourceField();
-                sbld.append(" LEFT JOIN %s ON %s.%s = %s.%s\n"
-                        .formatted(
-                                fkDataSource.getTableName(),
-                                srcDataSource.getTableName(), srcField.getDbName(),
-                                fkDataSource.getTableName(), fkField.getDbName()
-                        )
-                );
+            static WrapperBuilder wrap(IForeignKeyRelation fkr) {
+                return new WrapperBuilder(fkr);
             }
-            return sbld.toString();
+
+            static class WrapperBuilder {
+                private final IForeignKeyRelation foreignKeyRelation;
+                private String sourceTableAlias;
+                private String destTableAlias;
+
+                public WrapperBuilder(IForeignKeyRelation foreignKeyRelation) {
+                    this.foreignKeyRelation = foreignKeyRelation;
+                }
+
+                public WrapperBuilder withSourceTableAlias(String sourceTableAlias) {
+                    this.sourceTableAlias = sourceTableAlias;
+                    return this;
+                }
+
+                public WrapperBuilder withDestFieldAlias(String destFieldAlias) {
+                    this.destTableAlias = destFieldAlias;
+                    return this;
+                }
+
+                public ISQLForeignKeyRelation wrap() {
+                    return new ISQLForeignKeyRelation() {
+                        private final IForeignKeyRelation foreignKeyRelation = WrapperBuilder.this.foreignKeyRelation;
+                        private String sourceTableAlias = WrapperBuilder.this.sourceTableAlias;
+                        private String destTableAlias = WrapperBuilder.this.destTableAlias;
+
+                        @Override
+                        public String sourceTableAlias() {
+                            if (sourceTableAlias == null || sourceTableAlias.isBlank()) {
+                                return dataSource().getTableName();
+                            }
+                            return this.sourceTableAlias;
+                        }
+
+                        @Override
+                        public String destTableAlias() {
+                            if (destTableAlias == null || destTableAlias.isBlank()) {
+                                return foreign().dataSource().getTableName();
+                            }
+                            return this.destTableAlias;
+                        }
+
+                        @Override
+                        public DataSource dataSource() {
+                            return this.foreignKeyRelation.dataSource();
+                        }
+
+                        @Override
+                        public DSField sourceField() {
+                            return this.foreignKeyRelation.sourceField();
+                        }
+
+                        @Override
+                        public boolean isInverse() {
+                            return this.foreignKeyRelation.isInverse();
+                        }
+
+                        @Override
+                        public ForeignRelation foreign() {
+                            return this.foreignKeyRelation.foreign();
+                        }
+                    };
+                }
+            }
+        }
+
+
+
+        public static class JoinGenerator {
+
+            private record JoinDBDescr(String joinType, String sourceTable, String sourceField, String destTableAlias, String destTable,
+                                       String destField) {
+            }
+
+            private static String generateJoin(List<JoinDBDescr> jds) {
+
+                // -- generate relation chain
+                final StringBuilder sbld = new StringBuilder();
+
+                for (JoinDBDescr jd : jds) {
+
+                    final String effectiveDestTableAlias = jd.destTableAlias == null || jd.destTableAlias.isBlank() ?
+                            null /* there is no alias */ : jd.destTableAlias;
+
+                    sbld.append("%s JOIN %s %s ON %s.%s = %s.%s\n"
+                            .formatted(
+                                    jd.joinType,
+                                    jd.destTable,
+                                    effectiveDestTableAlias == null ? "" : effectiveDestTableAlias,
+                                    jd.sourceTable, jd.sourceField,
+                                    effectiveDestTableAlias == null ? jd.destTable : effectiveDestTableAlias, jd.destField
+                            )
+                    );
+                }
+                return sbld.toString();
+            }
+        }
+
+        /**
+         * @param frls
+         * @param <FKR>
+         * @return
+         */
+        public static <FKR extends IForeignKeyRelation>  String generateSQLJoin(List<FKR> frls) {
+            // -- generate relation chain
+
+            final String joinType = "LEFT";
+            final List<JoinGenerator.JoinDBDescr> jds = new LinkedList<>();
+            for (IForeignKeyRelation foreignKeyRelation : frls) {
+
+                if(foreignKeyRelation.sourceField().isMultiple()) {
+                    /**
+                     *  Implementation is no perfect will require re work as more use cases will come.
+                     *
+                     *  The join direction is hardcoded and that is, probably, not a good idea but the fastest one
+                     *  for the implementation.
+                     */
+
+                    /*
+                     * It is many-to-many relation, the join, actually,  must be done over a 3rd table
+                     */
+                    if (foreignKeyRelation.sourceField().getJoinTable() == null) {
+                        throw new IllegalStateException(
+                            "DataSource '%s': field '%s.%s' marked as 'multiple: true', but does not specify any 'joinTable', relation: %s."
+                                .formatted(
+                                        foreignKeyRelation.dataSource().getId(),
+                                        foreignKeyRelation.dataSource().getId(),
+                                        foreignKeyRelation.sourceField().getName(),
+                                        foreignKeyRelation
+                                )
+                        );
+                    }
+
+                    final DSField.JoinTableDescr joinTable = foreignKeyRelation.sourceField().getJoinTable();
+
+                    // --- Handle dest Relation: dest -> joinTable
+                    final DataSource dstDataSource = foreignKeyRelation.foreign().dataSource();
+
+                    // Determine effective dest field
+                    final DSField effectiveDstField = foreignKeyRelation.dataSource().getNonCompositePK();
+
+                    final String effectiveDstTableAlias = foreignKeyRelation instanceof ISQLForeignKeyRelation sfkr ?
+                            sfkr.destTableAlias() : dstDataSource.getTableName();
+
+                    jds.add(new JoinGenerator.JoinDBDescr(
+                                    "",
+                                    effectiveDstTableAlias,
+                                    effectiveDstField.getDbName(),
+                                    "",
+                                    joinTable.getTableName(),
+                                joinTable.getDestColumn()
+                            )
+                    );
+
+                    // --- Handle source Relation: joinTable -> src
+                    final DataSource srcDataSource = foreignKeyRelation.dataSource();
+
+                    // Determine effective source field
+                    final DSField effectiveSrcField = srcDataSource.getNonCompositePK();
+
+                    String effectiveSrcAlias = foreignKeyRelation instanceof ISQLForeignKeyRelation sfkr ?
+                            sfkr.sourceTableAlias() : srcDataSource.getTableName();
+
+                    jds.add(new JoinGenerator.JoinDBDescr(
+                            "",
+                            joinTable.getTableName(),
+                            joinTable.getSourceColumn(),
+                            effectiveSrcAlias,
+                            srcDataSource.getTableName(),
+                            effectiveSrcField.getDbName()
+                        )
+                    );
+
+                } else {
+                    /* */
+                    final DataSource srcDataSource = foreignKeyRelation.dataSource();
+                    final DataSource fkDataSource = foreignKeyRelation.foreign().dataSource();
+                    final DSField fkField = foreignKeyRelation.foreign().field();
+                    final DSField srcField = foreignKeyRelation.sourceField();
+
+                    jds.add(new JoinGenerator.JoinDBDescr(
+                            joinType,
+                            srcDataSource.getTableName(),
+                            srcField.getDbName(),
+                            "",
+                            fkDataSource.getTableName(),
+                            fkField.getDbName()
+                        )
+                    );
+                }
+            }
+            return JoinGenerator.generateJoin(jds);
         }
     }
 }

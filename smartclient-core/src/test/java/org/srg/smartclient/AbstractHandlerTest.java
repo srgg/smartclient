@@ -1,7 +1,6 @@
 package org.srg.smartclient;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
@@ -165,6 +164,26 @@ public abstract class AbstractHandlerTest<H extends DSHandler> {
 
                 ]""";
 
+        // ManyToMany
+        public static String Project_IncludeTeamMembersFromFromEmployee = """
+                    [
+                        {
+                           name:'teamMembers',
+                           type:'ENTITY',
+                           foreignKey:'EmployeeDS.id',
+                           foreignDisplayField:'name',
+                           displayField:'projectName',
+                           dbName:'project_id',
+                           tableName:'project_team',
+                           multiple:true,
+                           joinTable:{
+                              tableName:'project_team',
+                              sourceColumn:'project_id',
+                              destColumn:'employee_id'
+                           }
+                        }
+                    ]
+                """;
     }
 
     protected IDSRegistry dsRegistry;

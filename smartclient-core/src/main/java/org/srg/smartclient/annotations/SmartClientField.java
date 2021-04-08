@@ -19,5 +19,11 @@ public @interface SmartClientField {
     String customSelectExpression() default "";
     String displayField() default "";
     String foreignDisplayField() default "";
+
+    /**
+     *
+     * @see DSField#includeSummaryFunction
+     */
+    DSField.SummaryFunctionType foreignDisplayFieldSummaryFunction() default DSField.SummaryFunctionType.CONCAT;
     DSField.FieldType type() default DSField.FieldType.ANY;
 }
