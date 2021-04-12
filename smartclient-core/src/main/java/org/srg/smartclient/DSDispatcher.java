@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.srg.smartclient.dmi.JDKDMIHandlerFactory;
 import org.srg.smartclient.isomorphic.*;
 import org.srg.smartclient.utils.ContextualRuntimeException;
 import org.srg.smartclient.utils.Serde;
@@ -33,9 +34,10 @@ import java.util.stream.Collectors;
 
 public class DSDispatcher implements IDSDispatcher {
     private static Logger logger = LoggerFactory.getLogger(DSDispatcher.class);
-    private Map<String, DSHandler> datasourceMap = new LinkedHashMap<>();
+    private Map<String, IHandler> datasourceMap = new LinkedHashMap<>();
     private JDBCHandlerFactory  jdbcHandlerFactory = new JDBCHandlerFactory();
     private JDBCHandler.JDBCPolicy jdbcPolicy;
+    private JDKDMIHandlerFactory dmiHandlerFactory;
 
     public DSDispatcher() {
         this(DBConnectionManager.get());
@@ -43,6 +45,7 @@ public class DSDispatcher implements IDSDispatcher {
 
     public DSDispatcher(JDBCHandler.JDBCPolicy jdbcPolicy) {
         this.jdbcPolicy = jdbcPolicy;
+        this.dmiHandlerFactory = new JDKDMIHandlerFactory();
     }
 
     protected JDBCHandler.JDBCPolicy getJdbcPolicy() {
@@ -52,28 +55,35 @@ public class DSDispatcher implements IDSDispatcher {
 
 
     @Override
-    public DSHandler getHandlerByName(String dsId) {
-        final DSHandler ds = datasourceMap.get(dsId);
+    public IHandler getHandlerByName(String dsId) {
+        final IHandler ds = datasourceMap.get(dsId);
+        return ds;
 
-        if (ds != null) {
-            return ds;
-        }
-
-        return Utils.throw_it("Unknown datasource '%s'", dsId);
+//        if (ds != null) {
+//            return ds;
+//        }
+//
+//        return Utils.throw_it("Unknown datasource '%s'", dsId);
     }
 
-    @Override
-    public DataSource getDataSourceById(String dsId) {
-        final DSHandler dsHandler = datasourceMap.get(dsId);
-        if (dsHandler == null){
-            return null;
-        }
+//    @Override
+//    public DataSource getDataSourceById(String dsId) {
+//        final IHandler handler = datasourceMap.get(dsId);
+//        if (handler == null){
+//            return null;
+//        }
+//
+//        if (handler instanceof DSHandler dsHandler) {
+//            return dsHandler.dataSource();
+//        }
+//
+//        throw new RuntimeException("Handler '%s' is not an instance of 'DSHandler'."
+//                .formatted(dsId)
+//        );
+//    }
 
-        return dsHandler.dataSource();
-    }
-
     @Override
-    public Collection<DSHandler> handlers() {
+    public Collection<IHandler> handlers() {
         return datasourceMap.values();
     }
 
@@ -121,7 +131,7 @@ public class DSDispatcher implements IDSDispatcher {
 
     protected DSResponse handleRequest(DSRequest request) {
         try {
-            final DSHandler ds = getHandlerByName(request.getDataSource());
+            final IHandler ds = getHandlerByName(request.getDataSource());
             final DSResponse response = ds.handle(request);
 
             response.setOperationId( request.getOperationId());
@@ -229,16 +239,31 @@ public class DSDispatcher implements IDSDispatcher {
         }
 
         for (String name : dsId) {
-            final DSHandler ds = getHandlerByName(name);
-            out.append(DSDeclarationBuilder.build(this, dispatcherUrl, ds));
+            final IHandler handler = getHandlerByName(name);
+
+            if (handler instanceof DSHandler ds) {
+                out.append(DSDeclarationBuilder.build(this, dispatcherUrl, ds));
+            }
         }
         return out;
     }
 
-    protected DSHandler createHandler(DataSource ds) {
+    protected IHandler createHandler(DataSource ds) {
         switch (ds.getServerType()) {
             case SQL:
                 return jdbcHandlerFactory.createJDBCHandler(getJdbcPolicy(), this, ds);
+
+            case GENERIC:
+                if (ds.getServerObject() == null) {
+                    throw new IllegalStateException();
+                }
+
+                try {
+                    return dmiHandlerFactory.createDMIHandler(ds.getServerObject());
+                } catch (Exception ex) {
+                    throw new RuntimeException("Data source '%s': Can't instantiate DMI handler: %s."
+                            .formatted(ds.getId(), ds.getServerObject()));
+                }
 
             default:
                 return Utils.throw_it("Can't load Data source '%s': serverType '%s' is not supported.",
@@ -246,7 +271,7 @@ public class DSDispatcher implements IDSDispatcher {
         }
     }
 
-    private DSHandler loadDsFromResource(File file) throws IOException {
+    private IHandler loadDsFromResource(File file) throws IOException {
 //        final XmlMapper xmlMapper = new XmlMapper();
 //        xmlMapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
 //        xmlMapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS, true);
@@ -394,8 +419,8 @@ public class DSDispatcher implements IDSDispatcher {
 
         for (String s: files ) {
             try {
-                final DSHandler ds = loadDsFromResource(new File(s));
-                registerDatasource(ds);
+                final IHandler ds = loadDsFromResource(new File(s));
+                registerHandler(ds);
             } catch (Exception ex) {
                 logger.warn("Can't load Smart Client DSHandler from file '%s'".formatted(s), ex);
             }
@@ -403,7 +428,7 @@ public class DSDispatcher implements IDSDispatcher {
     }
 
     @Override
-    public void registerDatasource(DSHandler handler) {
+    public void registerHandler(IHandler handler) {
         datasourceMap.put(handler.id(), handler);
         logger.info("A new DSHandler has been registered as '%s' ".formatted(handler.id()));
     }

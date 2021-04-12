@@ -4,10 +4,8 @@ import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
 import org.srg.smartclient.isomorphic.DataSource;
 
-public interface DSHandler {
-    String id();
+public interface DSHandler extends IHandler {
     DataSource dataSource();
-    DSResponse handle(DSRequest request) throws Exception;
 
     default boolean allowAdvancedCriteria() {
         return false;

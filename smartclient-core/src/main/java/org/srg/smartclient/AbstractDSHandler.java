@@ -117,7 +117,7 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
 
     protected DSHandler getDataSourceHandlerById(String id) {
         assert dsRegistry != null;
-        return dsRegistry.getHandlerByName(id);
+        return dsRegistry.getDataSourceHandlerById(id);
     }
 
     protected DataSource getDataSourceById(String dsId) {
@@ -128,9 +128,11 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
     protected DataSource getDatasourceByTableName(String tableName) {
         assert dsRegistry != null;
 
-        for (DSHandler h: dsRegistry.handlers()) {
-            if (h.dataSource().getTableName().equalsIgnoreCase(tableName)) {
-                return h.dataSource();
+        for (IHandler h: dsRegistry.handlers()) {
+            if (h instanceof DSHandler dsHandler) {
+                if (dsHandler.dataSource().getTableName().equalsIgnoreCase(tableName)) {
+                    return dsHandler.dataSource();
+                }
             }
         }
         return null;

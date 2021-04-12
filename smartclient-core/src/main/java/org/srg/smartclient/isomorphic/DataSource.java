@@ -21,6 +21,7 @@ public class DataSource {
     private DSServerType serverType;
     private String dbName;
     private String beanClassName;
+    private ServerObject serverObject;
 
     private String fileName;
     private List<DSField> fields;
@@ -200,6 +201,14 @@ public class DataSource {
                                 .formatted(this.getId())
                 );
         }
+    }
+
+    public ServerObject getServerObject() {
+        return serverObject;
+    }
+
+    public void setServerObject(ServerObject serverObject) {
+        this.serverObject = serverObject;
     }
 
     @Override

@@ -243,6 +243,12 @@ public abstract class AbstractHandlerTest<H extends DSHandler> {
 
         Mockito.doReturn(handler)
                 .when(dsRegistry)
+                .getDataSourceHandlerById(
+                        Mockito.matches(ds.getId())
+                );
+
+        Mockito.doReturn(handler)
+                .when(dsRegistry)
                 .getHandlerByName(
                         Mockito.matches(ds.getId())
                 );

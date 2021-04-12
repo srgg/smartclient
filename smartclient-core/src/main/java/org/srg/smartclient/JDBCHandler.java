@@ -226,7 +226,7 @@ public class JDBCHandler extends AbstractDSHandler {
                     )
             );
 
-            final DSHandler dsHandler = this.idsRegistry.getHandlerByName(foreignKeyRelation.foreign().dataSourceId());
+            final DSHandler dsHandler = this.idsRegistry.getDataSourceHandlerById(foreignKeyRelation.foreign().dataSourceId());
             if (dsHandler == null) {
                 throw new RuntimeException( "Foreign data source handler with id '%s' is not registered."
                         .formatted(foreignKeyRelation.foreign().dataSourceId())
