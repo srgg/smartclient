@@ -2,10 +2,12 @@ package org.srg.smartclient;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
+import org.srg.smartclient.utils.Serde;
 
 import java.lang.reflect.Constructor;
 import java.util.LinkedList;
@@ -188,6 +190,11 @@ public abstract class AbstractHandlerTest<H extends DSHandler> {
 
     protected IDSRegistry dsRegistry;
     protected H handler;
+
+    @BeforeAll
+    public static void setupDB() {
+        JsonTestSupport.defaultMapper = Serde.createMapper();
+    }
 
     @BeforeEach
     public void setupMockitoHooks() throws Exception {
