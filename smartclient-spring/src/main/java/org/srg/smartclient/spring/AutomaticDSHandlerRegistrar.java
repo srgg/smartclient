@@ -43,7 +43,6 @@ public class AutomaticDSHandlerRegistrar implements Ordered, SmartLifecycle, App
     private boolean autoStartup = true;
 
     private IDSDispatcher dsDispatcher;
-    private SmartClientProperties properties;
     private Object lifecycleMonitor = new Object();
     private volatile boolean running = false;
 
@@ -59,18 +58,9 @@ public class AutomaticDSHandlerRegistrar implements Ordered, SmartLifecycle, App
         this.dsDispatcher = dsDispatcher;
     }
 
-    public SmartClientProperties getProperties() {
-        return properties;
-    }
-
-    public void setProperties(SmartClientProperties properties) {
-        this.properties = properties;
-    }
-
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.state(dsDispatcher != null, "A DSDispatcher must be provided");
-        Assert.state(properties != null, "Smart Client properties must be provided");
     }
 
     /**
@@ -91,6 +81,10 @@ public class AutomaticDSHandlerRegistrar implements Ordered, SmartLifecycle, App
             if (running) {
                 return;
             }
+
+            final SmartClientProperties properties = applicationContext.getBean(SmartClientProperties.class);
+//          Assert.state(properties != null, "Smart Client properties must be provided");
+
             try {
                 dsDispatcher.loadFromResource(properties.getSharedDirectory());
             } catch ( Exception ex) {
