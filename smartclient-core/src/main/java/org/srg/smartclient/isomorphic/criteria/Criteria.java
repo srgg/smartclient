@@ -1,5 +1,6 @@
 package org.srg.smartclient.isomorphic.criteria;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.srg.smartclient.utils.Serde;
 
@@ -92,6 +93,7 @@ public class Criteria {
     /**
      * Utility function
      */
+    @JsonIgnore
     public Set<String> getCriteriaFieldNames() {
         final HashSet<String> r = new HashSet<>();
 
