@@ -42,6 +42,11 @@ public class SimpleSmartClientConfiguration {
     private AtomicReference<IDSDispatcher> dsDispatcher = new AtomicReference<>();
 
     @Bean
+    public DMIBeanPostProcessor dmiBeanPostProcessor() {
+        return new DMIBeanPostProcessor();
+    }
+
+    @Bean
     public IDSDispatcher dsDispatcher() throws Exception {
         return createLazyProxy(dsDispatcher, IDSDispatcher.class);
     }

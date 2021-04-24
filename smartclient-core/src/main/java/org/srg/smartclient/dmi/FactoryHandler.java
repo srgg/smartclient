@@ -22,8 +22,14 @@ public class FactoryHandler extends AbstractDSDMIHandler {
     }
 
     @Override
-    public DSResponse handle(DSRequest request) throws Exception {
+    protected Object getInstance() throws InvocationTargetException, IllegalAccessException {
         final Object instance = factoryMethod.invoke(factory);
+        return  instance;
+    }
+
+    @Override
+    public DSResponse handle(DSRequest request) throws Exception {
+        final Object instance = getInstance();
         return (DSResponse) MethodUtils.invokeMethod(instance, dmiMethodName, request);
     }
 }

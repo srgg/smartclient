@@ -9,6 +9,8 @@ public abstract class AbstractDSDMIHandler implements IHandler {
         this.id = id;
     }
 
+    abstract protected Object getInstance() throws Exception;
+
     @Override
     public String id() {
         return id;

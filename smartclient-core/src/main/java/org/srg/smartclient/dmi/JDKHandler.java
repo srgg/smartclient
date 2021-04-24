@@ -24,14 +24,19 @@ public class JDKHandler extends AbstractDSDMIHandler {
     }
 
     @Override
-    public DSResponse handle(DSRequest request) throws Exception {
+    protected Object getInstance() throws Exception {
         final Object instance;
         if (Modifier.isStatic(method.getModifiers())) {
             instance = null;
         } else {
             instance = ConstructorUtils.invokeConstructor(handlerClass);
         }
-        return (DSResponse) method.invoke(instance, request);
+        return instance;
+    }
 
+    @Override
+    public DSResponse handle(DSRequest request) throws Exception {
+        final Object instance = getInstance();
+        return (DSResponse) method.invoke(instance, request);
     }
 }
