@@ -118,7 +118,7 @@ public class JDBCHandler extends AbstractDSHandler {
             return fetchRespone;
         }
 
-        return DSResponse.successUpdate(fetchRespone.getData());
+        return DSResponse.successExecute(fetchRespone.getData());
     }
 
     @Override
@@ -134,6 +134,78 @@ public class JDBCHandler extends AbstractDSHandler {
         }
 
         return r[0];
+    }
+
+    @Override
+    protected DSResponse handleAdd(DSRequest request) throws Exception {
+        if (! (request.getData() instanceof Map)) {
+            throw new RuntimeException("Bad request: operation 'ADD', the map of modified and PK fields " +
+                    "must be provided in the  'data' field.");
+        }
+
+        final OperationBinding operationBinding = getEffectiveOperationBinding(DSRequest.OperationType.FETCH, request.getOperationId());
+        final SQLAddContext<JDBCHandler> sqlAddContext = new SQLAddContext<>(this, request, operationBinding);
+
+
+        // --
+        final DSResponse[] response = {null};
+
+        policy.withConnectionDo(this.getDataSource().getDbName(), conn-> {
+
+            try (PreparedStatement st = conn.prepareStatement(sqlAddContext.getAddSQL(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
+                int idx =0;
+
+                final List<IFilterData> l = sqlAddContext.getFilterData();
+                for (IFilterData fd: l) {
+                    idx = fd.setStatementParameters(idx, st);
+                }
+                final int qnt = st.executeUpdate();
+
+
+                if (qnt == 0) {
+                    // There is no added/affected records
+                    throw new RuntimeException("Zero rows were added.");
+                }
+            } catch (Throwable t) {
+                conn.rollback();
+                throw new ContextualRuntimeException("SQL add query execution failed.", t, sqlAddContext);
+            }
+
+            /*
+             * It is required to return modified row back to the client.
+             *
+             * This can be done either by comprehensive fetch from DB
+             *
+             * The first option is more durable, since it will handle all side effects like calculated fields? operation bindings
+             * with respect of security rules tat can be affected by side effects.
+             */
+
+
+            final DSRequest fr = new DSRequest();
+            fr.setDataSource(request.getDataSource());
+            fr.setOperationType(DSRequest.OperationType.FETCH);
+            fr.setOperationId(request.getOperationId());
+            fr.setComponentId(request.getComponentId());
+
+            final DSResponse r =  doHandleFetch(fr, conn, false);
+
+            if (r.getStatus() == DSResponse.STATUS_SUCCESS ) {
+                conn.commit();
+            } else {
+                conn.rollback();
+            }
+
+            response[0] = r;
+            return null;
+        });
+
+        final DSResponse fetchRespone = response[0];
+
+        if (fetchRespone.getStatus() != DSResponse.STATUS_SUCCESS) {
+            return fetchRespone;
+        }
+
+        return DSResponse.successExecute(fetchRespone.getData());
     }
 
     private static class StickyDBDSRequest extends DSRequest {
