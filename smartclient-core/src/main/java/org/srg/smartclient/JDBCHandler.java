@@ -118,7 +118,7 @@ public class JDBCHandler extends AbstractDSHandler {
             return fetchRespone;
         }
 
-        return DSResponse.successExecute(fetchRespone.getData());
+        return DSResponse.success(fetchRespone.getData());
     }
 
     @Override
@@ -152,7 +152,7 @@ public class JDBCHandler extends AbstractDSHandler {
 
         policy.withConnectionDo(this.getDataSource().getDbName(), conn-> {
 
-            try (PreparedStatement st = conn.prepareStatement(sqlAddContext.getAddSQL(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
+            try (PreparedStatement st = conn.prepareStatement(sqlAddContext.getAddSQL())) {
                 int idx =0;
 
                 final List<IFilterData> l = sqlAddContext.getFilterData();
@@ -205,7 +205,7 @@ public class JDBCHandler extends AbstractDSHandler {
             return fetchRespone;
         }
 
-        return DSResponse.successExecute(fetchRespone.getData());
+        return DSResponse.success(fetchRespone.getData());
     }
 
     private static class StickyDBDSRequest extends DSRequest {

@@ -32,7 +32,7 @@ public class JDBCHandlerAddTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                  endRow : 0,
                  textMatchStyle : "EXACT",
                  data : {
-                   name: "Client Name"
+                   name: "A new Record"
                  },
                  oldValues : null
                }                
@@ -86,14 +86,14 @@ public class JDBCHandlerAddTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                          },
                          {
                              id:7,
-                             name: 'Client Name'
+                             name: 'A new Record'
                          }
                      ]
                 }""", response);
     }
 
     @Test
-    public void addMustFails_if_idNotNull() throws Exception {
+    public void addingMustFails_if_idExists() throws Exception {
         withExtraFields(ExtraField.Email);
 
         final DSRequest request = JsonTestSupport.fromJSON(new TypeReference<>(){}, """
@@ -104,7 +104,7 @@ public class JDBCHandlerAddTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                  textMatchStyle : "EXACT",
                  data : {
                     id: 2,
-                   name: 'Client Name'
+                   name: 'A new Record'
                  },
                  oldValues : null
                }

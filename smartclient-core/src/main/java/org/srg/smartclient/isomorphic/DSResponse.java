@@ -102,7 +102,7 @@ public class DSResponse {
         return retVal;
     }
 
-    public static DSResponse successExecute(DSResponseDataContainer dsResponseDataContainer){
+    public static DSResponse success(DSResponseDataContainer dsResponseDataContainer){
         final DSResponse retVal = new DSResponse();
 //        retVal.setOperationType(DSRequest.OperationType.UPDATE);
         retVal.setStatus(DSResponse.STATUS_SUCCESS);
