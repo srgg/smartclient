@@ -93,7 +93,7 @@ public class JDBCHandlerAddTest extends AbstractJDBCHandlerTest<JDBCHandler> {
     }
 
     @Test
-    public void addingMustFails_if_idExists() throws Exception {
+    public void addingMustFails_if_providedIdAlreadyExists() throws Exception {
         withExtraFields(ExtraField.Email);
 
         final DSRequest request = JsonTestSupport.fromJSON(new TypeReference<>(){}, """
