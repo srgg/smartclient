@@ -168,9 +168,10 @@ public class SmartClientAutoConfiguration {
     public RouterFunction<ServerResponse> smartClientDataSourceLoader(){
         return RouterFunctions
                 .route(GET("/ds-loader"), (r) -> {
+                    final String efficientUrl =  r.uriBuilder().replacePath(smartClientProperties.getDispatcherPath()).build().toString();
                     final StringBuilder sbld = new StringBuilder();
                     try {
-                        dsDispatcher.generateDSJavaScript(sbld, smartClientProperties.getDispatcherPath());
+                        dsDispatcher.generateDSJavaScript(sbld, efficientUrl);
 
                         if (sbld.length() == 0) {
                             sbld.append("// There is no any registered smartclient data source");

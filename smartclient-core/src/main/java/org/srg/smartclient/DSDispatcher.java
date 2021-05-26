@@ -234,6 +234,9 @@ public class DSDispatcher implements IDSDispatcher {
     }
 
     public <A extends Appendable> A generateDSJavaScript(A out, String dispatcherUrl, String... dsId) throws Exception {
+        out.append("const DISPATCHER_URL = \"%s\";\n"
+                .formatted(dispatcherUrl));
+
         if (dsId.length == 0) {
             dsId = datasourceMap.keySet().toArray(new String[0]);
         }
