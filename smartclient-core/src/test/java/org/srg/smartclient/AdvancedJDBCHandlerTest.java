@@ -102,12 +102,12 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 {
                                     id:1,
                                     name:'admin',
-                                    firedAt: '2000-01-02T01:04:05.000+00:00'
+                                    firedAt: '2000-01-02T03:04:05.000+00:00'
                                 },
                                 {
                                     id:5,
                                     name:'manager2',
-                                    firedAt: '2000-05-04T00:02:01.000+00:00'
+                                    firedAt: '2000-05-04T03:02:01.000+00:00'
                                 }
                             ],
                             endRow:2,
@@ -145,13 +145,13 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 {
                                     id:1,
                                     name:'admin',
-                                    firedAt: '2000-01-02T01:04:05.000+00:00',
+                                    firedAt: '2000-01-02T03:04:05.000+00:00',
                                     email:"admin@acmE.org"
                                 },
                                 {
                                     id:5,
                                     name:'manager2',
-                                    firedAt: '2000-05-04T00:02:01.000+00:00',
+                                    firedAt: '2000-05-04T03:02:01.000+00:00',
                                     email:"pm2@acme.org"
                                 }
                             ],
@@ -190,7 +190,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             {
                                 id:1,
                                 name:'admin',
-                                firedAt: '2000-01-02T01:04:05.000+00:00',
+                                firedAt: '2000-01-02T03:04:05.000+00:00',
                                 email:"admin@acmE.org"
                             },
                             {
@@ -202,7 +202,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                             {
                                 id:5,
                                 name:'manager2',
-                                firedAt: '2000-05-04T00:02:01.000+00:00',
+                                firedAt: '2000-05-04T03:02:01.000+00:00',
                                 email:"pm2@acme.org"
                             }
                         ],
@@ -345,7 +345,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                     {
                         id:1,
                         name:'admin',
-                        firedAt: '2000-01-02T01:04:05.000+00:00'
+                        firedAt: '2000-01-02T03:04:05.000+00:00'
                     },
                     {
                         id:2,
@@ -365,7 +365,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                     {
                         id:5,
                         name:'manager2',
-                        firedAt: '2000-05-04T00:02:01.000+00:00'
+                        firedAt: '2000-05-04T03:02:01.000+00:00'
                     },
                     {
                         id:6,
@@ -502,7 +502,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                     "fieldName" : "firedAt",
                                     "operator":"betweenInclusive",
                                     "start":"1970-10-01T00:00:00.000",
-                                    "end":"2000-05-04T00:02:01.000+00:00",
+                                    "end":"2000-05-04T03:02:01.000+00:00",
                                     "_constructor":null
                                 }
                             ]
@@ -513,12 +513,12 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 {
                                     id:1,
                                     name:'admin',
-                                    firedAt: "2000-01-02T01:04:05.000+00:00"
+                                    firedAt: "2000-01-02T03:04:05.000+00:00"
                                 },
                                 {
                                     id:5,
                                     name:'manager2',
-                                    firedAt: "2000-05-04T00:02:01.000+00:00"
+                                    firedAt: "2000-05-04T03:02:01.000+00:00"
                                 }
                             ],
                             endRow:2,
@@ -541,7 +541,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                     "fieldName" : "firedAt",
                                     "operator":"between",
                                     "start":"1970-10-01T00:00:00.000",
-                                    "end":"2000-05-04T00:02:01.000+00:00",
+                                    "end":"2000-05-04T03:02:01.000+00:00",
                                     "_constructor":null
                                 }
                             ]
@@ -552,7 +552,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 {
                                     id:1,
                                     name:'admin',
-                                    firedAt: "2000-01-02T01:04:05.000+00:00"
+                                    firedAt: "2000-01-02T03:04:05.000+00:00"
                                 }
                             ],
                             endRow:1,
@@ -574,7 +574,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 {
                                     "fieldName":"firedAt",
                                     "operator":"greaterOrEqual",
-                                    "value":"2000-05-04T00:02:01.000+00:00"
+                                    "value":"2000-05-04T03:02:01.000+00:00"
                                 }
                             ]
                         }""",
@@ -584,7 +584,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 {
                                     id:5,
                                     name:'manager2',
-                                    firedAt: '2000-05-04T00:02:01.000+00:00'
+                                    firedAt: '2000-05-04T03:02:01.000+00:00'
                                 }
                             ],
                             endRow:1,
@@ -606,7 +606,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 {
                                     "fieldName":"firedAt",
                                     "operator":"lessOrEqual",
-                                    "value":"2000-05-04T00:02:01.000+00:00"
+                                    "value":"2000-05-04T03:02:01.000+00:00"
                                 }
                             ]
                         }""",
@@ -616,12 +616,12 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 {
                                     id:1,
                                     name:'admin',
-                                    firedAt: "2000-01-02T01:04:05.000+00:00"
+                                    firedAt: "2000-01-02T03:04:05.000+00:00"
                                 },
                                 {
                                     id:5,
                                     name:'manager2',
-                                    firedAt: '2000-05-04T00:02:01.000+00:00'
+                                    firedAt: '2000-05-04T03:02:01.000+00:00'
                                 }
                             ],
                             endRow:2,
@@ -643,7 +643,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 {
                                     "fieldName":"firedAt",
                                     "operator":"lessThan",
-                                    "value":"2000-05-04T00:02:01.000+00:00"
+                                    "value":"2000-05-04T03:02:01.000+00:00"
                                 }
                             ]
                         }""",
@@ -653,7 +653,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 {
                                     id:1,
                                     name:'admin',
-                                    firedAt: "2000-01-02T01:04:05.000+00:00"
+                                    firedAt: "2000-01-02T03:04:05.000+00:00"
                                 }
                             ],
                             endRow:1,
@@ -675,7 +675,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                 {
                                     "fieldName":"firedAt",
                                     "operator":"greaterThan",
-                                    "value":"2000-05-04T00:02:01.000+00:00"
+                                    "value":"2000-05-04T03:02:01.000+00:00"
                                 }
                             ]
                         }""",
