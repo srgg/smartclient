@@ -47,7 +47,7 @@ public class SQLUpdateContext<H extends JDBCHandler> extends JDBCHandler.Abstrac
          */
         final String setSQL = modifiedData.stream()
                 .map(fd -> fd.sql(null))
-                .collect(Collectors.joining("\n\t\t AND "));
+                .collect(Collectors.joining("\n\t\t , "));
 
         this.updateSQL = """
                         UPDATE  %s 
