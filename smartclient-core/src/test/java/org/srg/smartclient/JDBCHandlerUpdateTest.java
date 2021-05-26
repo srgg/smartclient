@@ -76,6 +76,58 @@ public class JDBCHandlerUpdateTest extends AbstractJDBCHandlerTest<JDBCHandler> 
     }
 
     @Test
+    public void simpleUpdateOfMultipleValues() throws Exception {
+        withExtraFields(ExtraField.Email);
+
+        final DSRequest request = JsonTestSupport.fromJSON(new TypeReference<>(){}, """
+               {
+                 dataSource : "EmployeeDS",
+                 operationType : "UPDATE",
+                 data : {
+                   id : 2,
+                   name: 'updated-developer',
+                   email: 'updated-developer@acme.org'
+                 },
+                 oldValues : {
+                   id : 2,
+                   name : 'developer',
+                   email: 'developer@acme.org'
+                 }
+               }
+            """);
+
+        final DSResponse response;
+        try {
+            response = handler.handleUpdate(request);
+        } catch (ContextualRuntimeException e) {
+            /*
+             * This exception handler can be used  to check and adjust
+             * ContextualRuntimeException.dumpContext_ifAny().
+             *
+             * Other than that it does not have any sense
+             */
+            final StringWriter sw = new StringWriter();
+            final ObjectMapper mapper = Serde.createMapper();
+
+            e.dumpContext_ifAny(sw, "  ", mapper.writerWithDefaultPrettyPrinter());
+            System.out.println( sw.toString());
+            throw new RuntimeException(e);
+        }
+
+        JsonTestSupport.assertJsonEquals("""
+                 {
+                     status: 0,
+                     data:[
+                         {
+                             id:2,
+                             email:'updated-developer@acme.org',
+                             name:'updated-developer'
+                         }
+                     ]
+                }""", response);
+    }
+
+    @Test
     public void updateMustIgnoreMetaDataInOldValues() throws Exception {
         withExtraFields(ExtraField.Email);
 
