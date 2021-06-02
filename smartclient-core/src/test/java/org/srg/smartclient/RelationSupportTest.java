@@ -38,7 +38,28 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
             }
         },
 
-        Direct_Multiple_With_IncludeVia() {
+        Direct_Multiple_OneToMany_With_IncludeVia() {
+            @Override
+            public <H extends DSHandler> H apply(AbstractHandlerTest<H> test) throws Exception {
+                final H h = test.withHandlers(Handler.EmployeeRole, Handler.Employee);
+                withExtraFields(h,
+                        """
+                                   [{
+                                       name:'concatRoles',
+                                       type:'TEXT',
+                                       includeFrom:'EmployeeRoleDS.role',
+                                       includeSummaryFunction:'CONCAT',
+                                       multiple:true
+                                   }]                                                                                                      
+                                """,
+                        ExtraFieldBase.Employee_RolesFromEmployeeRole
+                );
+
+                return h;
+            }
+        },
+
+        Direct_Multiple_ManyToMany_With_IncludeVia() {
             @Override
             public <H extends DSHandler> H apply(AbstractHandlerTest<H> test) throws Exception {
                 final H h = test.withHandlers(Handler.Project);
@@ -281,7 +302,7 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
 
     @Test
     public void importFromRelation_directIncludeFrom_multiple_with_includeVia() throws Exception {
-        final DSHandler h = IncludeFrom_TestCases.Direct_Multiple_With_IncludeVia.apply(this);
+        final DSHandler h = IncludeFrom_TestCases.Direct_Multiple_ManyToMany_With_IncludeVia.apply(this);
 
         final RelationSupport.ImportFromRelation ifr = RelationSupport.describeImportFrom(
             dsRegistry,

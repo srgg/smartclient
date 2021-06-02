@@ -186,6 +186,19 @@ public abstract class AbstractHandlerTest<H extends DSHandler> {
                         }
                     ]
                 """;
+
+        // OneToMany
+        public static String Employee_RolesFromEmployeeRole = """
+                [
+                    {
+                        name:"roles"
+                        ,foreignKey:"EmployeeRoleDS.employee"
+                        ,type:"EmployeeRoleDS"
+                        ,foreignDisplayField:"role"
+                        ,multiple:true
+                    }
+                ]""";
+
     }
 
     protected IDSRegistry dsRegistry;

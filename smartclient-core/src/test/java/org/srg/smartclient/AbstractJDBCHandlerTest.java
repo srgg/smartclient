@@ -16,16 +16,7 @@ import java.util.TimeZone;
 public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> extends AbstractHandlerTest<H> {
     protected static class ExtraField extends AbstractHandlerTest.ExtraFieldBase{
 
-        public static String OneToMany_FetchEntireEntities = """
-                [
-                    {
-                        name:"roles"
-                        ,foreignKey:"EmployeeRoleDS.employee"
-                        ,type:"EmployeeRoleDS"
-                        ,foreignDisplayField:"role"
-                        ,multiple:true
-                    }
-                ]""";
+        public static String OneToMany_FetchEntireEntities = Employee_RolesFromEmployeeRole;
 
         public static String OneToMany_FetchOnlyIds = """
                 [

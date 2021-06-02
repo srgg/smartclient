@@ -990,7 +990,7 @@ public class JDBCHandler extends AbstractDSHandler {
 
                 if(foreignKeyRelation.sourceField().isMultiple()) {
                     /**
-                     *  Implementation is no perfect will require re work as more use cases will come.
+                     *  Implementation is not perfect and will require re-work as more use cases will come.
                      *
                      *  The join direction is hardcoded and that is, probably, not a good idea but the fastest one
                      *  for the implementation.
