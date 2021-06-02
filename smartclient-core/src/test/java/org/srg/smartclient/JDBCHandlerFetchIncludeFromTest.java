@@ -296,8 +296,72 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
     }
 
     @Test
+    public void fetchOneToMany_EntireEntity_WithForeignDisplayField() throws Exception {
+        final JDBCHandler h = RelationSupportTest.IncludeFrom_TestCases.Direct_Multiple_OneToMany_With_IncludeVia.apply(this);
+
+        final DSRequest request = new DSRequest();
+        request.setOutputs("id, name, concatRoles");
+
+        final DSField includeFrom = h.getField("concatRoles");
+        final RelationSupport.ForeignRelation frl = h.determineEffectiveField(includeFrom);
+        JsonTestSupport.assertJsonEquals("""
+                {
+                    dataSource:'EmployeeRoleDS',
+                    field: 'role',
+                    sqlFieldAlias:null
+                }""",
+                frl,
+                Option.IGNORING_EXTRA_FIELDS
+        );
+
+        final RelationSupport.ImportFromRelation ifr = h.describeImportFrom(includeFrom);
+
+
+        final DSResponse response = h.handleFetch(request);
+
+        JsonTestSupport.assertJsonEquals("""
+                {
+                  status:0,
+                  startRow:0,
+                  endRow:6,
+                  totalRows:6,
+                  data:[
+                       {
+                          id:1,
+                          name:'admin',
+                          concatRoles:'Admin, Developer'
+                       },
+                       {
+                          id:2,
+                          name:'developer',
+                          concatRoles:'Developer'
+                       },
+                       {
+                          id:3,
+                          name:'UseR3'
+                       },
+                       {
+                          id:4,
+                          name:'manager1',
+                          concatRoles:'PM'
+                       },
+                       {
+                          id:5,
+                          name:'manager2',
+                          concatRoles:'PM'
+                       },
+                       {
+                          id:6,
+                          name:'user2'
+                       }                  
+                  ]
+                }
+                }""", response);
+    }
+
+        @Test
     public void fetchManyToMany_EntireEntity_WithForeignDisplayField() throws Exception {
-        final JDBCHandler h = RelationSupportTest.IncludeFrom_TestCases.Direct_Multiple_With_IncludeVia.apply(this);
+        final JDBCHandler h = RelationSupportTest.IncludeFrom_TestCases.Direct_Multiple_ManyToMany_With_IncludeVia.apply(this);
 
         final DSRequest request = new DSRequest();
         request.setOutputs("id, name, teamMembers, employeeName");
@@ -330,7 +394,6 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
                         """
                 )
         );
-
 
         final DSResponse response = h.handleFetch(request);
 

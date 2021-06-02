@@ -570,17 +570,6 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                 .wrap();
         }
 
-        if (fkr.sourceField().getJoinTable() == null) {
-            throw new IllegalStateException(
-                    "DataSource '%s': summarized fetch generation is failed: field '%s.%s' does not specify any 'joinTable', relation: %s".formatted(
-                            fkr.dataSource().getId(),
-                            fkr.dataSource().getId(),
-                            fkr.sourceField().getName(),
-                            ifr
-                    )
-            );
-        }
-
         final StringBuilder sbld = new StringBuilder("""
                 SELECT %s
                     FROM %s %s
@@ -591,19 +580,28 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                 )
             );
 
-        // -- join
-        final String joinClause = JDBCHandler.AbstractSQLContext.generateSQLJoin(List.of(fkr));
+        final String alias;
 
-        sbld.append('\n')
-                .append(joinClause);
+        // -- generate join if it is ManyToMany and join table is provided
+        if (fkr.sourceField().getJoinTable() != null) {
+            final String joinClause = JDBCHandler.AbstractSQLContext.generateSQLJoin(List.of(fkr));
+
+            sbld.append('\n')
+                    .append(joinClause);
+
+            alias = fkr.sourceTableAlias();
+        } else {
+            alias = effectiveRelatedTableAlias;
+        }
 
         // -- where
-        final DSField pk = ifr.dataSource().getNonCompositePK();
+        final DSField sourcePk = ifr.dataSource().getNonCompositePK();
+        final DSField foreignPk = ifr.toForeignKeyRelation().foreign().field();
 
         sbld.append('\n')
                 .append("WHERE %s.%s = %s.%s".formatted(
-                        ifr.dataSource().getTableName(), pk.getDbName(),
-                        fkr.sourceTableAlias(), pk.getDbName()
+                        ifr.dataSource().getTableName(), sourcePk.getDbName(),
+                        alias, foreignPk.getDbName()
                     )
                 );
 

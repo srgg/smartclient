@@ -27,7 +27,7 @@ public class JpaDSDispatcher extends DSDispatcher {
                 entityClass
         );
 
-        registerDatasource(handler);
+        registerHandler(handler);
 
         return handler.id();
     }

@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Configuration;
 import org.srg.smartclient.IDSDispatcher;
 import org.srg.smartclient.spring.AutomaticDSHandlerRegistrar;
 import org.srg.smartclient.spring.EnableSmartClient;
-import org.srg.smartclient.spring.SmartClientProperties;
 
 import javax.sql.DataSource;
 import java.util.Collection;
@@ -36,9 +35,6 @@ public class SimpleSmartClientConfiguration {
     @Autowired(required = false)
     private DataSource dataSource;
 
-    @Autowired
-    private SmartClientProperties smartClientProperties;
-
     private boolean initialized = false;
     private SmartClientConfigurer configurer;
     private AutomaticDSHandlerRegistrar registrar = new AutomaticDSHandlerRegistrar();
@@ -46,10 +42,14 @@ public class SimpleSmartClientConfiguration {
     private AtomicReference<IDSDispatcher> dsDispatcher = new AtomicReference<>();
 
     @Bean
+    public DMIBeanPostProcessor dmiBeanPostProcessor() {
+        return new DMIBeanPostProcessor();
+    }
+
+    @Bean
     public IDSDispatcher dsDispatcher() throws Exception {
         return createLazyProxy(dsDispatcher, IDSDispatcher.class);
     }
-
 
     private <T> T createLazyProxy(AtomicReference<T> reference, Class<T> type) {
         ProxyFactory factory = new ProxyFactory();
@@ -122,7 +122,6 @@ public class SimpleSmartClientConfiguration {
     @Bean
     public AutomaticDSHandlerRegistrar smartClientRegistrar() throws Exception {
         registrar.setDsDispatcher(dsDispatcher());
-        registrar.setProperties(smartClientProperties);
         return registrar;
     }
 }

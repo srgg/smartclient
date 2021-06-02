@@ -11,20 +11,12 @@ import org.srg.smartclient.utils.Serde;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.TimeZone;
 
 public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> extends AbstractHandlerTest<H> {
     protected static class ExtraField extends AbstractHandlerTest.ExtraFieldBase{
 
-        public static String OneToMany_FetchEntireEntities = """
-                [
-                    {
-                        name:"roles"
-                        ,foreignKey:"EmployeeRoleDS.employee"
-                        ,type:"EmployeeRoleDS"
-                        ,foreignDisplayField:"role"
-                        ,multiple:true
-                    }
-                ]""";
+        public static String OneToMany_FetchEntireEntities = Employee_RolesFromEmployeeRole;
 
         public static String OneToMany_FetchOnlyIds = """
                 [
@@ -119,7 +111,7 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> extends Abs
 
 
     @BeforeAll
-    public static void setupDB() {
+    public static void setupObjectMapper() {
         JsonTestSupport.defaultMapper = Serde.createMapper();
     }
 
@@ -149,6 +141,10 @@ public abstract class AbstractJDBCHandlerTest<H extends JDBCHandler> extends Abs
 
     @BeforeEach
     public void setupDataSources() throws Exception {
+
+        // SET TZ to UTC, otherwise timestamps stored in DB as GMT will be treated as local timezone
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+
         jdbcDataSource.setURL("jdbc:h2:mem:test:˜/test;DB_CLOSE_DELAY=0;AUTOCOMMIT=OFF;database_to_lower=true");
         jdbcDataSource.setUser("sa");
         jdbcDataSource.setPassword("sa");

@@ -1,6 +1,7 @@
 package org.srg.smartclient;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.javers.core.Javers;
 import org.javers.core.JaversBuilder;
@@ -46,6 +47,7 @@ public record JpaRelation<S, T>(
         JoinTable joinTable
 ) {
 
+    @JsonIgnore
     public String getTargetAttributeName_or_null() {
         if (targetAttribute != null) {
             return targetAttribute.getName();

@@ -298,7 +298,7 @@ public class JDBCHandler extends AbstractDSHandler {
                     )
             );
 
-            final DSHandler dsHandler = this.idsRegistry.getHandlerByName(foreignKeyRelation.foreign().dataSourceId());
+            final DSHandler dsHandler = this.idsRegistry.getDataSourceHandlerById(foreignKeyRelation.foreign().dataSourceId());
             if (dsHandler == null) {
                 throw new RuntimeException( "Foreign data source handler with id '%s' is not registered."
                         .formatted(foreignKeyRelation.foreign().dataSourceId())
@@ -1062,7 +1062,7 @@ public class JDBCHandler extends AbstractDSHandler {
 
                 if(foreignKeyRelation.sourceField().isMultiple()) {
                     /**
-                     *  Implementation is no perfect will require re work as more use cases will come.
+                     *  Implementation is not perfect and will require re-work as more use cases will come.
                      *
                      *  The join direction is hardcoded and that is, probably, not a good idea but the fastest one
                      *  for the implementation.
