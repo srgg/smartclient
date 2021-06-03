@@ -8,6 +8,7 @@ import java.beans.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -19,25 +20,38 @@ public final class AnnotationUtils {
     private AnnotationUtils() {
     }
 
-    public static <A extends Annotation> A getAnnotation(Class<?> clazz, String name, Class<A> annotationClass) {
-        final String canonicalName = clazz.getCanonicalName();
-        final String cname = canonicalName.replaceAll("\\.", "/") + ".class";
+    private static String replaceLast(String text, String regex, String replacement) {
+        return text.replaceFirst("(?s)"+regex+"(?!.*?"+regex+")", replacement);
+    }
 
-        Indexer indexer = new Indexer();
-        InputStream stream = annotationClass
-                .getClassLoader()
-                .getResourceAsStream(cname);
+    public static <A extends Annotation> A getAnnotation(Class<?> clazz, String fieldName, Class<A> annotationClass) {
+        final Indexer indexer = new Indexer();
+        final List<String> names = new LinkedList<>();
 
-        try {
-            indexer.index(stream);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        for (Class c = clazz; !c.equals(Object.class); c = c.getSuperclass()) {
+            final String canonicalName = c.getCanonicalName();
+
+            String cname = canonicalName.replaceAll("\\.", "/") ;
+
+            if (c.isMemberClass()) {
+                cname = replaceLast(cname, "\\/", "\\$");
+            }
+            cname += ".class";
+
+            InputStream stream = annotationClass
+                    .getClassLoader()
+                    .getResourceAsStream(cname);
+
+            try {
+                indexer.index(stream);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            names.add(cname);
         }
 
-        Index index = indexer.complete();
-
-        final DotName dotCName = DotName.createSimple(canonicalName);
-        final ClassInfo ci = index.getClassByName(dotCName);
+        final Index index = indexer.complete();
 
         final DotName dotAnnotation = DotName.createSimple(annotationClass.getCanonicalName());
         List<AnnotationInstance> annotations = index.getAnnotations(dotAnnotation);
@@ -51,7 +65,7 @@ public final class AnnotationUtils {
 
         PropertyDescriptor propertyDescriptor = null;
         for (PropertyDescriptor pd : bi.getPropertyDescriptors()) {
-            if (name.equals(pd.getName())) {
+            if (fieldName.equals(pd.getName())) {
                 propertyDescriptor = pd;
                 break;
             }
@@ -65,7 +79,7 @@ public final class AnnotationUtils {
              */
 
             logger.debug("Property Description is empty {}.{}, this will be treated as no {} annotation was found for the field.",
-                    clazz.getSimpleName(), name, annotationClass.getSimpleName());
+                    clazz.getSimpleName(), fieldName, annotationClass.getSimpleName());
             return null;
         }
 
@@ -83,8 +97,8 @@ public final class AnnotationUtils {
                     break;
 
                 case FIELD:
-                    final String fieldName = annotation.target().asField().name();
-                    if (fieldName.equals(propertyDescriptor.getName())) {
+                    final String fName = annotation.target().asField().name();
+                    if (fName.equals(propertyDescriptor.getName())) {
                         effectiveAnnotations.add(annotation);
                     }
                     break;
