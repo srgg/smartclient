@@ -159,6 +159,9 @@ abstract class DSDeclarationBuilder {
         ctx.write_if_notBlank(f.getTitle(),
                 "\t\t\t, title:'%s'\n", f.getTitle());
 
+        ctx.write_if_notBlank(f.getTitleField(),
+                "\t\t\t, title:'%s'\n", f.getTitleField());
+
 //        context.write_if(f.canEdit() != null && !f.canEdit(),
 //                "\t\t\t, canEdit:false\n" );
 //
@@ -258,6 +261,11 @@ abstract class DSDeclarationBuilder {
         ctx.write_if(Boolean.TRUE.equals(f.isHidden()),
                 "\t\t\t,hidden:%b\n",
                 f.isHidden()
+        );
+
+        ctx.write_if(Boolean.TRUE.equals(f.isHidden()),
+                "\t\t\t,treeField:%b\n",
+                f.isTreeField()
         );
 
         ctx.write_if(f.getRootValue() != null, ", rootValue: %s\n", f.getRootValue());

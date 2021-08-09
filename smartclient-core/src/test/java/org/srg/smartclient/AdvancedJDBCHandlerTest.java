@@ -15,6 +15,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
     private static Stream<? extends Arguments> provideArgs() {
         return Stream.of(
                 basicCriteria()
+                ,compositeRegressionImproperNullHandling()
                 ,compositeAndCaseInsensitiveCriteria()
                 ,compositeOrCaseSensitiveCriteria()
                 ,iNotContainsCriteria()
@@ -88,7 +89,7 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                         {
                             "operator" : "and",
                             "_constructor" : "AdvancedCriteria",
-                            "criteria" : [ 
+                            "criteria" : [
                                 {
                                     "fieldName" : "firedAt",
                                     "operator" : "notBlank",
@@ -119,6 +120,64 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
         );
     }
 
+    /**
+     * Caused by: org.h2.jdbc.JdbcSQLDataException: Parameter "#2" is not set; SQL statement:
+     * SELECT count(*) FROM (
+     *     SELECT employee.id AS id_employee,
+     *   employee.name AS name_employee,
+     *   employee.firedAt AS firedAt_employee,
+     *   employee.email AS email_employee
+     *         FROM employee
+     * ) opaque
+     *     WHERE ( LOWER(opaque.email_employee) LIKE LOWER(?) AND opaque.firedAt_employee = ? )
+     *  [90012-200]
+     *
+     * @return
+     */
+    @Regression("")
+    private static Arguments compositeRegressionImproperNullHandling() {
+        return Arguments.of(
+                "REGRESSION: improper NULL handling in composite criteria",
+                """
+                        {
+                            "operator":"and",
+                            "_constructor":"AdvancedCriteria",
+                            "criteria":[
+                                {
+                                    "fieldName":"email",
+                                    "operator":"iEndsWith",
+                                    "value":"E.org"
+                                 },
+                                {
+                                  "fieldName":"firedAt",
+                                  "value":null,
+                                  "operator":"equals"
+                                }
+                            ]
+                        }""",
+                """
+                        {
+                            data:[
+                                {
+                                    id:2,
+                                    email:'developer@acme.org',
+                                    name:'developer'
+                                },
+                                {
+                                    id:4,
+                                    email:'pm1@acmE.org',
+                                    name:'manager1'
+                                }
+                            ],
+                            endRow:2,
+                            startRow:0,
+                            status:0,
+                            totalRows:2
+                        }""",
+                ExtraField.Email
+        );
+    }
+
     private static Arguments compositeAndCaseInsensitiveCriteria() {
         return  Arguments.of(
                 "composite AND case insensitive criteria",
@@ -132,6 +191,12 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                     "operator" : "notBlank",
                                     "_constructor" : "AdvancedCriteria"
                                 },
+                                {
+                                    "fieldName" : "name",
+                                    "operator" : "startsWith",
+                                    "value":"a"
+                                },
+                                
                                 {
                                     "fieldName":"email",
                                     "operator":"iEndsWith",
@@ -147,18 +212,12 @@ public class AdvancedJDBCHandlerTest extends AbstractJDBCHandlerTest<AdvancedJDB
                                     name:'admin',
                                     firedAt: '2000-01-02T03:04:05.000+00:00',
                                     email:"admin@acmE.org"
-                                },
-                                {
-                                    id:5,
-                                    name:'manager2',
-                                    firedAt: '2000-05-04T03:02:01.000+00:00',
-                                    email:"pm2@acme.org"
                                 }
                             ],
-                            endRow:2,
+                            endRow:1,
                             startRow:0,
                             status:0,
-                            totalRows:2
+                            totalRows:1
                         }""",
                 ExtraField.Email
         );

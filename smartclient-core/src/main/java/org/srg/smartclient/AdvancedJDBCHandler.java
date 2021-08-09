@@ -7,6 +7,8 @@ import org.srg.smartclient.isomorphic.IDSRequestData;
 import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
 import org.srg.smartclient.isomorphic.criteria.Criteria;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -199,7 +201,30 @@ public class AdvancedJDBCHandler extends JDBCHandler {
                 )
             );
 
-            return ValueFilterData.create(effectiveField, filterStr, values);
+            if (values == null) {
+                /**
+                 * MariaDB does not handle properly NULL values in prepared statements,
+                 * therefore it is reuired to  use 'IS NULL' only
+                 */
+                switch (ac.getOperator()){
+                    case NOT_BLANK:
+                    case NOT_NULL:
+                    case INOT_EQUAL:
+                    case NOT_EQUAL:
+                        return FilterData.createIsNotNullFilterData(effectiveField);
+
+                    case IS_BLANK:
+                    case IS_NULL:
+                    case IEQUALS:
+                    case EQUALS:
+                        return FilterData.createIsNullFilterData(effectiveField);
+
+                    default:
+                        throw new IllegalStateException();
+                }
+            } else {
+                return ValueFilterData.create(effectiveField, filterStr, values);
+            }
         } else {
             switch (ac.getOperator()) {
                 case OR:
@@ -329,6 +354,14 @@ public class AdvancedJDBCHandler extends JDBCHandler {
         @Override
         public Iterable<Object> values() {
             return this;
+        }
+
+        @Override
+        public int setStatementParameters(int idx, PreparedStatement preparedStatement) throws SQLException {
+            for (IFilterData fd : filterDataList) {
+                idx = fd.setStatementParameters(idx, preparedStatement);
+            }
+            return idx;
         }
 
         @Override

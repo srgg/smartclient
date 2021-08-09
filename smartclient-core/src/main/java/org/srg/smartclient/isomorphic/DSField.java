@@ -195,12 +195,23 @@ public class DSField {
 
     private String name;
     private String title;
+    private String titleField;
     private boolean required;
     private boolean primaryKey;
     private Boolean hidden;
     private FieldType type;
     private String foreignKey;
     private String foreignDisplayField;
+
+    /**
+     * The field containing treeField: true will display the Tree. If no field specifies this property,
+     * if a field named after the Tree.titleProperty of the Tree is present in TreeGrid.fields,
+     * that field will show the tree. Note that when using a DataSource,
+     * you typically define the title field via DataSource.titleField and the generated ResultTree automatically
+     * uses this field. If none of the above rules apply,
+     * the first field in TreeGrid.fields is assigned to display the Tree.
+     */
+    private boolean treeField;
 
     /**
      * Set of search-operators valid for this field.
@@ -397,6 +408,14 @@ public class DSField {
         return this;
     }
 
+    public String getTitleField() {
+        return titleField;
+    }
+
+    public void setTitleField(String titleField) {
+        this.titleField = titleField;
+    }
+
     public boolean isRequired() {
         return required;
     }
@@ -422,6 +441,14 @@ public class DSField {
     public DSField setHidden(Boolean hidden) {
         this.hidden = hidden;
         return this;
+    }
+
+    public boolean isTreeField() {
+        return treeField;
+    }
+
+    public void setTreeField(boolean treeField) {
+        this.treeField = treeField;
     }
 
     public FieldType getType() {

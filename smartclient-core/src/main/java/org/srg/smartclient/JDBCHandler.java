@@ -788,7 +788,7 @@ public class JDBCHandler extends AbstractDSHandler {
                         } else {
                             /**
                              * MariaDB does not handle properly NULL values in prepared statements,
-                             * therefore it is re   uired to  use 'IS NULL' only
+                             * therefore it is reuired to  use 'IS NULL' only
                              */
                             return FilterData.createIsNullFilterData(effectiveField);
                         }
@@ -848,9 +848,29 @@ public class JDBCHandler extends AbstractDSHandler {
 
             @Override
             public int setStatementParameters(int idx, PreparedStatement preparedStatement) throws SQLException {
-                return ++idx;
+//                return ++idx;
+                return idx;
             }
         }
+
+        protected static class ISNotNullFilterData extends FilterData {
+
+            public ISNotNullFilterData(ForeignRelation dsFieldPair) {
+                super(dsFieldPair, "%s IS NOT NULL");
+            }
+
+            @Override
+            public Iterable<Object> values() {
+                return Collections.singletonList(null);
+            }
+
+            @Override
+            public int setStatementParameters(int idx, PreparedStatement preparedStatement) throws SQLException {
+//                return ++idx;
+                return idx;
+            }
+        }
+
 
         private final ForeignRelation dsFieldPair;
         private final String sqlTemplate;
@@ -910,6 +930,10 @@ public class JDBCHandler extends AbstractDSHandler {
 
         public static FilterData createIsNullFilterData(ForeignRelation dsFieldPair) {
             return new ISNullFilterData(dsFieldPair);
+        }
+
+        public static FilterData createIsNotNullFilterData(ForeignRelation dsFieldPair) {
+            return new ISNotNullFilterData(dsFieldPair);
         }
     }
 
