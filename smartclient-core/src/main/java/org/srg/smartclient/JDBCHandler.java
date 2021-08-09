@@ -783,7 +783,15 @@ public class JDBCHandler extends AbstractDSHandler {
                                 )
                                 : effectiveField.field().getDbName());
 
-                        return new FilterData(effectiveField, filterStr, value);
+                        if (value != null) {
+                            return new FilterData(effectiveField, filterStr, value);
+                        } else {
+                            /**
+                             * MariaDB does not handle properly NULL values in prepared statements,
+                             * therefore it is re   uired to  use 'IS NULL' only
+                             */
+                            return FilterData.createIsNullFilterData(effectiveField);
+                        }
                     })
                     .collect(Collectors.toList());
         } else if (data == null){
@@ -814,7 +822,11 @@ public class JDBCHandler extends AbstractDSHandler {
 
         default int setStatementParameters(int idx, PreparedStatement preparedStatement) throws SQLException {
             for (Object v : values()) {
-                preparedStatement.setObject(++idx, v);
+                if (v != null) {
+                    preparedStatement.setObject(++idx, v);
+                } else {
+                    preparedStatement.setNull(++idx, JDBCType.NULL.ordinal());
+                }
             }
             return idx;
         }
@@ -822,6 +834,24 @@ public class JDBCHandler extends AbstractDSHandler {
     }
 
     protected static class FilterData implements IFilterData{
+
+        protected static class ISNullFilterData extends FilterData {
+
+            public ISNullFilterData(ForeignRelation dsFieldPair) {
+                super(dsFieldPair, "%s IS NULL");
+            }
+
+            @Override
+            public Iterable<Object> values() {
+                return Collections.singletonList(null);
+            }
+
+            @Override
+            public int setStatementParameters(int idx, PreparedStatement preparedStatement) throws SQLException {
+                return ++idx;
+            }
+        }
+
         private final ForeignRelation dsFieldPair;
         private final String sqlTemplate;
         private transient String formattedSql;
@@ -876,6 +906,10 @@ public class JDBCHandler extends AbstractDSHandler {
                     ", sqlTemplate='" + sqlTemplate + '\'' +
                     ", value=" + value +
                     '}';
+        }
+
+        public static FilterData createIsNullFilterData(ForeignRelation dsFieldPair) {
+            return new ISNullFilterData(dsFieldPair);
         }
     }
 
