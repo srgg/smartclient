@@ -395,6 +395,7 @@ public class DSField {
     private String valueMapEnum;
 
     private boolean canEdit;
+    private Boolean canFilter;
 
     // https://www.smartclient.com/smartgwt/javadoc/com/smartgwt/client/docs/CustomQuerying.html
     private boolean customSQL;
@@ -542,6 +543,14 @@ public class DSField {
     public DSField setCanEdit(boolean canEdit) {
         this.canEdit = canEdit;
         return this;
+    }
+
+    public Boolean isCanFilter() {
+        return canFilter;
+    }
+
+    public void setCanFilter(Boolean canFilter) {
+        this.canFilter = canFilter;
     }
 
     public boolean isCustomSQL() {

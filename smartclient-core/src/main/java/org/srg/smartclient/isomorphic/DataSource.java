@@ -29,6 +29,7 @@ public class DataSource {
     private transient Map<String, DSField> fieldMap;
 
     private String tableName;
+    private String titleField;
 
 //    /**
 //     * https://www.smartclient.com/smartclient-release/isomorphic/system/reference/?id=attr..DataSource.schemaBean
@@ -119,6 +120,14 @@ public class DataSource {
 
     public void setTableName(String tableName) {
         this.tableName = tableName;
+    }
+
+    public String getTitleField() {
+        return titleField;
+    }
+
+    public void setTitleField(String titleField) {
+        this.titleField = titleField;
     }
 
     public String getDbName() {

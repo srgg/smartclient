@@ -96,13 +96,15 @@ abstract class DSDeclarationBuilder {
                     {operationType:"add", dataProtocol:"postMessage"},
                     {operationType:"remove", dataProtocol:"postMessage"},
                     {operationType:"update", dataProtocol:"postMessage"}
-                  ],
-                  fields:[""",
+                  ]""",
                 ctx.dsName,
                 dispatcherUrl,
                 allowAdvancedCriteria
         );
 
+        buildDSAttributes(ctx);
+
+        ctx.write("                  ,fields:[\n");
         for (DSField f : allFields) {
             buildField(ctx, f);
         }
@@ -113,6 +115,12 @@ abstract class DSDeclarationBuilder {
 
     protected static boolean isNotBlank( String value) {
         return value != null && !value.isEmpty();
+    }
+
+    protected static void buildDSAttributes(BuilderContext ctx) {
+        final DataSource ds = ctx.dataSource;
+        ctx.write_if_notBlank(ds.getTitleField(),
+                "\t\t, titleField:'%s'\n", ds.getTitleField());
     }
 
     protected static void buildField(BuilderContext ctx, DSField f) throws ClassNotFoundException {
@@ -258,12 +266,17 @@ abstract class DSDeclarationBuilder {
                 f.isCanEdit()
         );
 
+        ctx.write_if( f.isCanFilter() != null,
+                "\t\t\t,canFilter:%b\n",
+                Boolean.TRUE.equals(f.isCanFilter())
+        );
+
         ctx.write_if(Boolean.TRUE.equals(f.isHidden()),
                 "\t\t\t,hidden:%b\n",
                 f.isHidden()
         );
 
-        ctx.write_if(Boolean.TRUE.equals(f.isHidden()),
+        ctx.write_if(Boolean.TRUE.equals(f.isTreeField()),
                 "\t\t\t,treeField:%b\n",
                 f.isTreeField()
         );
