@@ -6,6 +6,7 @@ import org.srg.smartclient.isomorphic.DataSource;
 import org.srg.smartclient.isomorphic.IDSRequestData;
 import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
 import org.srg.smartclient.isomorphic.criteria.Criteria;
+import org.srg.smartclient.runtime.IDSRuntime;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -18,8 +19,8 @@ import java.util.stream.Collectors;
  * https://stackoverrun.com/ru/q/5891230
  */
 public class AdvancedJDBCHandler extends JDBCHandler {
-    public AdvancedJDBCHandler(JDBCPolicy jdbcPolicy, IDSRegistry dsRegistry, DataSource datasource) {
-        super(jdbcPolicy, dsRegistry, datasource);
+    public AdvancedJDBCHandler(JDBCPolicy jdbcPolicy, IDSRuntime scRuntime, DataSource datasource) {
+        super(jdbcPolicy, scRuntime, datasource);
     }
 
     @Override

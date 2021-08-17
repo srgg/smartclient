@@ -204,6 +204,7 @@ public class JsonTestSupport {
                 gen.writeStringField("fieldName", value.fieldName());
             }
 
+            gen.writeObjectField("relatedTableAlias", value.getRelatedTableAlias());
             gen.writeStringField("sqlFieldAlias", value.getSqlFieldAlias());
 
             gen.writeEndObject();
@@ -218,9 +219,9 @@ public class JsonTestSupport {
 
             gen.writeStringField("dataSource", value.dataSource().getId());
             gen.writeObjectField("sourceField", value.sourceField().getName());
+//            gen.writeObjectField("relatedTableAlias", value.relatedTableAlias());
 
             gen.writeObjectField("foreignKeyRelations", value.foreignKeyRelations());
-
             gen.writeObjectField("foreignDisplay", value.foreignDisplay().getName());
 
             gen.writeEndObject();

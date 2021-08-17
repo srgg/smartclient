@@ -7,6 +7,8 @@ import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
 
+import java.util.List;
+
 import static org.hamcrest.Matchers.equalToCompressingWhiteSpace;
 
 public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDBCHandler> {
@@ -41,11 +43,11 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
         );
 
         // -- Check generated SQL join clause
-        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifr.foreignKeyRelations());
+        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(List.of(ifr.foreignKeyRelations()));
 
         MatcherAssert.assertThat( sqlJoin,
                 equalToCompressingWhiteSpace("""
-                        LEFT JOIN locations ON employee.location_id = locations.id        
+                        LEFT JOIN locations location_locations ON employee.location_id = location_locations.id
                     """
                 )
         );
@@ -109,15 +111,15 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
 
 
 
-        final RelationSupport.ImportFromRelation ifr = h.describeImportFrom(includeFrom);
+        final RelationSupport.ImportFromRelation ifr = h.getImportFromRelation(includeFrom);
 
         // -- Check generated SQL join clause
-        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifr.foreignKeyRelations());
+        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(List.of(ifr.foreignKeyRelations()));
 
         MatcherAssert.assertThat( sqlJoin,
                 equalToCompressingWhiteSpace("""
-                        LEFT JOIN locations ON employee.location_id = locations.id
-                        LEFT JOIN countries ON locations.country_id = countries.id        
+                        LEFT JOIN locations location_locations ON employee.location_id = location_locations.id
+                        LEFT JOIN countries country_countries ON location_locations.country_id = country_countries.id
                     """
                 )
         );
@@ -154,6 +156,120 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
     }
 
     @Test
+    @Regression("""
+            org.srg.smartclient.utils.ContextualRuntimeException: SQL count query execution failed.
+            Caused by: org.h2.jdbc.JdbcSQLSyntaxErrorException: Ambiguous column name "id"; SQL statement:            
+                SELECT count(*) FROM (
+                    SELECT project.id AS id_project,
+                  project.name AS name_project,
+                  project.manager_id AS manager_id_project,
+                  CONCAT(employee.id, '_', employee.name) AS calculated_employee,
+                  project.supervisor_id AS supervisor_id_project,
+                  CONCAT(employee.id, '_', employee.name) AS calculated_employee
+                        FROM project
+                        LEFT JOIN employee  ON project.manager_id = employee.id
+                        LEFT JOIN employee  ON project.supervisor_id = employee.id
+                ) opaque
+            """)
+    public void multipleDirectIncludeFromTheSameDisplayField_without_includeVia() throws Exception {
+        final JDBCHandler h = RelationSupportTest.IncludeFrom_TestCases.Two_Direct_Same_The_Same_DisplayField_With_IncludeVia.apply(this);
+
+        {
+            final DSField includeFrom = h.getField("managerFullName");
+
+            final RelationSupport.ForeignRelation frl = h.determineEffectiveField(includeFrom);
+            JsonTestSupport.assertJsonEquals("""
+                            {
+                                dataSource:'EmployeeDS',
+                                field: 'name',
+                                sqlFieldAlias:null
+                            }""",
+                    frl,
+                    Option.IGNORING_EXTRA_FIELDS
+            );
+
+            final RelationSupport.ImportFromRelation ifr = h.getImportFromRelation(includeFrom);
+
+            // -- Check generated SQL join clause
+            final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(List.of(ifr.foreignKeyRelations()));
+
+            MatcherAssert.assertThat( sqlJoin,
+                    equalToCompressingWhiteSpace("""
+                        LEFT JOIN employee manager_employee ON project.manager_id = manager_employee.id
+                    """
+                    )
+            );
+        }
+
+        {
+            final DSField includeFrom = h.getField("supervisorFullName");
+
+            final RelationSupport.ForeignRelation frl = h.determineEffectiveField(includeFrom);
+            JsonTestSupport.assertJsonEquals("""
+                            {
+                                dataSource:'EmployeeDS',
+                                field: 'name',
+                                sqlFieldAlias:null
+                            }""",
+                    frl,
+                    Option.IGNORING_EXTRA_FIELDS
+            );
+
+            final RelationSupport.ImportFromRelation ifr = h.getImportFromRelation(includeFrom);
+
+            // -- Check generated SQL join clause
+            final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(List.of(ifr.foreignKeyRelations()));
+
+            MatcherAssert.assertThat( sqlJoin,
+                    equalToCompressingWhiteSpace("""
+                        LEFT JOIN employee supervisor_employee  ON project.supervisor_id = supervisor_employee.id
+                    """
+                    )
+            );
+        }
+
+        final DSRequest request = new DSRequest();
+        request.setStartRow(0);
+        request.setEndRow(3);
+
+        final DSResponse response = h.handleFetch(request);
+
+        JsonTestSupport.assertJsonEquals("""
+            {
+               status:0,
+               startRow:0,
+               endRow:3,
+               totalRows:5,
+               data:[
+                   {
+                      id:1,
+                      manager:4,
+                      managerFullName:'manager1',
+                      name:'Project 1 for client 1',
+                      supervisor:5,
+                      supervisorFullName:'manager2'
+                   },
+                   {
+                      id:2,
+                      manager:4,
+                      managerFullName:'manager1',
+                      name:'Project 2 for client 1',
+                      supervisor:5,
+                      supervisorFullName:'manager2'
+                   },
+                   {
+                      id:3,
+                      manager:5,
+                      managerFullName:'manager2',
+                      name:'Project 1 for client 2',
+                      supervisor:4,
+                      supervisorFullName:'manager1'
+                   }
+               ]
+            }""", response);
+    }
+
+    @Test
     public void indirectIncludeFrom_with_includeVia() throws Exception {
         final JDBCHandler h = RelationSupportTest.IncludeFrom_TestCases.Indirect_With_IncludeVia.apply(this);
 
@@ -176,15 +292,15 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
 
 
 
-        final RelationSupport.ImportFromRelation ifr = h.describeImportFrom(includeFrom);
+        final RelationSupport.ImportFromRelation ifr = h.getImportFromRelation(includeFrom);
 
         // -- Check generated SQL join clause
-        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifr.foreignKeyRelations());
+        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(List.of(ifr.foreignKeyRelations()));
 
         MatcherAssert.assertThat( sqlJoin,
                 equalToCompressingWhiteSpace("""
-                        LEFT JOIN locations ON employee.location_id = locations.id
-                        LEFT JOIN countries ON locations.country_id = countries.id        
+                        LEFT JOIN locations location_locations ON employee.location_id = location_locations.id
+                        LEFT JOIN countries country_countries ON location_locations.country_id = country_countries.id        
                     """
                 )
         );
@@ -314,7 +430,7 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
                 Option.IGNORING_EXTRA_FIELDS
         );
 
-        final RelationSupport.ImportFromRelation ifr = h.describeImportFrom(includeFrom);
+        final RelationSupport.ImportFromRelation ifr = h.getImportFromRelation(includeFrom);
 
 
         final DSResponse response = h.handleFetch(request);
@@ -382,10 +498,10 @@ public class JDBCHandlerFetchIncludeFromTest extends AbstractJDBCHandlerTest<JDB
 
 
 
-        final RelationSupport.ImportFromRelation ifr = h.describeImportFrom(includeFrom);
+        final RelationSupport.ImportFromRelation ifr = h.getImportFromRelation(includeFrom);
 
         // -- Check generated SQL join clause
-        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(ifr.foreignKeyRelations());
+        final String sqlJoin = JDBCHandler.AbstractSQLContext.generateSQLJoin(List.of(ifr.foreignKeyRelations()));
 
         MatcherAssert.assertThat( sqlJoin,
                 equalToCompressingWhiteSpace("""

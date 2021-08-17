@@ -6,6 +6,7 @@ import org.srg.smartclient.isomorphic.*;
 import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
 import org.srg.smartclient.isomorphic.criteria.Criteria;
 import org.srg.smartclient.isomorphic.criteria.OperatorId;
+import org.srg.smartclient.runtime.IDSRuntime;
 import org.srg.smartclient.utils.ContextualRuntimeException;
 import org.srg.smartclient.utils.Utils;
 
@@ -28,8 +29,8 @@ public class JDBCHandler extends AbstractDSHandler {
 
     private final JDBCPolicy policy;
 
-    public JDBCHandler(JDBCPolicy jdbcPolicy, IDSRegistry dsRegistry, DataSource datasource) {
-        super(dsRegistry, datasource);
+    public JDBCHandler(JDBCPolicy jdbcPolicy, IDSRuntime scRuntime, DataSource datasource) {
+        super(scRuntime, datasource);
         policy = jdbcPolicy;
     }
 
@@ -292,10 +293,7 @@ public class JDBCHandler extends AbstractDSHandler {
 
         protected DSResponse fetchForeignEntity(Connection connection, ForeignKeyRelation foreignKeyRelation, String outputs, IDSRequestData criteria) throws Exception {
             logger.debug("Performing foreign fetch for relation '%s' with criteria: %s"
-                    .formatted(
-                            foreignKeyRelation,
-                            criteria
-                    )
+                    .formatted(foreignKeyRelation, criteria)
             );
 
             final DSHandler dsHandler = this.idsRegistry.getDataSourceHandlerById(foreignKeyRelation.foreign().dataSourceId());
@@ -786,9 +784,9 @@ public class JDBCHandler extends AbstractDSHandler {
                         if (value != null) {
                             return new FilterData(effectiveField, filterStr, value);
                         } else {
-                            /**
-                             * MariaDB does not handle properly NULL values in prepared statements,
-                             * therefore it is reuired to  use 'IS NULL' only
+                            /*
+                              MariaDB does not handle properly NULL values in prepared statements,
+                              therefore it is reuired to  use 'IS NULL' only
                              */
                             return FilterData.createIsNullFilterData(effectiveField);
                         }
@@ -1111,13 +1109,50 @@ public class JDBCHandler extends AbstractDSHandler {
          * @param <FKR>
          * @return
          */
-        public static <FKR extends IForeignKeyRelation>  String generateSQLJoin(List<FKR> frls) {
+        public static <FKR extends IForeignKeyRelation>  String generateSQLJoin(List<List<FKR>> frls) {
+            final List<JoinGenerator.JoinDBDescr> allDescrs = frls.stream()
+                    .map( AbstractSQLContext::generateJoinDBDescr )
+                    .flatMap( Collection::stream )
+                    .collect(Collectors.toList());
+
+
+            /* It is required to generate one join per unique Join Description  */
+            final List<JoinGenerator.JoinDBDescr> uniqueJDs = allDescrs.stream()
+                .filter(new Predicate<>() {
+                    final List<JoinGenerator.JoinDBDescr> unique = new LinkedList<>();
+
+                    @Override
+                    public boolean test(JoinGenerator.JoinDBDescr jd) {
+
+                        for (JoinGenerator.JoinDBDescr u :unique) {
+                            if (
+                                    u.sourceTable().equals(jd.sourceTable())
+                                    && u.sourceField().equals(jd.sourceField())
+                                    && u.destTable().equals(jd.destTable())
+                                    && u.destField().equals(jd.destField())
+                                    && u.destTableAlias().equals(jd.destTableAlias())
+                            ) {
+                                return false;
+                            }
+                        }
+                        unique.add(jd);
+                        return true;
+                    }
+                })
+                .collect(Collectors.toList());
+
+            return JoinGenerator.generateJoin(uniqueJDs);
+        }
+
+        private static <FKR extends IForeignKeyRelation> List<JoinGenerator.JoinDBDescr> generateJoinDBDescr(List<FKR> frls) {
             // -- generate relation chain
 
             final String joinType = "LEFT";
             final List<JoinGenerator.JoinDBDescr> jds = new LinkedList<>();
-            for (IForeignKeyRelation foreignKeyRelation : frls) {
+            JoinGenerator.JoinDBDescr prevJoinDBDescr = null;
 
+            for (IForeignKeyRelation foreignKeyRelation : frls) {
+                final JoinGenerator.JoinDBDescr currJoinDBDescr;
                 if(foreignKeyRelation.sourceField().isMultiple()) {
                     /**
                      *  Implementation is not perfect and will require re-work as more use cases will come.
@@ -1131,13 +1166,13 @@ public class JDBCHandler extends AbstractDSHandler {
                      */
                     if (foreignKeyRelation.sourceField().getJoinTable() == null) {
                         throw new IllegalStateException(
-                            "DataSource '%s': field '%s.%s' marked as 'multiple: true', but does not specify any 'joinTable', relation: %s."
-                                .formatted(
-                                        foreignKeyRelation.dataSource().getId(),
-                                        foreignKeyRelation.dataSource().getId(),
-                                        foreignKeyRelation.sourceField().getName(),
-                                        foreignKeyRelation
-                                )
+                                "DataSource '%s': field '%s.%s' marked as 'multiple: true', but does not specify any 'joinTable', relation: %s."
+                                        .formatted(
+                                                foreignKeyRelation.dataSource().getId(),
+                                                foreignKeyRelation.dataSource().getId(),
+                                                foreignKeyRelation.sourceField().getName(),
+                                                foreignKeyRelation
+                                        )
                         );
                     }
 
@@ -1158,7 +1193,7 @@ public class JDBCHandler extends AbstractDSHandler {
                                     effectiveDstField.getDbName(),
                                     "",
                                     joinTable.getTableName(),
-                                joinTable.getDestColumn()
+                                    joinTable.getDestColumn()
                             )
                     );
 
@@ -1171,14 +1206,13 @@ public class JDBCHandler extends AbstractDSHandler {
                     String effectiveSrcAlias = foreignKeyRelation instanceof ISQLForeignKeyRelation sfkr ?
                             sfkr.sourceTableAlias() : srcDataSource.getTableName();
 
-                    jds.add(new JoinGenerator.JoinDBDescr(
+                    currJoinDBDescr = new JoinGenerator.JoinDBDescr(
                             "",
                             joinTable.getTableName(),
                             joinTable.getSourceColumn(),
                             effectiveSrcAlias,
                             srcDataSource.getTableName(),
                             effectiveSrcField.getDbName()
-                        )
                     );
 
                 } else {
@@ -1188,18 +1222,21 @@ public class JDBCHandler extends AbstractDSHandler {
                     final DSField fkField = foreignKeyRelation.foreign().field();
                     final DSField srcField = foreignKeyRelation.sourceField();
 
-                    jds.add(new JoinGenerator.JoinDBDescr(
+                    currJoinDBDescr = new JoinGenerator.JoinDBDescr(
                             joinType,
-                            srcDataSource.getTableName(),
+                            prevJoinDBDescr == null ?  srcDataSource.getTableName() : prevJoinDBDescr.destTableAlias,
                             srcField.getDbName(),
-                            "",
+                            foreignKeyRelation.foreign().getRelatedTableAlias(),
                             fkDataSource.getTableName(),
                             fkField.getDbName()
-                        )
                     );
                 }
+
+                jds.add(currJoinDBDescr);
+                prevJoinDBDescr = currJoinDBDescr;
             }
-            return JoinGenerator.generateJoin(jds);
+
+            return jds;
         }
     }
 }

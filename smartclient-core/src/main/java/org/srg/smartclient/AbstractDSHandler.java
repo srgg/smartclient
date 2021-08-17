@@ -3,6 +3,7 @@ package org.srg.smartclient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.*;
+import org.srg.smartclient.runtime.IDSRuntime;
 
 import java.util.*;
 
@@ -10,12 +11,12 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
     private static final String META_DATA_PREFIX = "_";
     private static final Logger logger = LoggerFactory.getLogger(AbstractDSHandler.class);
 
-    private final IDSRegistry dsRegistry;
+    private final IDSRuntime dsRuntime;
     private final DataSource datasource;
     private transient Map<DSRequest.OperationType, List<OperationBinding>> bindingsMap;
 
-    public AbstractDSHandler(IDSRegistry dsRegistry, DataSource datasource) {
-        this.dsRegistry = dsRegistry;
+    public AbstractDSHandler(IDSRuntime dsRuntime, DataSource datasource) {
+        this.dsRuntime = dsRuntime;
         this.datasource = datasource;
     }
 
@@ -120,33 +121,29 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
         );
     }
 
+    protected IDSRuntime getDsRuntime() {
+        return dsRuntime;
+    }
+
     protected DSHandler getDataSourceHandlerById(String id) {
-        assert dsRegistry != null;
-        return dsRegistry.getDataSourceHandlerById(id);
+        assert dsRuntime != null;
+        return dsRuntime.getDataSourceHandlerById(id);
     }
 
-    protected DataSource getDataSourceById(String dsId) {
-        assert dsRegistry != null;
-        return dsRegistry.getDataSourceById(dsId);
+    protected ImportFromRelation getImportFromRelation(DSField importFromField){
+        return getDsRuntime().getImportFromRelation(this.id(), importFromField.getName());
     }
 
-    protected DataSource getDatasourceByTableName(String tableName) {
-        assert dsRegistry != null;
-
-        for (IHandler h: dsRegistry.handlers()) {
-            if (h instanceof DSHandler dsHandler) {
-                if (dsHandler.dataSource().getTableName().equalsIgnoreCase(tableName)) {
-                    return dsHandler.dataSource();
-                }
-            }
-        }
-        return null;
+    protected ForeignKeyRelation getForeignKeyRelation(DSField importFromField){
+        return getDsRuntime().getForeignKeyRelation(this.id(), importFromField.getName());
     }
 
+    @Deprecated(since ="Use getImportFromRelation() instead", forRemoval = true)
     protected ImportFromRelation describeImportFrom(DSField importFromField) {
         return RelationSupport.describeImportFrom(this::getDataSourceHandlerById, this.getDataSource(), importFromField);
     }
 
+    @Deprecated(since ="Use getForeignKeyRelation() instead", forRemoval = true)
     protected ForeignKeyRelation describeForeignKey(DSField foreignKeyField) {
         return RelationSupport.describeForeignKey(this::getDataSourceHandlerById, this.getDataSource(), foreignKeyField);
     }
@@ -158,17 +155,21 @@ public abstract class AbstractDSHandler extends RelationSupport implements DSHan
     protected ForeignRelation determineEffectiveField(DSField dsf) {
         final DataSource effectiveDS;
         final DSField effectiveField;
+        final String effectiveRelatedTableAlias;
 
         if (dsf.isIncludeField()) {
-            final ImportFromRelation relation = describeImportFrom(dsf);
+            final ImportFromRelation relation = getImportFromRelation(dsf);
             effectiveDS = relation.getLast().foreign().dataSource();
             effectiveField = relation.foreignDisplay();
+            effectiveRelatedTableAlias = relation.getLast().foreign().getRelatedTableAlias();
         } else {
             effectiveDS = getDataSource();
             effectiveField = dsf;
+            // TODO: not sure what effectiveRelatedTableAlias should be there, figure this out later, as have more usecses
+            effectiveRelatedTableAlias = null;
         }
 
-        return new ForeignRelation(effectiveDS.getId(), effectiveDS, effectiveField.getName(), effectiveField);
+        return new ForeignRelation(effectiveDS.getId(), effectiveDS, effectiveField.getName(), effectiveField, null, effectiveRelatedTableAlias);
     }
 
     protected OperationBinding getEffectiveOperationBinding(DSRequest.OperationType operationType, String operationId) {

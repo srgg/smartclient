@@ -8,6 +8,7 @@ import org.srg.smartclient.annotations.SmartClientField;
 import org.srg.smartclient.annotations.SmartClientHandler;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
+import org.srg.smartclient.runtime.IDSRuntime;
 import org.srg.smartclient.utils.AnnotationUtils;
 
 import java.lang.annotation.Annotation;
@@ -21,16 +22,16 @@ public class JDBCHandlerFactory {
     private static Logger logger = LoggerFactory.getLogger(JDBCHandlerFactory.class);
 
 
-    public JDBCHandler createJDBCHandler(JDBCHandler.JDBCPolicy jdbcPolicy, IDSRegistry dsRegistry, DataSource ds) {
+    public JDBCHandler createJDBCHandler(JDBCHandler.JDBCPolicy jdbcPolicy, IDSRuntime scRuntime, DataSource ds) {
         if (ds.getServerConstructor() != null) {
             try {
                 final Class< ? super JDBCHandler> c = (Class<? super JDBCHandler>) Class.forName(ds.getServerConstructor());
-                return (JDBCHandler) ConstructorUtils.invokeConstructor(c, jdbcPolicy, dsRegistry, ds);
+                return (JDBCHandler) ConstructorUtils.invokeConstructor(c, jdbcPolicy, scRuntime, ds);
             } catch (ReflectiveOperationException e) {
                 throw new RuntimeException(e);
             }
         } else {
-            return new AdvancedJDBCHandler(jdbcPolicy, dsRegistry, ds);
+            return new AdvancedJDBCHandler(jdbcPolicy, scRuntime, ds);
         }
     }
 

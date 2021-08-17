@@ -153,11 +153,6 @@ public class AutomaticDSHandlerRegistrar implements Ordered, SmartLifecycle, App
         callback.run();
     }
 
-    private void registerJpaEntity(Class<?> entityClass) throws Exception {
-        final JpaDSDispatcher jpaDSDispatcher = getJpaDSDispatcher();
-        jpaDSDispatcher.registerJPAEntity(entityClass );
-    }
-
     protected void register(ListableBeanFactory beanFactory)  throws Exception {
         final Set<ComponentScan> scans = new HashSet<>();
         beanFactory.getBeansWithAnnotation(ComponentScan.class).forEach((name, instance) -> {
@@ -229,45 +224,32 @@ public class AutomaticDSHandlerRegistrar implements Ordered, SmartLifecycle, App
 
         logger.debug(msg);
 
-        // -- register
-        final HashSet<Class>  registrationFailed = new HashSet<>();
+        if (!entitiesFound.isEmpty()) {
+            this.getJpaDSDispatcher().registerJPAEntities(entitiesFound.toArray(new Class[0]));
 
-        for (Class c :entitiesFound) {
-            try {
-                registerJpaEntity(c);
-            } catch (Throwable t) {
-                registerFailedClass(
-                        this.classesFailed,
-                        c.getCanonicalName(),
-                        "Class '%s' failed to be registered and will be skipped"
-                                .formatted(c.getCanonicalName()),
-                        t
-                );
+            final int ignoredQnt = classesSkipped.size() + classesFailed.size();
+            final String msg2 = "\nSmartClient JPA Handler Registration has been completed, %d JPA entities were registered and  %d were ignored:\n"
+                    .formatted(entitiesFound.size() - classesFailed.size(), ignoredQnt) +
 
-                registrationFailed.add(c);
+                    entitiesFound.stream()
+                            .map(Class::getCanonicalName)
+                            .collect(Collectors.joining("\n   ")) +
+
+                    classesSkipped.stream()
+                            .map(s -> "\n   [Skipped] %s, reason: %s".formatted(s.one, s.two))
+                            .collect(Collectors.joining()) +
+
+                    classesFailed.stream()
+                            .map(s -> "\n   [Failed] %s, reason: %s".formatted(s.one, s.two))
+                            .collect(Collectors.joining());
+
+            if (ignoredQnt <= 0) {
+                logger.info(msg2);
+            } else {
+                logger.warn(msg2);
             }
-        }
-
-        final int ignoredQnt =  classesSkipped.size() + classesFailed.size();
-        final String msg2 = "\nSmartClient JPA Handler Registration was completed, %d persistable entities were registered and  %d were ignored:\n"
-                .formatted(entitiesFound.size() - classesFailed.size(), ignoredQnt) +
-
-                entitiesFound.stream()
-                        .map(Class::getCanonicalName)
-                        .collect(Collectors.joining("\n   ")) +
-
-                classesSkipped.stream()
-                        .map( s -> "\n   [Skipped] %s, reason: %s".formatted(s.one, s.two))
-                        .collect(Collectors.joining()) +
-
-                classesFailed.stream()
-                        .map( s -> "\n   [Failed] %s, reason: %s".formatted(s.one, s.two))
-                        .collect(Collectors.joining());
-
-        if ( ignoredQnt <= 0) {
-            logger.info(msg2);
         } else {
-            logger.warn(msg2);
+            logger.info("\nSmartClient JPA Handler Registration has been completed, no JPA entities were found");
         }
     }
 

@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.srg.smartclient.annotations.SmartClientField;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
-import org.srg.smartclient.isomorphic.OperationBinding;
+import org.srg.smartclient.runtime.IDSRuntime;
 import org.srg.smartclient.utils.Utils;
 
 import javax.persistence.*;
@@ -20,7 +20,7 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
     private static final Logger logger = LoggerFactory.getLogger(JPAAwareHandlerFactory.class);
 
     public JDBCHandler createHandler(EntityManagerFactory emf, JDBCHandler.JDBCPolicy jdbcPolicy,
-                                     IDSRegistry dsRegistry, Class<?> entityClass) {
+                                     IDSRuntime scRuntime, Class<?> entityClass) {
 
         logger.trace("Building DataSource definition for JPA entity '%s'..."
                 .formatted(
@@ -31,36 +31,13 @@ public class JPAAwareHandlerFactory extends JDBCHandlerFactory {
         final Metamodel mm = emf.getMetamodel();
         final DataSource ds = this.describeEntity(mm, entityClass);
 
-        if (logger.isDebugEnabled()) {
-
-            String dsDefinition;
-            try {
-                dsDefinition = DSDeclarationBuilder.build(dsRegistry, "<URL-PLACE-HOLDER>", ds, true);
-            } catch (Exception e) {
-                dsDefinition = "Can't serialize Data Source definition, unexpected error occurred: %s"
-                        .formatted(
-                                e.getMessage()
-                        );
-
-                logger.warn(dsDefinition, e);
-            }
-
-            logger.debug("DataSource definition for entity '%s' has been built:\n%s"
-                    .formatted(
-                            entityClass.getCanonicalName(),
-                            dsDefinition
-                    )
-            );
-        }
-
         logger.trace("Creating JDBCHandler Handler for JPA entity '%s'..."
                 .formatted(
                         entityClass.getCanonicalName()
                 )
         );
 
-        JDBCHandler handler = createJDBCHandler(jdbcPolicy, dsRegistry, ds);
-        return handler;
+        return createJDBCHandler(jdbcPolicy, scRuntime, ds);
     }
 
     protected <T> DataSource describeEntity(Metamodel mm, Class<T> entityClass) {

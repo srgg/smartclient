@@ -86,6 +86,7 @@ CREATE TABLE project
     id              INT NOT NULL,
     client_id       INT,
     manager_id      INT NULL,
+    supervisor_id   INT NULL,
     name            VARCHAR(255) NOT NULL,
 
     CONSTRAINT pkProjects
@@ -95,7 +96,10 @@ CREATE TABLE project
         FOREIGN KEY (client_id) REFERENCES client (id),
 
     CONSTRAINT fkProject_ManagerId
-        FOREIGN KEY (manager_id) REFERENCES employee (id)
+        FOREIGN KEY (manager_id) REFERENCES employee (id),
+
+    CONSTRAINT fkProject_SupervisorId
+        FOREIGN KEY (supervisor_id) REFERENCES employee (id)
 );
 
 CREATE TABLE project_team
@@ -179,11 +183,11 @@ INSERT INTO client VALUES (2, 'client 2');
 INSERT INTO client_data VALUES (1, 'Data1: client 1', 1);
 INSERT INTO client_data VALUES (2, 'Data2: client 2', 2);
 
-INSERT INTO project VALUES (1, 1, 4, 'Project 1 for client 1');
-INSERT INTO project VALUES (2, 1, 4, 'Project 2 for client 1');
-INSERT INTO project VALUES (3, 2, 5, 'Project 1 for client 2');
-INSERT INTO project VALUES (4, 2, 5, 'Project 2 for client 2');
-INSERT INTO project VALUES (5, 2, 5, 'Project 3 for client 2');
+INSERT INTO project VALUES (1, 1, 4, 5, 'Project 1 for client 1');
+INSERT INTO project VALUES (2, 1, 4, 5, 'Project 2 for client 1');
+INSERT INTO project VALUES (3, 2, 5, 4, 'Project 1 for client 2');
+INSERT INTO project VALUES (4, 2, 5, 4, 'Project 2 for client 2');
+INSERT INTO project VALUES (5, 2, 5, null, 'Project 3 for client 2');
 
 INSERT INTO project_team VALUES (1, 1);
 INSERT INTO project_team VALUES (1, 2);

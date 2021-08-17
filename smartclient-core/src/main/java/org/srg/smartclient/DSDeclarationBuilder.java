@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
+import org.srg.smartclient.runtime.IDSRuntime;
 
 import java.util.Collection;
 import java.util.Map;
@@ -23,11 +24,11 @@ abstract class DSDeclarationBuilder {
         private String dsName;
         private int qntGeneratedFields;
         private StringBuilder builder;
-        private final IDSRegistry dsRegistry;
+        private final IDSRuntime dsRuntime;
         private final DataSource dataSource;
 
-        public BuilderContext(IDSRegistry dsRegistry, DataSource dataSource) {
-            this.dsRegistry = dsRegistry;
+        public BuilderContext(IDSRuntime dsRuntime, DataSource dataSource) {
+            this.dsRuntime = dsRuntime;
             this.dataSource = dataSource;
 
             clear();
@@ -64,17 +65,18 @@ abstract class DSDeclarationBuilder {
 //        }
 
         public ForeignKeyRelation describeForeignKey(DSField foreignKeyField) {
-            return RelationSupport.describeForeignKey(this.dsRegistry, this.dataSource, foreignKeyField);
+//            return RelationSupport.describeForeignKey(this.scRuntime, this.dataSource, foreignKeyField);
+            return this.dsRuntime.getForeignKeyRelation(this.dataSource.getId(), foreignKeyField.getName());
         }
     }
 
-    public static String build(IDSRegistry dsRegistry, String dispatcherUrl, DSHandler dsHandler) throws ClassNotFoundException {
-        return build(dsRegistry, dispatcherUrl, dsHandler.dataSource(), dsHandler.allowAdvancedCriteria());
+    public static String build(IDSRuntime scRuntime, String dispatcherUrl, DSHandler dsHandler) throws ClassNotFoundException {
+        return build(scRuntime, dispatcherUrl, dsHandler.dataSource(), dsHandler.allowAdvancedCriteria());
     }
 
-    public static String build(IDSRegistry dsRegistry, String dispatcherUrl, DataSource dataSource, boolean allowAdvancedCriteria) throws ClassNotFoundException {
+    public static String build(IDSRuntime scRuntime, String dispatcherUrl, DataSource dataSource, boolean allowAdvancedCriteria) throws ClassNotFoundException {
 
-        final BuilderContext ctx = new BuilderContext(dsRegistry, dataSource);
+        final BuilderContext ctx = new BuilderContext(scRuntime, dataSource);
 
         ctx.dsName = dataSource.getId();
         final Collection<DSField> allFields = dataSource.getFields();
