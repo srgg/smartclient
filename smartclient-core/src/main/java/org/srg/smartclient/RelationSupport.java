@@ -117,19 +117,21 @@ public class RelationSupport {
         private final DataSource dataSource;
         private final String fieldName;
         private final DSField field;
+        private final String relatedTableAlias;
 
         private String sqlFieldAlias;
 
         protected ForeignRelation(String dataSourceId, DataSource dataSource, String fieldName, DSField field) {
-            this(dataSourceId, dataSource, fieldName, field, null);
+            this(dataSourceId, dataSource, fieldName, field, null, null);
         }
 
-        protected ForeignRelation(String dataSourceId, DataSource dataSource, String fieldName, DSField field, String sqlFieldAlias) {
+        protected ForeignRelation(String dataSourceId, DataSource dataSource, String fieldName, DSField field, String sqlFieldAlias, String relatedTableAlias) {
             this.dataSourceId = dataSourceId;
             this.dataSource = dataSource;
             this.fieldName = fieldName;
             this.field = field;
             this.sqlFieldAlias = sqlFieldAlias;
+            this.relatedTableAlias = relatedTableAlias;
         }
 
         public String dataSourceId() {
@@ -152,20 +154,25 @@ public class RelationSupport {
             return sqlFieldAlias;
         }
 
+        public String getRelatedTableAlias() {
+            return relatedTableAlias;
+        }
+
         public ForeignRelation createWithSqlFieldAlias(String sqlFieldAlias) {
             final ForeignRelation effective = new ForeignRelation(
                     this.dataSourceId(),
                     this.dataSource(),
                     this.fieldName(),
                     this.field(),
-                    sqlFieldAlias
+                    sqlFieldAlias,
+                    null
             );
 
             return effective;
         }
 
         public String formatAsSQL() {
-            return formatAsSQL(dataSource().getTableName());
+            return formatAsSQL(this.getRelatedTableAlias() == null || this.getRelatedTableAlias().isBlank() ? dataSource().getTableName() : this.getRelatedTableAlias());
         }
 
         public String formatAsSQL(String aliasOrTable) {
@@ -322,6 +329,11 @@ public class RelationSupport {
     }
 
     public static ImportFromRelation describeImportFrom(IDSLookup idsRegistry, DataSource dataSource, DSField importFromField) {
+        if (importFromField == null) {
+            throw new IllegalArgumentException("Can't determine ImportFromRelation for '%s' datasource: importFrom field is NULL"
+                    .formatted(dataSource.getId()));
+        }
+
         if (!importFromField.isIncludeField()) {
             throw new IllegalStateException();
         }
@@ -404,11 +416,14 @@ public class RelationSupport {
                 );
             }
 
+            final String  relatedTableAlias = fkField.getRelatedTableAlias() == null || fkField.getRelatedTableAlias().isBlank() ?
+                    fkField.getName() + "_" + foreignRelation.dataSource.getTableName() : fkField.getRelatedTableAlias();
+
             final ForeignKeyRelation frl = new ForeignKeyRelation(
                     ds,
                     fkField,
                     false,
-                    new ForeignRelation(foreignRelation.dataSource.getId(), foreignRelation.dataSource, foreignKey.getName(), foreignKey)
+                    new ForeignRelation(foreignRelation.dataSource.getId(), foreignRelation.dataSource, foreignKey.getName(), foreignKey, null, relatedTableAlias)
             );
 
             foreignKeyRelations.add(frl);

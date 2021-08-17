@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 import org.srg.smartclient.isomorphic.DSField;
 import org.srg.smartclient.isomorphic.DataSource;
+import org.srg.smartclient.runtime.IDSRuntime;
 import org.srg.smartclient.utils.Serde;
 
 import java.lang.reflect.Constructor;
@@ -201,7 +202,7 @@ public abstract class AbstractHandlerTest<H extends DSHandler> {
 
     }
 
-    protected IDSRegistry dsRegistry;
+    protected IDSRuntime dsRuntime;
     protected H handler;
 
     @BeforeAll
@@ -211,14 +212,14 @@ public abstract class AbstractHandlerTest<H extends DSHandler> {
 
     @BeforeEach
     public void setupMockitoHooks() throws Exception {
-        dsRegistry = Mockito.mock(IDSRegistry.class);
+        dsRuntime = Mockito.mock(IDSRuntime.class);
         handler = withHandlers(Handler.Employee);
     }
 
     @AfterEach
     public void unsetMockitoHooks() {
-        Mockito.reset(dsRegistry);
-        dsRegistry = null;
+        Mockito.reset(dsRuntime);
+        dsRuntime = null;
 
         Mockito.reset(handler);
         handler = null;
@@ -243,28 +244,48 @@ public abstract class AbstractHandlerTest<H extends DSHandler> {
                     .when(handler)
                     .dataSource();
         } else {
-            final Constructor<H> constructor = hc.getConstructor(JDBCHandler.JDBCPolicy.class, IDSRegistry.class, DataSource.class);
-            final H instance = constructor.newInstance(getJDJdbcPolicy(), dsRegistry, ds);
+            final Constructor<H> constructor = hc.getConstructor(JDBCHandler.JDBCPolicy.class, IDSRuntime.class, DataSource.class);
+            final H instance = constructor.newInstance(getJDJdbcPolicy(), dsRuntime, ds);
             handler = Mockito.spy(instance);
         }
 
         Mockito.doReturn(ds)
-                .when(dsRegistry)
+                .when(dsRuntime)
                 .getDataSourceById(
                         Mockito.matches(ds.getId())
                 );
 
         Mockito.doReturn(handler)
-                .when(dsRegistry)
+                .when(dsRuntime)
                 .getDataSourceHandlerById(
                         Mockito.matches(ds.getId())
                 );
 
         Mockito.doReturn(handler)
-                .when(dsRegistry)
-                .getHandlerByName(
+                .when(dsRuntime)
+                .getHandlerById(
                         Mockito.matches(ds.getId())
                 );
+
+        Mockito.when(dsRuntime.getImportFromRelation(Mockito.matches(ds.getId()),Mockito.anyString()))
+                .thenAnswer( (inv) -> {
+                    String dsId = inv.getArgument(0);
+                    assert dsId.equals(ds.getId());
+
+                    String fieldName = inv.getArgument(1);
+                    DSField dsf = ds.getField(fieldName);
+                    return RelationSupport.describeImportFrom(dsRuntime, ds, dsf);
+                });
+
+        Mockito.when(dsRuntime.getForeignKeyRelation(Mockito.matches(ds.getId()),Mockito.anyString()))
+                .thenAnswer( (inv) -> {
+                    String dsId = inv.getArgument(0);
+                    assert dsId.equals(ds.getId());
+
+                    String fieldName = inv.getArgument(1);
+                    DSField dsf = ds.getField(fieldName);
+                    return RelationSupport.describeForeignKey(dsRuntime, ds, dsf);
+                });
 
         return handler;
     }

@@ -475,7 +475,7 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                      {
                         id:1,
                         name:'admin',
-                        calculated:'1_admin', 
+                        calculated:'1_admin',
                         roles:[
                            {
                               role:'Admin',
@@ -492,7 +492,7 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                      {
                         id:2,
                         name:'developer',
-                        calculated:'2_developer', 
+                        calculated:'2_developer',
                         roles:[
                            {
                               role:'Developer',
@@ -504,13 +504,13 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                      {
                         id:3,
                         name:'UseR3',
-                        calculated:'3_UseR3', 
+                        calculated:'3_UseR3',
                         roles:[]
                      },
                      {
                         id:4,
                         name:'manager1',
-                        calculated:'4_manager1', 
+                        calculated:'4_manager1',
                         roles:[
                             {
                                 role:'PM',
@@ -522,7 +522,7 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                      {
                         id:5,
                         name:'manager2',
-                        calculated:'5_manager2', 
+                        calculated:'5_manager2',
                         roles:[
                             {
                                 role:'PM',
@@ -534,7 +534,7 @@ public class JDBCHandlerFetchTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                      {
                         id:6,
                         name:'user2',
-                        calculated:'6_user2', 
+                        calculated:'6_user2',
                         roles:[
                         ]
                      }                     

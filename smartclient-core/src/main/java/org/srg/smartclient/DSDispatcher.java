@@ -19,6 +19,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srg.smartclient.dmi.JDKDMIHandlerFactory;
 import org.srg.smartclient.isomorphic.*;
+import org.srg.smartclient.runtime.DSRuntime;
+import org.srg.smartclient.runtime.IDSRuntime;
 import org.srg.smartclient.utils.ContextualRuntimeException;
 import org.srg.smartclient.utils.Serde;
 import org.srg.smartclient.utils.Utils;
@@ -31,10 +33,11 @@ import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
-public class DSDispatcher implements IDSDispatcher {
+public class DSDispatcher implements IDSDispatcher, IDSRuntime {
     private static Logger logger = LoggerFactory.getLogger(DSDispatcher.class);
-    private Map<String, IHandler> datasourceMap = new LinkedHashMap<>();
+    private DSRuntime dsRuntime = DSRuntime.create(Collections.emptyList());
     private JDBCHandlerFactory  jdbcHandlerFactory = new JDBCHandlerFactory();
     private JDBCHandler.JDBCPolicy jdbcPolicy;
     private JDKDMIHandlerFactory dmiHandlerFactory;
@@ -53,38 +56,30 @@ public class DSDispatcher implements IDSDispatcher {
         return jdbcPolicy;
     }
 
+    @Override
+    public Iterator<IHandler> iterator() {
+        return dsRuntime.iterator();
+    }
 
     @Override
-    public IHandler getHandlerByName(String dsId) {
-        final IHandler ds = datasourceMap.get(dsId);
-        return ds;
+    public RelationSupport.ForeignKeyRelation getForeignKeyRelation(String dsId, String fieldName) {
+        return dsRuntime.getForeignKeyRelation(dsId, fieldName);
+    }
+
+    @Override
+    public RelationSupport.ImportFromRelation getImportFromRelation(String dsId, String fieldName) {
+        return dsRuntime.getImportFromRelation(dsId, fieldName);
+    }
+
+    @Override
+    public IHandler getHandlerById(String dsId) {
+        return dsRuntime.getHandlerById(dsId);
 
 //        if (ds != null) {
 //            return ds;
 //        }
 //
 //        return Utils.throw_it("Unknown datasource '%s'", dsId);
-    }
-
-//    @Override
-//    public DataSource getDataSourceById(String dsId) {
-//        final IHandler handler = datasourceMap.get(dsId);
-//        if (handler == null){
-//            return null;
-//        }
-//
-//        if (handler instanceof DSHandler dsHandler) {
-//            return dsHandler.dataSource();
-//        }
-//
-//        throw new RuntimeException("Handler '%s' is not an instance of 'DSHandler'."
-//                .formatted(dsId)
-//        );
-//    }
-
-    @Override
-    public Collection<IHandler> handlers() {
-        return datasourceMap.values();
     }
 
     private ObjectWriter createObjectWriter() {
@@ -131,7 +126,7 @@ public class DSDispatcher implements IDSDispatcher {
 
     protected DSResponse handleRequest(DSRequest request) {
         try {
-            final IHandler ds = getHandlerByName(request.getDataSource());
+            final IHandler ds = getHandlerById(request.getDataSource());
             final DSResponse response = ds.handle(request);
 
             response.setOperationId( request.getOperationId());
@@ -237,12 +232,19 @@ public class DSDispatcher implements IDSDispatcher {
         out.append("const DISPATCHER_URL = \"%s\";\n"
                 .formatted(dispatcherUrl));
 
+        /*
+         * If dsIds is not provided, -- generate all registered handlers
+         */
         if (dsId.length == 0) {
-            dsId = datasourceMap.keySet().toArray(new String[0]);
+            final List<String> ids = StreamSupport.stream(dsRuntime.spliterator(), false)
+                    .map(IHandler::id)
+                    .collect(Collectors.toList());
+
+            dsId = ids.toArray(ids.toArray(new String[0]));
         }
 
         for (String name : dsId) {
-            final IHandler handler = getHandlerByName(name);
+            final IHandler handler = getHandlerById(name);
 
             if (handler instanceof DSHandler ds) {
                 out.append(DSDeclarationBuilder.build(this, dispatcherUrl, ds));
@@ -326,7 +328,7 @@ public class DSDispatcher implements IDSDispatcher {
             logger.info("Resource URL: %s".formatted( url1));
 
             if (url.getProtocol().equals("jar")) {
-                logger.debug("Scanning a jar file via URL: %s".formatted( url1));
+                logger.debug("Scanning a jar file via URL: %s...".formatted( url1));
 
 
                 /* A JAR path */
@@ -369,23 +371,27 @@ public class DSDispatcher implements IDSDispatcher {
                     }
                 }
 
-                logger.debug("""
-                    Jar scan was completed, the following matches were found in the '%s':               
-                        """
-                        .formatted(
-                                url1,
-                                result.stream()
-                                .collect(Collectors.joining(",\n"))
-                        )
-                );
-                files.addAll(result);
+                if (result.isEmpty()) {
+                    logger.debug("Jar scan was completed, nothing ound (jar: '%s')".formatted(url1));
+                } else {
+                    logger.debug(
+                            "Jar scan was completed, %d matches were found(jar: '%s'):\n%s"
+                            .formatted(
+                                    result.size(),
+                                    url1,
+                                    result.stream()
+                                            .collect(Collectors.joining(",\n    ", "    ", ""))
+                            )
+                    );
+                    files.addAll(result);
+                }
             } else {
                 File f = new File(url.getFile());
 
                 List<String> result;
                 if (f.isDirectory()) {
 
-                    logger.info("loading Data Sources from resources, scanning resource directory '%s'."
+                    logger.debug("Scanning resource directory '%s'..."
                             .formatted(f));
 
 
@@ -396,44 +402,56 @@ public class DSDispatcher implements IDSDispatcher {
                     result = List.of(f.getName());
                 }
 
-                logger.debug("""
-                    Directory scan was completed, the following matches were found in the '%s':               
-                        """
-                        .formatted(
-                                url1,
-                                result.stream()
-                                        .collect(Collectors.joining(",\n"))
-                        )
-                );
+                if (result.isEmpty()) {
+                    logger.debug("Directory scan was completed, nothing found (jar: '%s')".formatted(url1));
+                } else {
+                    logger.debug("Directory scan was completed, %d matches were found(dir: '%s'):\n%s"
+                            .formatted(
+                                    result.size(),
+                                    url1,
+                                    result.stream()
+                                            .collect(Collectors.joining(",\n    ","    ",""))
+                            )
+                    );
+                }
 
                 files.addAll(result);
             }
         }
 
-        logger.info("""
-                    BUILTIN RESOURCES SCAN COMPLETED, the following matches were found in the '%s':
-                       %s            
-                    """.formatted(
+        logger.info("BUILTIN RESOURCES SCAN COMPLETED, %d matches were found(path '%s'):\n%s"
+                .formatted(
+                        files.size(),
                         url,
                         files.stream()
-                                .collect(Collectors.joining(",\n   "))
+                                .collect(Collectors.joining(",\n   ", "   ", ""))
                 )
         );
 
+        final List<IHandler>    handlers = new LinkedList<>();
         for (String s: files ) {
             try {
                 final IHandler ds = loadDsFromResource(new File(s));
-                registerHandler(ds);
+                handlers.add(ds);
             } catch (Exception ex) {
                 logger.warn("Can't load Smart Client DSHandler from file '%s'".formatted(s), ex);
             }
         }
+
+        registerHandlers(handlers.toArray(new IHandler[0]));
     }
 
     @Override
-    public void registerHandler(IHandler handler) {
-        datasourceMap.put(handler.id(), handler);
-        logger.info("A new DSHandler has been registered as '%s' ".formatted(handler.id()));
+    public void registerHandlers(IHandler... handlers) {
+        dsRuntime = dsRuntime.registerHandlers(handlers);
+
+        logger.info("Following Handlers have been registered:\n%s"
+            .formatted(
+                    Arrays.stream(handlers)
+                        .map( IHandler::id)
+                        .collect(Collectors.joining(",\n    ", "    ", ""))
+                    )
+        );
     }
 
     @JsonFilter("PropertyFilter")

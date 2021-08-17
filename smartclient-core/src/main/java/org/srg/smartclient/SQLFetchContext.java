@@ -16,6 +16,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.srg.smartclient.RelationSupport.*;
+
 public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.AbstractSQLContext<JDBCHandler> {
     private static final Logger logger = LoggerFactory.getLogger(SQLFetchContext.class);
     private String genericQuery;
@@ -24,7 +26,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
     private String paginationClause;
 
     private final List<DSField> requestedFields = new LinkedList<>();
-    private final Map<DSField, List<RelationSupport.ForeignRelation>> additionalOutputs = new HashMap<>();
+    private final Map<DSField, List<ForeignRelation>> additionalOutputs = new HashMap<>();
     private List<JDBCHandler.IFilterData> filterData = new LinkedList<>();
 
     private Map<String, Object> templateContext;
@@ -40,7 +42,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
         return requestedFields;
     }
 
-    public Map<DSField, List<RelationSupport.ForeignRelation>> getAdditionalOutputs() {
+    public Map<DSField, List<ForeignRelation>> getAdditionalOutputs() {
         return additionalOutputs;
     }
 
@@ -66,7 +68,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
 
 
     private String formatFieldNameFor(boolean formatForSelect, DSField dsf) {
-        final RelationSupport.ForeignRelation effectiveRelation;
+        final ForeignRelation effectiveRelation;
         final String effectiveColumn;
 
         if (AbstractDSHandler.isSubEntityFetchRequired(dsf)) {
@@ -77,7 +79,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
 
             // Populate extra information for the sake of troubleshooting
             final String extraInfo;
-            final RelationSupport.ForeignKeyRelation foreignKeyRelation = dsHandler().describeForeignKey(dsf);
+            final ForeignKeyRelation foreignKeyRelation = dsHandler().getForeignKeyRelation(dsf);
             if (logger.isDebugEnabled()) {
                 extraInfo = "Sub-entity placeholder for '%s' (will be fetched as a subsequent request)"
                         .formatted(
@@ -92,7 +94,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
              * Correspondent entity will be fetched by the subsequent query,
              * therefore it is required to reserve space in the response
              */
-            effectiveRelation = new RelationSupport.ForeignRelation(foreignKeyRelation.dataSource().getId(), foreignKeyRelation.dataSource(),
+            effectiveRelation = new ForeignRelation(foreignKeyRelation.dataSource().getId(), foreignKeyRelation.dataSource(),
                     dsf.getName(), dsf);
 
             effectiveColumn = "NULL  /*  %s  */"
@@ -107,7 +109,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                 effectiveColumn = effectiveRelation.field().getCustomSelectExpression();
             } else {
                 if (dsHandler().isIncludeSummaryRequired(dsf)) {
-                    final RelationSupport.ImportFromRelation ifr = dsHandler().describeImportFrom(dsf);
+                    final ImportFromRelation ifr = dsHandler().getImportFromRelation(dsf);
 
                     final String extraInfo;
                     if (logger.isDebugEnabled()) {
@@ -135,10 +137,39 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
             }
         }
 
-        final String formattedFieldName = JDBCHandler.formatColumnNameToAvoidAnyPotentialDuplication(
-                effectiveRelation.dataSource(),
-                effectiveRelation.field()
-        );
+        final String formattedFieldName;
+        if (dsf.isIncludeField()) {
+            /*
+             * In case of multiple include from with the same displayField
+             * it is required to differentiate generated column aliases,
+             * otherwise such usage will introduce column name duplication:
+             *
+             *  [{
+             *      name:"managerFullName"
+             *      ,includeFrom:"EmployeeDS.name"
+             *      ,includeVia:"manager"
+             *   },
+             *   {
+             *      name:"supervisorFullName"
+             *      ,includeFrom:"EmployeeDS.name"
+             *      ,includeVia:"supervisor"
+             *    }]
+             *
+             *  'Duplicate column name "name_employee"':
+             *  SELECT
+             *     manager_employee.name AS name_employee,
+             *     supervisor_employee.name AS name_employee
+             *  FROM project
+             *     LEFT JOIN employee manager_employee ON project.manager_id = manager_employee.id
+             *     LEFT JOIN employee supervisor_employee ON project.supervisor_id = supervisor_employee.id
+             */
+            formattedFieldName = dsf.getName();
+        } else {
+            formattedFieldName = JDBCHandler.formatColumnNameToAvoidAnyPotentialDuplication(
+                    effectiveRelation.dataSource(),
+                    effectiveRelation.field()
+            );
+        }
 
         if (!formatForSelect) {
             return formattedFieldName;
@@ -232,7 +263,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
 
         if (request().getAdditionalOutputs() != null
                 && !request().getAdditionalOutputs().isBlank()) {
-            final Map<DSField, List<RelationSupport.ForeignRelation>> additionalOutputs = Stream.of(request().getAdditionalOutputs().split(","))
+            final Map<DSField, List<ForeignRelation>> additionalOutputs = Stream.of(request().getAdditionalOutputs().split(","))
                     .map(String::trim)
                     .filter(s -> !s.isEmpty() && !s.isBlank())
                     .map(descr -> {
@@ -262,10 +293,10 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                             );
                         }
 
-                        final RelationSupport.ForeignKeyRelation fkRelation;
+                        final ForeignKeyRelation fkRelation;
 
                         try {
-                            fkRelation = dsHandler().describeForeignKey(sourceField);
+                            fkRelation = dsHandler().getForeignKeyRelation(sourceField);
                         } catch (Throwable t) {
                             throw new ContextualRuntimeException("Data source '%s': Invalid additionalOutputs value '%s', "
                                     .formatted(
@@ -277,7 +308,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                             );
                         }
 
-                        final RelationSupport.ForeignRelation fRelation;
+                        final ForeignRelation fRelation;
 
                         try {
                             fRelation = dsHandler().describeForeignRelation(dataSource(), sourceField, parsed[1].trim());
@@ -383,7 +414,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
         final String fromClause = dataSource().getTableName();
 
         // -- JOIN ON
-        final List<RelationSupport.ForeignKeyRelation> foreignKeyRelations = dsHandler().getFields()
+        final List<List<ForeignKeyRelation>> foreignKeyRelations = dsHandler().getFields()
                 .stream()
                 .filter(dsf -> dsf.isIncludeField()
                         /*
@@ -400,31 +431,8 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                         && !dsf.isMultiple()
                 )
                 .map(dsf -> {
-                    final RelationSupport.ImportFromRelation relation = dsHandler().describeImportFrom(dsf);
+                    final ImportFromRelation relation = dsHandler().getImportFromRelation(dsf);
                     return relation.foreignKeyRelations();
-                })
-                .flatMap( Collection::stream /*fkrls -> fkrls.stream()*/ )
-
-                /* It is required to generate one join per unique ForeignKeyRelation value */
-                .filter(new Predicate<>() {
-                    final List<RelationSupport.ForeignKeyRelation> unique = new LinkedList<>();
-
-                    @Override
-                    public boolean test(RelationSupport.ForeignKeyRelation fkrl) {
-
-                        for (RelationSupport.ForeignKeyRelation f :unique) {
-                            if (
-                                    f.dataSource().equals(fkrl.dataSource())
-                                    && f.sourceField().equals(fkrl.sourceField())
-                                    && f.foreign().dataSource().equals(fkrl.foreign().dataSource())
-                                    && f.foreign().field().equals(fkrl.foreign().field())
-                            ) {
-                                return false;
-                            }
-                        }
-                        unique.add(fkrl);
-                        return true;
-                    }
                 })
                 .collect(Collectors.toList());
 
@@ -479,10 +487,10 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
                         <#if effectiveAnsiJoinClause?has_content>
                             ${effectiveAnsiJoinClause}
                         </#if>
-                    ) opaque                                                                                                              
+                    ) opaque
                     <#if effectiveWhereClause?has_content>
                         WHERE ${effectiveWhereClause}
-                    </#if>                                                                                                              
+                    </#if>
                     """;
 
             final String effectiveQuery = operationBinding() == null
@@ -505,7 +513,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
         }
     }
 
-    public static String fetchSummarized(RelationSupport.ImportFromRelation ifr) {
+    public static String fetchSummarized(ImportFromRelation ifr) {
         final DSField sourceField = ifr.sourceField();
         if (!sourceField.isIncludeField()
                 || !sourceField.isMultiple()) {
@@ -561,7 +569,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
 
         final ISQLForeignKeyRelation fkr;
         {
-            final RelationSupport.ForeignKeyRelation fkrO = ifr.toForeignKeyRelation();
+            final ForeignKeyRelation fkrO = ifr.toForeignKeyRelation();
             fkr = ISQLForeignKeyRelation.wrap(
                     ifr.toForeignKeyRelation()
                 )
@@ -584,7 +592,7 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
 
         // -- generate join if it is ManyToMany and join table is provided
         if (fkr.sourceField().getJoinTable() != null) {
-            final String joinClause = JDBCHandler.AbstractSQLContext.generateSQLJoin(List.of(fkr));
+            final String joinClause = JDBCHandler.AbstractSQLContext.generateSQLJoin(List.of(List.of(fkr)));
 
             sbld.append('\n')
                     .append(joinClause);

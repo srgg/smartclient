@@ -66,7 +66,7 @@ public class SpringDMITest {
     @Test
     public void test() throws Exception {
 
-        final  IHandler handler = dispatcher.getHandlerByName("dmi1");
+        final  IHandler handler = dispatcher.getHandlerById("dmi1");
         Assert.notNull(handler, "DMI handler is not registered");
 
         final DSRequest request = new DSRequest();

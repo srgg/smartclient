@@ -3,10 +3,10 @@ package org.srg.smartclient;
 import org.srg.smartclient.isomorphic.DataSource;
 
 public interface IDSLookup {
-    IHandler getHandlerByName(String id);
+    IHandler getHandlerById(String id);
 
     default DSHandler getDataSourceHandlerById(String id) {
-        final IHandler handler = this.getHandlerByName(id);
+        final IHandler handler = this.getHandlerById(id);
         if (handler instanceof DSHandler dsHandler) {
             return dsHandler;
         }
@@ -17,7 +17,7 @@ public interface IDSLookup {
     }
 
     default DataSource getDataSourceById(String dsId) {
-        final IHandler handler = getHandlerByName(dsId);
+        final IHandler handler = getHandlerById(dsId);
         if (handler == null) {
             return null;
         }

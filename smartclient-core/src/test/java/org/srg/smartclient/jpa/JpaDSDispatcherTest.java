@@ -503,8 +503,8 @@ public class JpaDSDispatcherTest {
 
     @Test
     public void oneToOneRelation() {
-        dispatcher.registerJPAEntity(Client.class);
-        final String clientDataDsId = dispatcher.registerJPAEntity(ClientData.class);
+        dispatcher.registerJPAEntities(Client.class, ClientData.class, Project.class, Employee.class, EmployeeStatus.class);
+        final String clientDataDsId = dispatcher.getHandlerByClass(ClientData.class).id();
 
         final DSRequest request = new DSRequest();
         request.setStartRow(0);
@@ -541,8 +541,8 @@ public class JpaDSDispatcherTest {
 
     @Test
     public void oneToOneRelationMappedBy() {
-        final String clientDsId = dispatcher.registerJPAEntity(Client.class);
-        dispatcher.registerJPAEntity(ClientData.class);
+        dispatcher.registerJPAEntities(Client.class, ClientData.class, Project.class, Employee.class, EmployeeStatus.class);
+        final String clientDsId = dispatcher.getHandlerByClass(Client.class).id();
 
         final DSRequest request = new DSRequest();
         request.setStartRow(0);
@@ -637,9 +637,8 @@ public class JpaDSDispatcherTest {
 
     @Test
     public void manyToOneRelation() {
-        dispatcher.registerJPAEntity(Employee.class);
-        dispatcher.registerJPAEntity(Client.class);
-        final String projectDsId = dispatcher.registerJPAEntity(Project.class);
+        dispatcher.registerJPAEntities(EmployeeStatus.class, Employee.class, Client.class, Project.class);
+        final String projectDsId = dispatcher.getHandlerByClass(Project.class).id();
 
         final DSRequest request = new DSRequest();
         request.setStartRow(0);
@@ -692,9 +691,8 @@ public class JpaDSDispatcherTest {
 
     @Test
     public void oneToManyRelation() {
-        final String clientDsId = dispatcher.registerJPAEntity(Client.class);
-        dispatcher.registerJPAEntity(Employee.class);
-        dispatcher.registerJPAEntity(Project.class);
+        dispatcher.registerJPAEntities(Client.class, Employee.class, EmployeeStatus.class, Project.class);
+        final String clientDsId = dispatcher.getHandlerByClass(Client.class).id();
 
         final DSRequest request = new DSRequest();
         request.setStartRow(0);
@@ -761,8 +759,8 @@ public class JpaDSDispatcherTest {
 
     @Test
     public void oneToManyRelationWithCompositeForeignKey() {
-        final String employeeDsId = dispatcher.registerJPAEntity(Employee.class);
-        dispatcher.registerJPAEntity(EmployeeRole.class);
+        dispatcher.registerJPAEntities(Employee.class, EmployeeStatus.class, EmployeeRole.class, Project.class, Client.class);
+        final String employeeDsId = dispatcher.getHandlerByClass(Employee.class).id();
 
         // --
         final DSRequest request = new DSRequest();
@@ -838,9 +836,7 @@ public class JpaDSDispatcherTest {
 
     @Test
     public void loadSqlDataSourceFromResource() throws Exception {
-        dispatcher.registerJPAEntity(Employee.class);
-        dispatcher.registerJPAEntity(Client.class);
-        dispatcher.registerJPAEntity(ClientData.class);
+        dispatcher.registerJPAEntities(Employee.class, Client.class, Project.class, ClientData.class, EmployeeStatus.class);
 
         final String hprjDSId = "HProjectDS";
         dispatcher.loadFromResource("HProject.ds.json");
@@ -898,8 +894,8 @@ public class JpaDSDispatcherTest {
 
     @Test
     public void oneToMany_WithAssociationOverride() {
-        final String employeeDsId = dispatcher.registerJPAEntity(Employee.class);
-        dispatcher.registerJPAEntity(EmployeeStatus.class);
+        dispatcher.registerJPAEntities(Employee.class, EmployeeStatus.class, Project.class, Client.class);
+        final String employeeDsId = dispatcher.getHandlerByClass(Employee.class).id();
 
         // --
         final DSRequest request = new DSRequest();
@@ -1036,11 +1032,8 @@ public class JpaDSDispatcherTest {
 
     @Test
     public void fetchManyToMany_MappedBy() {
-        dispatcher.registerJPAEntity(Project.class);
-        dispatcher.registerJPAEntity(Client.class);
-        dispatcher.registerJPAEntity(ClientData.class);
-
-        final String employeeDs = dispatcher.registerJPAEntity(Employee.class);
+        dispatcher.registerJPAEntities(Project.class, Client.class, ClientData.class, EmployeeStatus.class, Employee.class);
+        final String employeeDs = dispatcher.getHandlerByClass(Employee.class).id();
 
         // --
         final DSRequest request = new DSRequest();
@@ -1122,11 +1115,8 @@ public class JpaDSDispatcherTest {
     }
     @Test
     public void fetchManyToMany() {
-        dispatcher.registerJPAEntity(Employee.class);
-        dispatcher.registerJPAEntity(Client.class);
-        dispatcher.registerJPAEntity(ClientData.class);
-
-        final String projectDs = dispatcher.registerJPAEntity(Project.class);
+        dispatcher.registerJPAEntities(Employee.class, Client.class, ClientData.class, Project.class, EmployeeStatus.class);
+        final String projectDs = dispatcher.getHandlerByClass(Project.class).id();
 
         // --
         final DSRequest request = new DSRequest();

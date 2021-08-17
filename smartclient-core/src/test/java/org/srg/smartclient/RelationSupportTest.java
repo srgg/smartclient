@@ -1,6 +1,8 @@
 package org.srg.smartclient;
 
+import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.Test;
+import org.srg.smartclient.isomorphic.DSField;
 
 class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
 
@@ -16,7 +18,7 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                             name:'location',
                             foreignKey:'LocationDS.id',
                             dbName:'location_id',
-                            displayField: 'location_city'                        
+                            displayField: 'location_city'
                         },
                         {
                             name:'location_city',
@@ -27,6 +29,48 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                 );
             }
         },
+
+        Two_Direct_Same_The_Same_DisplayField_With_IncludeVia(){
+            @Override
+            public <H extends DSHandler> H apply(AbstractHandlerTest<H> test) throws Exception {
+                final H projectHandler =  test.withHandlers(Handler.Project);
+
+                withExtraFields(projectHandler,
+                        """
+                        [
+                             {
+                                 name:"manager"
+                                 ,foreignKey:"EmployeeDS.id"
+                                 ,displayField:"managerFullName"
+                                 ,foreignDisplayField:"fullName"
+                                 ,dbName:"manager_id"
+                             },
+                             {
+                                 name:"managerFullName"
+                                 ,type:"TEXT"
+                                 ,includeFrom:"EmployeeDS.name"
+                                 ,includeVia:"manager"
+                             },
+                             
+                             {
+                                 name:"supervisor"
+                                 ,foreignKey:"EmployeeDS.id"
+                                 ,displayField:"supervisorFullName"
+                                 ,foreignDisplayField:"fullName"
+                                 ,dbName:"supervisor_id"
+                             },
+                             {
+                                 name:"supervisorFullName"
+                                 ,type:"TEXT"
+                                 ,includeFrom:"EmployeeDS.name"
+                                 ,includeVia:"supervisor"
+                             }
+        
+                        ]""");
+                return projectHandler;
+            }
+        },
+
         Direct_With_IncludeVia() {
             @Override
             public <H extends DSHandler> H apply(AbstractHandlerTest<H> test) throws Exception {
@@ -50,7 +94,7 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                                        includeFrom:'EmployeeRoleDS.role',
                                        includeSummaryFunction:'CONCAT',
                                        multiple:true
-                                   }]                                                                                                      
+                                   }]
                                 """,
                         ExtraFieldBase.Employee_RolesFromEmployeeRole
                 );
@@ -75,7 +119,7 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                                        multiple:true,
                                        includeSummaryFunction: 'CONCAT',
                                        customSQL:false
-                                   }]                                                                                                      
+                                   }]
                                 """,
                         ExtraFieldBase.Project_IncludeTeamMembersFromFromEmployee
                 );
@@ -158,7 +202,7 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
         final DSHandler h = IncludeFrom_TestCases.Direct_Without_IncludeVia.apply(this);
 
         final RelationSupport.ImportFromRelation ifr = RelationSupport.describeImportFrom(
-                dsRegistry,
+                dsRuntime,
                 h.dataSource(),
                 h.dataSource().getField("location_city")
         );
@@ -175,7 +219,8 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                          foreign:{
                             dataSource:'LocationDS',
                             field: 'id',
-                            sqlFieldAlias:null
+                            sqlFieldAlias:null,
+                            relatedTableAlias:'location_locations'
                          }
                       }
                    ],
@@ -190,7 +235,7 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
         final DSHandler h = IncludeFrom_TestCases.Indirect_Without_IncludeVia.apply(this);
 
         final RelationSupport.ImportFromRelation ifr = RelationSupport.describeImportFrom(
-                dsRegistry,
+                dsRuntime,
                 h.dataSource(),
                 h.dataSource().getField("location_country")
         );
@@ -207,7 +252,8 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                      foreign:{
                         dataSource:'LocationDS',
                         field:'id',
-                        sqlFieldAlias:null
+                        sqlFieldAlias:null,
+                        relatedTableAlias:'location_locations'
                      },
                      isInverse:false
                   },
@@ -217,7 +263,8 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                      foreign:{
                         dataSource:'CountryDS',
                         field: 'id',
-                        sqlFieldAlias:null
+                        sqlFieldAlias:null,
+                        relatedTableAlias:'country_countries'
                      },
                      isInverse:false
                   }
@@ -232,7 +279,7 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
         final DSHandler h = IncludeFrom_TestCases.Indirect_With_IncludeVia.apply(this);
 
         final RelationSupport.ImportFromRelation ifr = RelationSupport.describeImportFrom(
-                dsRegistry,
+                dsRuntime,
                 h.dataSource(),
                 h.dataSource().getField("location_country")
         );
@@ -249,7 +296,8 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                      foreign:{
                         dataSource:'LocationDS',
                         field: 'id',
-                        sqlFieldAlias:null
+                        sqlFieldAlias:null,
+                        relatedTableAlias:'location_locations'
                      },
                      isInverse:false
                   },
@@ -259,7 +307,8 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                      foreign:{
                         dataSource:'CountryDS',
                         field: 'id',
-                        sqlFieldAlias:null
+                        sqlFieldAlias:null,
+                        relatedTableAlias:'country_countries'
                      },
                      isInverse:false
                   }
@@ -274,7 +323,7 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
         final DSHandler h = IncludeFrom_TestCases.Direct_With_IncludeVia.apply(this);
 
         final RelationSupport.ImportFromRelation ifr = RelationSupport.describeImportFrom(
-                dsRegistry,
+                dsRuntime,
                 h.dataSource(),
                 h.dataSource().getField("employeeFullName")
         );
@@ -292,7 +341,8 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                         foreign: {
                             dataSource: 'EmployeeDS',
                             field: 'id',
-                            sqlFieldAlias: null
+                            sqlFieldAlias: null,
+                            relatedTableAlias: 'manager_employee'
                         }
                     }
                 ]
@@ -305,7 +355,7 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
         final DSHandler h = IncludeFrom_TestCases.Direct_Multiple_ManyToMany_With_IncludeVia.apply(this);
 
         final RelationSupport.ImportFromRelation ifr = RelationSupport.describeImportFrom(
-            dsRegistry,
+                dsRuntime,
             h.dataSource(),
             h.dataSource().getField("employeeName")
         );
@@ -323,7 +373,8 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                         foreign: {
                             dataSource: 'EmployeeDS',
                             field: 'id',
-                            sqlFieldAlias: null
+                            sqlFieldAlias: null,
+                            relatedTableAlias: 'teamMembers_employee'
                         }
                     }
                 ]
@@ -339,7 +390,8 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                 foreign: {
                     dataSource:'EmployeeDS',
                     field:'id',
-                    sqlFieldAlias:null
+                    sqlFieldAlias:null,
+                    relatedTableAlias: null
                 }
             }""", fkr
         );
@@ -353,9 +405,88 @@ class RelationSupportTest extends AbstractHandlerTest<DSHandler> {
                 foreign: {
                     dataSource:'EmployeeDS',
                     field:'name',
-                    sqlFieldAlias:null
+                    sqlFieldAlias:null,
+                    relatedTableAlias: null
                 }
             }""", fkrDisplay
+        );
+    }
+
+    @Test
+    public void importFromRelation_multipleDirectIncludeFromTheSameTable_with_includeVia() throws Exception {
+        final DSHandler h = IncludeFrom_TestCases.Two_Direct_Same_The_Same_DisplayField_With_IncludeVia.apply(this);
+        {
+            final DSField includeFrom = h.dataSource().getField("managerFullName");
+            JsonTestSupport.assertJsonEquals("""
+                    {
+                        name: 'managerFullName',
+                        includeFrom: 'EmployeeDS.name',
+                        includeVia: 'manager'
+                    }""", includeFrom, Option.IGNORING_EXTRA_FIELDS);
+
+
+            final RelationSupport.ImportFromRelation ifr = RelationSupport.describeImportFrom(
+                    dsRuntime,
+                    h.dataSource(),
+                    includeFrom
+            );
+
+            JsonTestSupport.assertJsonEquals("""
+                    {
+                        dataSource: 'ProjectDS',
+                        sourceField: 'managerFullName',
+                        foreignDisplay: 'name',
+                        foreignKeyRelations: [
+                            {
+                                dataSource: 'ProjectDS',
+                                sourceField: 'manager',
+                                isInverse: false,
+                                foreign: {
+                                    dataSource: 'EmployeeDS',
+                                    field: 'id',
+                                    sqlFieldAlias: null,
+                                    relatedTableAlias: 'manager_employee'
+                                }
+                            }
+                        ]
+                    }""", ifr
+            );
+        }
+
+        final DSField includeFrom = h.dataSource().getField("supervisorFullName");
+        JsonTestSupport.assertJsonEquals("""
+                    {
+                        name: 'supervisorFullName',
+                        includeFrom: 'EmployeeDS.name',
+                        includeVia: 'supervisor'
+                    }""", includeFrom, Option.IGNORING_EXTRA_FIELDS);
+
+
+        final RelationSupport.ImportFromRelation ifr = RelationSupport.describeImportFrom(
+                dsRuntime,
+                h.dataSource(),
+                includeFrom
+        );
+
+        JsonTestSupport.assertJsonEquals("""
+                    {
+                        dataSource: 'ProjectDS',
+                        sourceField: 'supervisorFullName',
+                        foreignDisplay: 'name',
+                        foreignKeyRelations: [
+                            {
+                                dataSource: 'ProjectDS',
+                                sourceField: 'supervisor',
+                                isInverse: false,
+                                foreign: {
+                                    dataSource: 'EmployeeDS',
+                                    field: 'id',
+                                    sqlFieldAlias: null,
+                                    relatedTableAlias: 'supervisor_employee'
+                                }
+                            }
+                        ]
+                    }""", ifr
         );
     }
 

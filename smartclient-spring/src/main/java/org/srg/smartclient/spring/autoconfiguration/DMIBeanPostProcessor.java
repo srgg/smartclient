@@ -84,7 +84,7 @@ public class DMIBeanPostProcessor implements BeanPostProcessor {
             this.logger.info("{}: processing bean of type {}",
                     this.getClass().getSimpleName(), proxy.getClass().getName());
             final BeanDMIHandler h = new BeanDMIHandler(annotation.id(), bean, annotation.methodName() );
-            dispatcher.registerHandler(h);
+            dispatcher.registerHandlers(h);
         }
         return bean;
     }
