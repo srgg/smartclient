@@ -10,6 +10,8 @@ package org.srg.smartclient.isomorphic;
  *
  */
 public class OperationBinding {
+    public static final OperationBinding empty = new OperationBinding();
+
     private DSRequest.OperationType operationType;
     private String operationId = "";
 

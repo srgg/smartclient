@@ -942,7 +942,7 @@ public class JDBCHandler extends AbstractDSHandler {
 
         public AbstractSQLContext(H dsHandler, DSRequest request, OperationBinding operationBinding) {
             this.request = request;
-            this.operationBinding = operationBinding;
+            this.operationBinding = operationBinding == null ? OperationBinding.empty : operationBinding;
             this.dsHandler = dsHandler;
         }
 
