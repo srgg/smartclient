@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.srg.smartclient.isomorphic.DSRequest;
 import org.srg.smartclient.isomorphic.DSResponse;
+import org.srg.smartclient.isomorphic.DataSource;
 import org.srg.smartclient.isomorphic.OperationBinding;
 import org.srg.smartclient.isomorphic.criteria.AdvancedCriteria;
 
@@ -327,7 +328,6 @@ public class OperationBindingTest extends AbstractJDBCHandlerTest<JDBCHandler> {
             }""", response);
     }
 
-
     @Test
     public void fetchWith_CustomSQL_AdvancedCriteria() throws Exception {
         final JDBCHandler handler = withHandler(TIME_REPORT);
@@ -400,7 +400,7 @@ public class OperationBindingTest extends AbstractJDBCHandlerTest<JDBCHandler> {
 
     /*
      * Test wil fails if default binding will not be used:
-     * the default binding ignores non existent fields criteria sent within  request.
+     * the default binding ignores non-existent fields criteria sent within  request.
      */
     @Test
     public void fetchWith_defaultBinding() throws Exception {
@@ -446,5 +446,92 @@ public class OperationBindingTest extends AbstractJDBCHandlerTest<JDBCHandler> {
                 }                
               ]
             }""", response);
+    }
+
+    @Test
+    public void fetch_customTableClause_With_DefaultTables() throws Exception {
+        final OperationBinding ob = JsonTestSupport.fromJSON(OperationBinding.class, """
+                    {
+                      operationType: 'fetch',
+                      tableClause: '${defaultTableClause}'
+                    }
+                """);
+        final DataSource ds = JsonTestSupport.fromJSON(DataSource.class, Handler.Project);
+        ds.setOperationBindings(Arrays.asList(ob));
+        handler = withDataSource(ds);
+
+        final DSRequest request = new DSRequest()
+                .setStartRow(0)
+                .setEndRow(2);
+
+        final DSResponse response = handler.handleFetch(request);
+
+
+        JsonTestSupport.assertJsonEquals("""
+            {
+                status:0,
+                startRow:0,
+                endRow:2,
+                totalRows:5,
+                data:[
+                    {
+                      id:1,
+                      name:'Project 1 for client 1'
+                    },
+                    {
+                      id:2,
+                      name:'Project 2 for client 1'
+                    }
+                ]
+            }""", response);
+
+    }
+
+    @Test
+    @Regression("""
+            org.h2.jdbc.JdbcSQLDataException: Data conversion error converting "ROW ()"; SQL statement:
+            SELECT count(*) FROM (
+                SELECT employee.id AS id_employee,
+              employee.name AS name_employee
+                    FROM employee
+            ) opaque
+                WHERE () AND opaque.name_employee LIKE 'man%'
+            """)
+    public void fetch_customWhereClause_With_Empty_DefaultWhere() throws Exception {
+        final OperationBinding ob = JsonTestSupport.fromJSON(OperationBinding.class, """
+                    {
+                      operationType: 'fetch',
+                      whereClause: "(${defaultWhereClause}) AND opaque.name_employee LIKE 'man%%'"
+                    }
+                """);
+        final DataSource ds = JsonTestSupport.fromJSON(DataSource.class, Handler.Employee);
+        ds.setOperationBindings(Arrays.asList(ob));
+        handler = withDataSource(ds);
+
+        final DSRequest request = new DSRequest()
+                .setStartRow(0)
+                .setEndRow(2);
+
+        final DSResponse response = handler.handleFetch(request);
+
+
+        JsonTestSupport.assertJsonEquals("""
+            {
+                status:0,
+                startRow:0,
+                endRow:2,
+                totalRows:2,
+                data:[
+                    {
+                      id:4,
+                      name:'manager1'
+                    },
+                    {
+                      id:5,
+                      name:'manager2'
+                    }
+                ]
+            }""", response);
+
     }
 }

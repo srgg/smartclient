@@ -85,111 +85,126 @@ public class DSRequest implements IDSRequest {
         return useStrictJSON;
     }
 
-    public void setUseStrictJSON(Boolean useStrictJSON) {
+    public DSRequest setUseStrictJSON(Boolean useStrictJSON) {
         this.useStrictJSON = useStrictJSON;
+        return this;
     }
 
     public String getDataSource() {
         return dataSource;
     }
 
-    public void setDataSource(String dataSource) {
+    public DSRequest setDataSource(String dataSource) {
         this.dataSource = dataSource;
+        return this;
     }
 
     public OperationType getOperationType() {
         return operationType;
     }
 
-    public void setOperationType(OperationType operationType) {
+    public DSRequest setOperationType(OperationType operationType) {
         this.operationType = operationType;
+        return this;
     }
 
     public String getOperationId() {
         return operationId;
     }
 
-    public void setOperationId(String operationId) {
+    public DSRequest setOperationId(String operationId) {
         this.operationId = operationId;
+        return this;
     }
 
     public String getComponentId() {
         return componentId;
     }
 
-    public void setComponentId(String componentId) {
+    public DSRequest setComponentId(String componentId) {
         this.componentId = componentId;
+        return this;
     }
 
     public int getStartRow() {
         return startRow;
     }
 
-    public void setStartRow(int startRow) {
+    public DSRequest setStartRow(int startRow) {
         this.startRow = startRow;
+        return this;
     }
 
     public int getEndRow() {
         return endRow;
     }
 
-    public void setEndRow(int endRow) {
+    public DSRequest setEndRow(int endRow) {
         this.endRow = endRow;
+        return this;
     }
 
     public TextMatchStyle getTextMatchStyle() {
         return textMatchStyle;
     }
 
-    public void setTextMatchStyle(TextMatchStyle textMatchStyle) {
+    public DSRequest setTextMatchStyle(TextMatchStyle textMatchStyle) {
         this.textMatchStyle = textMatchStyle;
+        return this;
     }
 
     public List<String> getSortBy() {
         return sortBy;
     }
 
-    public void setSortBy(List<String> sortBy) {
+    public DSRequest setSortBy(List<String> sortBy) {
         this.sortBy = sortBy;
+        return this;
     }
 
     public IDSRequestData getData() {
         return data;
     }
 
-    public void setData(IDSRequestData data) {
+    public DSRequest setData(IDSRequestData data) {
         this.data = data;
+        return this;
     }
 
-    public void wrapAndSetData(Map<String,Object> data) {
+    public DSRequest wrapAndSetData(Map<String,Object> data) {
         this.data = new MapData();
         if(this.data instanceof Map m){
             m.putAll(data);
         }
+
+        return this;
     }
 
     public Map<String, Object> getOldValues() {
         return oldValues;
     }
 
-    public void setOldValues(Map<String, Object> oldValues) {
+    public DSRequest setOldValues(Map<String, Object> oldValues) {
         this.oldValues = oldValues;
+        return this;
     }
 
     public String getOutputs() {
         return outputs;
     }
 
-    public void setOutputs(String outputs) {
+    public DSRequest setOutputs(String outputs) {
         this.outputs = outputs;
+        return this;
     }
 
     public String getAdditionalOutputs() {
         return additionalOutputs;
     }
 
-    public void setAdditionalOutputs(String additionalOutputs) {
+    public DSRequest setAdditionalOutputs(String additionalOutputs) {
         this.additionalOutputs = additionalOutputs;
+        return this;
     }
 
     public static class MapData extends HashMap implements IDSRequestData {

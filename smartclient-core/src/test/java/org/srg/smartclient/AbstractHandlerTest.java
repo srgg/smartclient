@@ -308,6 +308,10 @@ public abstract class AbstractHandlerTest<H extends DSHandler> {
 
     protected H withHandler(String dataSourceDefinition) throws Exception {
         final DataSource ds = JsonTestSupport.fromJSON(DataSource.class, dataSourceDefinition);
+        return withDataSource(ds);
+    }
+
+    protected H withDataSource(DataSource ds ) throws Exception {
         return doInitHandler(ds);
     }
 

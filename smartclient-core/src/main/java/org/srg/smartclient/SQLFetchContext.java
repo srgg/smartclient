@@ -456,7 +456,13 @@ public class SQLFetchContext<H extends JDBCHandler> extends JDBCHandler.Abstract
 
         // -- generate query
         {
-            this.templateContext = SQLTemplateEngine.createContext(request(), selectClause, fromClause, joinClause, whereClause, "");
+            this.templateContext = SQLTemplateEngine.createContext(
+                    request(),
+                    selectClause,
+                    fromClause,
+                    joinClause,
+                    whereClause == null || whereClause.isBlank() ? "TRUE = TRUE" : whereClause,
+                    "");
 
             templateContext.put("effectiveSelectClause", selectClause);
 
